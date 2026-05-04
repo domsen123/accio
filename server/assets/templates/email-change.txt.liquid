@@ -1,0 +1,14 @@
+Confirm Your New Email Address
+
+{% if userName %}Hi {{ userName }},{% else %}Hi there,{% endif %}
+
+You requested to change your email address on {{ siteName }} to this address.
+
+Click the link below to confirm this change:
+{{ confirmationLink }}
+
+This link will expire in {{ expiresInHours }} hour{% if expiresInHours != 1 %}s{% endif %}.
+
+If you didn't request this change, you can safely ignore this email and your email address will remain unchanged.
+
+© {{ year }} {{ siteName }}. All rights reserved.

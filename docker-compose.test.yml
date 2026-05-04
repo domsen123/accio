@@ -1,0 +1,16 @@
+services:
+  postgres-test:
+    image: postgres:16
+    container_name: nuxt-starter-postgres-test-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: nuxt-starter-test
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - '5433:5432'
+    volumes:
+      - postgres_test_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_test_data:

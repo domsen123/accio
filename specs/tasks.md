@@ -1,0 +1,381 @@
+# Tasks
+
+Atomic, checkable tasks ordered by phase. Each task has:
+- An ID (`T-1.3` = Phase 1, task 3).
+- References to `requirements.md` and `design.md` sections.
+- A definition of "done" — what an agent or reviewer should verify before checking it off.
+
+Mark tasks done by changing `[ ]` to `[x]`. Add a brief note when deviating from the spec.
+
+---
+
+## Phase 0 — Setup
+
+- [x] **T-0.1 — Bootstrap project from starter**
+  - Clone `nuxt-drizzle`, install, run starter as-is to confirm baseline works.
+  - Done when: `pnpm dev` serves the starter, `pnpm test:run` passes.
+  - **Deviation:** Repo was already bootstrapped past the starter (admin features, item-service, event-bus already present). Rather than re-cloning, verified baseline: `pnpm dev` serves :3000 (HTTP 200), `pnpm typecheck` clean, `pnpm test:run` 39/39 pass.
+  - **Fixes carried in:**
+    - Buffer global lint error in `server/features/email/templates/index.ts` — added `import { Buffer } from 'node:buffer'`.
+    - 3 flaky `item-service.test.ts` filter tests (`_eq`, `_ilike`, `_in`) caused by parallel test files sharing the dev DB while `afterEach` truncates. Fixed by setting `fileParallelism: false` in `vitest.config.ts`.
+  - **Follow-up:** A dedicated test DB (or per-worker schema) is needed before integration test volume grows. Tracked as new task **T-0.0a** below; address before tests start to feel slow.
+
+- [ ] **T-0.2 — Enable `pgvector` extension**
+  - Add migration: `CREATE EXTENSION IF NOT EXISTS vector;`
+  - Refs: REQ-COMMON-4.
+  - Done when: Migration applies cleanly; no schema uses vector columns yet.
+
+- [ ] **T-0.3 — Add new env vars**
+  - Add Orchestrator and GitHub vars to `.env.example` and `nuxt.config.ts` runtimeConfig.
+  - Refs: DESIGN-ENV.
+  - Done when: New vars are typed and accessible via `useRuntimeConfig()`.
+
+- [ ] **T-0.4 — Add new permissions and seed**
+  - Extend `server/features/rbac/permissions.ts` with the 13 new permissions (incl. `ai:read`, `ai:manage`).
+  - Update seed to assign per DESIGN-RBAC table.
+  - Refs: REQ-COMMON-1, DESIGN-RBAC.
+  - Done when: Fresh DB seed produces roles with the new permissions; existing tests still pass.
+
+- [ ] **T-0.5 — Install and configure `@nuxtjs/i18n`**
+  - Add module to `nuxt.config.ts` with locales `de` (default) and `en`.
+  - Create `i18n/locales/de.json` and `i18n/locales/en.json` with seed strings for the auth and shell pages already present in the starter (so existing pages don't regress).
+  - Add language switcher component to the top nav.
+  - Persist user's language preference on the user/profile (extend the starter's profile feature with a `locale` field).
+  - Add `crypto_salt` column to `organisations` (for DESIGN-CRYPTO).
+  - Refs: REQ-I18N-1, REQ-I18N-2, DESIGN-I18N, DESIGN-CRYPTO.
+  - Done when: Switching language updates UI strings live; preference persists across sessions; existing tests pass.
+
+- [ ] **T-0.6 — Shared crypto utility**
+  - Implement `server/utils/crypto.ts` with `encryptForOrg` / `decryptForOrg` per DESIGN-CRYPTO.
+  - Unit tests cover round-trip, tamper detection, salt isolation between orgs.
+  - Refs: DESIGN-CRYPTO.
+  - Done when: Tests pass; module is ready to be consumed by GitHub and AI features.
+
+- [ ] **T-0.7 — `/app` layout and shell**
+  - Create `app/layouts/app.vue` with the hub's top nav (workspace switcher, global search placeholder, language toggle, orchestrator launcher placeholder) and side nav (KB / Todos / Projects / Orchestrator / Settings — entries can be stubs that link to not-yet-existing pages).
+  - Create `app/pages/app/index.vue` as a minimal hub landing page (welcome / quick stats placeholder).
+  - All `/app/**` pages going forward must use the `app` layout.
+  - Confirm `/admin/**` and `/` remain untouched.
+  - Refs: DESIGN-ROUTES, DESIGN-FRONTEND, ADR-015.
+  - Done when: Visiting `/app` shows the new layout; `/admin` still shows the starter admin layout; `/` is unchanged.
+
+---
+
+## Phase 1 — Knowledge Base
+
+### Schema
+- [ ] **T-1.1 — Drizzle schema for KB tables**
+  - Tables: `kb_entries`, `kb_categories`, `kb_tags`, `kb_entry_tags`, `kb_entry_links`.
+  - Add tsvector generated column on `kb_entries.body_search` and a GIN index.
+  - Refs: DESIGN-DATA §KB.
+  - Done when: `pnpm db:push` succeeds; tables visible in Drizzle Studio with expected indexes.
+
+### Server feature: kb
+- [ ] **T-1.2 — KB service skeleton**
+  - `server/features/kb/service.ts` with CRUD on entries, categories, tags. Use `ItemService` where it fits; custom methods for slug generation and search.
+  - Refs: REQ-KB-1, REQ-KB-2, REQ-KB-3.
+  - Done when: Unit tests cover create, update, find by slug, list with filters.
+
+- [ ] **T-1.3 — Slug generation**
+  - `slugify(title)` plus collision suffix per workspace.
+  - Refs: REQ-KB-1.
+  - Done when: Tests cover umlauts, punctuation, collision suffixing.
+
+- [ ] **T-1.4 — Markdown + wikilink parsing**
+  - `server/features/kb/markdown.ts`: extract `[[slug]]` and `[[Title|slug]]` patterns; expose `parseWikilinks(body)`.
+  - On entry save, transactionally rebuild `kb_entry_links` for that entry.
+  - Refs: REQ-KB-4, DESIGN-WIKILINKS.
+  - Done when: Tests cover both syntaxes, escaping, code-block exclusion (links inside ``` blocks must not match).
+
+- [ ] **T-1.5 — Full-text search**
+  - Generated tsvector column with weighted title (A) + body (B). Query via `to_tsquery` with prefix matching.
+  - Refs: REQ-KB-5, DESIGN-DATA, DESIGN-RANK.
+  - Done when: Search test fixture returns entries ranked by title match before body match.
+
+- [ ] **T-1.6 — Status lifecycle and inbox/trash views**
+  - Service methods `setStatus`, `softDelete`, `restore`. Default scope filters `deleted_at IS NULL` and excludes `archived` unless asked.
+  - Refs: REQ-KB-7, REQ-KB-8, REQ-KB-9.
+  - Done when: Tests cover all status transitions and the default exclusion of `archived`/`deleted`.
+
+### API
+- [ ] **T-1.7 — KB API routes**
+  - All endpoints in DESIGN-API §KB.
+  - Permission guards: `kb:read` for GET, `kb:write` for POST/PATCH, `kb:delete` for DELETE.
+  - Zod schemas for all inputs.
+  - Refs: REQ-KB-1..9, DESIGN-API.
+  - Done when: Manual smoke test via REST client passes for create/list/get/update/soft-delete/restore/backlinks/tags.
+
+### Client feature: kb
+- [ ] **T-1.8 — KB list and detail pages**
+  - `app/pages/app/kb/index.vue`, `app/pages/app/kb/[slug].vue`.
+  - Search box with FTS, filter chips (tag, category, status, author type, source type).
+  - Pinia Colada queries.
+  - Refs: REQ-KB-5, DESIGN-FRONTEND.
+  - Done when: Pages render lists, navigate to detail, filters change query results.
+
+- [ ] **T-1.9 — Markdown editor with preview**
+  - Split editor + preview. Wikilinks render as `<a>` to the target slug, with a visual indicator for unresolved links.
+  - Tag and category pickers integrated.
+  - Refs: REQ-KB-1, REQ-KB-4, DESIGN-FRONTEND.
+  - Done when: Creating and editing an entry round-trips Markdown faithfully; wikilinks in preview navigate.
+
+- [ ] **T-1.10 — Inbox and Trash views**
+  - `app/pages/app/kb/inbox.vue` and `app/pages/app/kb/trash.vue` with one-click actions.
+  - Refs: REQ-KB-8, REQ-KB-9.
+  - Done when: Inbox lists `status='inbox'` entries with Verify / Draft / Archive / Delete buttons; Trash lists `deleted_at IS NOT NULL` with Restore / Purge.
+
+- [ ] **T-1.11 — Categories tree UI**
+  - Sidebar with a collapsible tree; selecting a category filters the entry list.
+  - Refs: REQ-KB-3.
+  - Done when: Nested categories render correctly; clicking shows entries from selected and descendants.
+
+### Phase 1 acceptance
+- [ ] **T-1.X — Phase 1 complete**
+  - End-to-end: create category → create entry with tags and a wikilink → search finds it → backlinks appear on the linked entry → status flow works → soft delete and restore work.
+  - Done when: A manual run-through of the above succeeds in two different workspaces with no data leak.
+
+---
+
+## Phase 2 — Todos
+
+### Schema
+- [ ] **T-2.1 — Drizzle schema for todos**
+  - Tables: `todos`, `todo_tags`, `todo_kb_links`. Reuse `kb_tags`.
+  - Refs: DESIGN-DATA §Todo.
+  - Done when: `pnpm db:push` applies cleanly.
+
+### Server feature: todos
+- [ ] **T-2.2 — Todos service**
+  - CRUD, complete/uncomplete, link/unlink KB, tag set replace.
+  - Subtask depth check (max 3) enforced in service.
+  - Refs: REQ-TODO-1, REQ-TODO-2, REQ-TODO-3.
+  - Done when: Unit tests cover all of the above and reject depth > 3.
+
+- [ ] **T-2.3 — Todo views (today/upcoming/open/completed)**
+  - Service methods returning the four canonical views, plus filters by tag and priority.
+  - Refs: REQ-TODO-4.
+  - Done when: Tests verify view logic with fixture data covering edge cases (overdue, due today, due tomorrow).
+
+### API
+- [ ] **T-2.4 — Todo API routes**
+  - All endpoints in DESIGN-API §Todos.
+  - Permission guards: `todo:read`, `todo:write`, `todo:delete`.
+  - Refs: DESIGN-API.
+
+### Client feature: todos
+- [ ] **T-2.5 — Todo list pages**
+  - `app/pages/app/todos/index.vue` with the canonical views as tabs/segments.
+  - Refs: REQ-TODO-4.
+  - Done when: Switching views changes the rendered list correctly.
+
+- [ ] **T-2.6 — Todo detail / edit**
+  - Side-panel or page for editing a todo: title, Markdown description, priority, due date, parent, tags, KB links picker.
+  - Refs: REQ-TODO-1..3.
+  - Done when: All fields editable; KB picker autocompletes against KB entries in the workspace.
+
+- [ ] **T-2.7 — Subtask UI**
+  - Nested rendering up to depth 3, with `n/m` progress on parents.
+  - Refs: REQ-TODO-2.
+  - Done when: Adding/removing subtasks updates the count and the UI renders correctly to depth 3 only.
+
+- [ ] **T-2.8 — KB ↔ Todo cross-display**
+  - Linked todos appear on the KB entry detail; linked KB entries appear on the todo detail.
+  - Refs: REQ-TODO-3.
+  - Done when: Linking from either side shows up on both sides.
+
+### Phase 2 acceptance
+- [ ] **T-2.X — Phase 2 complete**
+  - End-to-end: create todos in different views, with subtasks, link to KB, complete, soft delete, restore.
+  - Done when: Manual run-through succeeds; permissions enforced.
+
+---
+
+## Phase 3 — Orchestrator
+
+### Schema
+- [ ] **T-3.1 — Drizzle schema for orchestrator and AI**
+  - Tables: `orchestrator_conversations`, `orchestrator_messages`, `orchestrator_actions`, `ai_providers`, `ai_provider_credentials`, `ai_models`, `orchestrator_workspace_settings`.
+  - `orchestrator_conversations.model_id` and `orchestrator_actions.model_id` set up with FK to `ai_models`.
+  - Refs: DESIGN-DATA §Orchestrator + §AI Provider.
+
+- [ ] **T-3.1b — Seed AI providers and initial models**
+  - Seed `ai_providers` rows for Anthropic, OpenAI, Google.
+  - Seed `ai_models` with a small curated list of currently-recommended frontier models per provider; mark one as `is_default=true`.
+  - The seed file (`server/database/seed/ai-models.ts`) is expected to be updated over time as models evolve.
+  - Refs: DESIGN-AI §Seed data, REQ-AI-1, REQ-AI-3.
+  - Done when: Fresh DB has providers and models; admin UI (T-3.x.UI below) lists them.
+
+### AI provider abstraction
+- [ ] **T-3.1c — Install Vercel AI SDK and provider packages**
+  - Add deps: `ai`, `@ai-sdk/anthropic`, `@ai-sdk/openai`, `@ai-sdk/google`.
+  - Refs: DESIGN-AI.
+
+- [ ] **T-3.1d — Provider client builder**
+  - `server/features/ai/provider.ts`: given a `model_id`, resolves provider, fetches and decrypts credentials for the active workspace, returns a ready-to-use AI SDK model instance.
+  - Caches nothing across requests (DESIGN-AI: avoid stale-key issues).
+  - Refs: DESIGN-AI §Provider-Model resolution flow.
+  - Done when: Unit test with fixture credentials produces a working SDK client for each of Anthropic / OpenAI / Google (mocked transport).
+
+- [ ] **T-3.1e — AI configuration API + UI**
+  - Routes per DESIGN-API §AI Configuration.
+  - Pages: `/app/settings/ai` (workspace credentials, default model, AI display name, history limit) and `/admin/ai/models` (super-admin model registry CRUD — stays under `/admin` because it's platform-global data).
+  - Permission guards: `ai:read` for GET, `ai:manage` for PUT/PATCH/DELETE on workspace endpoints; `platform:admin` for `/admin/ai/models`.
+  - Saving an API key encrypts it via `encryptForOrg`; reading credentials never returns the plaintext.
+  - Refs: REQ-AI-2, REQ-AI-3, REQ-AI-4, DESIGN-API §AI Configuration.
+
+### Self-MCP server
+- [ ] **T-3.2 — In-process MCP server bootstrap**
+  - `server/features/orchestrator/mcp-server.ts` exposes a tool registry: each tool is `{name, description, schema, class, handler}`.
+  - In-process invocation only — no HTTP transport (ADR-006).
+  - Refs: REQ-ORCH-2, ADR-006.
+  - Done when: A test spins up the registry and invokes a stub tool through it.
+
+- [ ] **T-3.3 — Read tools**
+  - Implement: `kb_search`, `kb_get_entry`, `kb_list_categories`, `kb_list_tags`, `todo_search`, `todo_get`. Project-related read tools deferred to Phase 4.
+  - Refs: DESIGN-TOOLS §Read.
+  - Done when: Each tool has a unit test that exercises it via the registry.
+
+- [ ] **T-3.4 — Write tools (KB)**
+  - Implement: `kb_create_entry`, `kb_update_entry`, `kb_set_status`, `kb_add_tag`, `kb_remove_tag`, `kb_link_entries`, `kb_soft_delete_entry`.
+  - Each tool's handler returns a structured result and never hard-deletes.
+  - Author propagation per REQ-ORCH-7.
+  - Refs: DESIGN-TOOLS §Write KB, REQ-ORCH-7, REQ-ORCH-8.
+
+- [ ] **T-3.5 — Write tools (Todos)**
+  - Implement: `todo_create`, `todo_update`, `todo_complete`, `todo_uncomplete`, `todo_soft_delete`, `todo_link_kb`, `todo_unlink_kb`.
+  - Refs: DESIGN-TOOLS §Write Todos.
+
+- [ ] **T-3.6 — Tool classification and confirmation enforcement**
+  - Each tool declares `class`. `confirm`-class tools throw a structured `ConfirmationRequired` from the registry; the chat handler surfaces it to the client.
+  - Bulk-change rule (≥6 affected items): enforced via a wrapper applied to all write tools.
+  - Refs: REQ-ORCH-4, DESIGN-CONF.
+  - Done when: Test verifies that `kb_update_entry` triggers a confirmation request and only executes after explicit resume.
+
+### Audit log
+- [ ] **T-3.7 — Audit log writes**
+  - Wrapper around tool execution writes to `orchestrator_actions` for every executed call (auto and confirmed).
+  - Refs: REQ-ORCH-6.
+
+- [ ] **T-3.8 — Audit log API + UI (admin)**
+  - `GET /api/orchestrator/audit` with pagination and filters; UI page under `/app/settings/audit` (workspace-scoped, gated by `orchestrator:audit:view`).
+  - Permission: `orchestrator:audit:view`.
+  - Refs: REQ-ORCH-6, DESIGN-RBAC.
+
+### Chat handler and API
+- [ ] **T-3.9 — Conversation CRUD**
+  - Routes per DESIGN-API §Orchestrator (excluding the streaming message endpoint).
+
+- [ ] **T-3.10 — Orchestrator AI client**
+  - `server/features/orchestrator/ai-client.ts`: thin layer on top of T-3.1d that, given a conversation, resolves the model and returns helpers `streamChat({ messages, tools })` using the Vercel AI SDK's `streamText`.
+  - Maps the orchestrator tool registry (T-3.2) into AI SDK `tools` schema.
+  - Refs: DESIGN-AI, DESIGN-CHAT.
+  - Done when: A unit test with a mocked transport sends a message with one tool and parses both text deltas and tool-call deltas correctly.
+
+- [ ] **T-3.11 — Streaming message endpoint with tool loop**
+  - `POST /api/orchestrator/conversations/[id]/messages` streams via SSE.
+  - Implements the loop in DESIGN-CHAT: assistant tokens → tool calls → auto-execute or pause for confirmation → resume on confirm.
+  - Persists every message and tool result.
+  - Refs: REQ-ORCH-1, REQ-ORCH-3, REQ-ORCH-4, DESIGN-CHAT.
+
+- [ ] **T-3.12 — Confirm and cancel endpoints**
+  - `POST .../confirm` and `POST .../cancel` resume or abort the paused tool call.
+  - Refs: REQ-ORCH-4, DESIGN-CHAT.
+
+### Client feature: orchestrator
+- [ ] **T-3.13 — Chat UI shell**
+  - `app/pages/app/orchestrator/index.vue` (list of conversations), `app/pages/app/orchestrator/[id].vue` (chat).
+  - Mode toggle (read-only / read+write) prominently shown.
+  - Per-conversation model picker that lists only models with configured credentials and required capabilities.
+  - Refs: REQ-ORCH-1, REQ-ORCH-3, REQ-AI-4.
+
+- [ ] **T-3.14 — Tool-call and confirmation cards**
+  - Render tool calls inline with name and parameters; confirmation cards with Confirm / Cancel.
+  - Refs: REQ-ORCH-4.
+
+- [ ] **T-3.15 — Streaming integration**
+  - Connect SSE stream; render tokens incrementally; handle reconnect.
+  - Refs: REQ-ORCH-1.
+
+### Phase 3 acceptance
+- [ ] **T-3.X — Phase 3 complete**
+  - End-to-end:
+    - Workspace owner configures credentials for at least two providers (e.g. Anthropic + OpenAI).
+    - Picking different models in two conversations actually routes through different providers (verifiable in audit log via `model_id`).
+    - Read-only conversation finds and summarises KB entries and todos.
+    - Read+write conversation creates an inbox KB entry without confirmation.
+    - Read+write conversation creating a verified entry triggers a confirmation card.
+    - Audit log shows all executed actions with the model that requested them.
+  - Done when: Manual run-through covers these flows with no regressions in earlier phases.
+
+---
+
+## Phase 4 — GitHub Integration
+
+### Schema
+- [ ] **T-4.1 — Drizzle schema for projects**
+  - Tables: `gh_connections`, `gh_repos`, `gh_issues`, `gh_pulls`, `gh_commits`.
+  - Refs: DESIGN-DATA §Projects.
+
+### Server feature: projects
+- [ ] **T-4.2 — Token storage with encryption**
+  - Encrypt PAT with AES-256-GCM keyed off `NUXT_AUTH_SECRET` + per-org salt.
+  - Refs: REQ-PROJ-1, DESIGN-AUTH.
+
+- [ ] **T-4.3 — GitHub client wrapper**
+  - Octokit instance per workspace, decrypts token on demand.
+  - Methods: `listRepos`, `listIssues(repo)`, `listPulls(repo)`, `listCommits(repo, since?)`.
+  - Refs: REQ-PROJ-2, REQ-PROJ-5.
+
+- [ ] **T-4.4 — Sync service**
+  - Pulls tracked repos, upserts cached records, sets `last_synced_at`.
+  - Refs: REQ-PROJ-3.
+
+- [ ] **T-4.5 — Scheduled sync job**
+  - Nitro scheduled task running every `NUXT_GITHUB_SYNC_INTERVAL_MINUTES` minutes.
+  - Refs: REQ-PROJ-3.
+
+### API
+- [ ] **T-4.6 — Projects API routes**
+  - All routes per DESIGN-API §Projects.
+  - Permissions: `project:read` for GET, `project:manage` for connection and sync triggers.
+
+### Orchestrator integration
+- [ ] **T-4.7 — Project read tools**
+  - `project_list_repos`, `project_list_issues`, `project_list_pulls`, `project_list_commits`.
+  - Refs: DESIGN-TOOLS §Read.
+
+### Client feature: projects
+- [ ] **T-4.8 — Projects pages**
+  - `app/pages/app/projects/index.vue` (repo list, connection status, tracked toggle, manual sync).
+  - `app/pages/app/projects/[repoId].vue` with tabs: Issues, PRs, Commits.
+  - "Open in github.dev" and per-issue/PR deep links.
+  - Refs: REQ-PROJ-2, REQ-PROJ-4, REQ-PROJ-5.
+
+### Phase 4 acceptance
+- [ ] **T-4.X — Phase 4 complete**
+  - End-to-end: connect token → mark repos tracked → sync → see issues/PRs/commits → orchestrator can answer "what's open in repo X" → deep-links open the right URLs.
+
+---
+
+## Cross-cutting / nice-to-haves (not blocking)
+
+- [ ] **T-NTH-0 — Isolated test database**
+  - Vitest currently runs file-serial (`fileParallelism: false`) because all test files share one Postgres dev DB and `tests/setup.ts` truncates between tests, causing parallel workers to wipe each other's rows.
+  - Wire up `.env.test`, `docker-compose.test.yml` (already present) and `pnpm test:db:push` so tests target an isolated DB. Then either re-enable file parallelism with a per-worker schema, or wrap each test in a transaction that rolls back.
+  - Refs: existing `vitest.config.ts` note left when T-0.1 was completed.
+
+- [ ] **T-NTH-1 — Re-resolution job for unresolved wikilinks**
+  - Nightly Nitro task re-runs `resolveLinks` for entries with unresolved links.
+
+- [ ] **T-NTH-2 — Bulk-action UIs**
+  - Bulk verify / archive in KB inbox; bulk complete in todos.
+
+- [ ] **T-NTH-3 — Export / import**
+  - Export workspace KB to a zip of Markdown files. Import the same.
+
+- [ ] **T-NTH-4 — Vector search behind feature flag**
+  - Add embeddings on entry save when flag is on; new tool `kb_semantic_search`.
+
+- [ ] **T-NTH-5 — Cost dashboard**
+  - Aggregate `orchestrator_actions` joined with `ai_models` prices to show per-workspace spend over time.
+  - Optional: token counting on streaming responses to populate input/output token columns on `orchestrator_actions` (currently not stored).

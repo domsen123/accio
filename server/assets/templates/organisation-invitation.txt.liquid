@@ -1,0 +1,13 @@
+You've been invited!
+
+You've been invited to join {{ organisationName }} on {{ siteName }}.
+{% if inviterName %}{{ inviterName }} has invited you to collaborate.{% endif %}
+
+Click the link below to accept this invitation and create your account:
+{{ acceptLink }}
+
+This invitation will expire in {{ expiresInDays }} day{% if expiresInDays != 1 %}s{% endif %}.
+
+If you didn't expect this invitation, you can safely ignore this email.
+
+© {{ year }} {{ siteName }}. All rights reserved.

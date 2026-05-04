@@ -1,0 +1,52 @@
+export const ROUTES = {
+  start: '/',
+  auth: {
+    signIn: '/auth/sign-in',
+    signUp: '/auth/sign-up',
+    forgotPassword: '/auth/forgot-password',
+    resetPassword: '/auth/reset-password',
+    verifyEmail: '/auth/verify-email',
+    confirmEmail: '/auth/confirm-email',
+    acceptInvitation: '/auth/accept-invitation',
+  },
+  legal: {
+    termsOfService: '/terms-of-service',
+    privacyPolicy: '/privacy-policy',
+  },
+  admin: {
+    home: '/admin',
+    organisations: '/admin/organisations',
+    organisationCreate: '/admin/organisations/create',
+    organisationEdit: (id: string) => `/admin/organisations/${id}`,
+    organisationMembers: (id: string) => `/admin/organisations/${id}/members`,
+    organisationTeams: (id: string) => `/admin/organisations/${id}/teams`,
+    // Standalone team routes
+    teams: '/admin/teams',
+    team: (teamId: string) => `/admin/teams/${teamId}`,
+    teamMembers: (teamId: string) => `/admin/teams/${teamId}/members`,
+    users: '/admin/users',
+    userEdit: (id: string) => `/admin/users/${id}`,
+    blog: '/admin/blog',
+    blogPosts: '/admin/blog/posts',
+    blogPostCreate: '/admin/blog/posts/create',
+    blogPostEdit: (id: string) => `/admin/blog/posts/${id}`,
+    blogCategories: '/admin/blog/categories',
+    blogTags: '/admin/blog/tags',
+    blogContentCreator: '/admin/blog/content-creator',
+    media: '/admin/media',
+    mediaEdit: (id: string) => `/admin/media/${id}`,
+    settings: '/admin/settings',
+    settingsAuthentication: '/admin/settings/authentication',
+  },
+  settings: {
+    profile: '/settings',
+    security: '/settings/security',
+  },
+  errors: {
+    unauthorized: '/401',
+  },
+  dashboard: {
+    home: '/dashboard',
+    overview: '/dashboard/overview',
+  },
+} as const
