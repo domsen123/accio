@@ -11,6 +11,19 @@ export const KB_ENTRY_STATUSES: readonly KbEntryStatus[] = [
   'archived',
 ] as const
 
+export const KB_ENTRY_AUTHOR_TYPES: readonly KbEntryAuthorType[] = [
+  'human',
+  'ai',
+] as const
+
+export const KB_ENTRY_SOURCE_TYPES: readonly KbEntrySourceType[] = [
+  'manual',
+  'commit',
+  'claude_code_session',
+  'chat',
+  'external',
+] as const
+
 /**
  * Thrown when {@link setStatus} or {@link update} is asked to move an entry
  * into a status that isn't valid in the current state. Carries `from` and

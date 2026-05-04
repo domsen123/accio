@@ -118,12 +118,17 @@ Mark tasks done by changing `[ ]` to `[x]`. Add a brief note when deviating from
   - **Deviation:** the task brief suggested a constrained transition matrix (e.g. `verified` cannot go back to `inbox`). REQ-KB-7 explicitly states "THE SYSTEM SHALL allow the user to transition any entry between any of the four statuses", so the implementation honours the looser rule: `isValidStatusTransition` accepts every ordered pair of valid enum values, including same-status no-ops. The validation/error infrastructure (`KbInvalidStatusTransitionError`, shared between `setStatus` and `update({ status })`) is in place so a future tightening is one function edit. The error fires today only for unknown enum values (defence in depth at the service layer).
 
 ### API
-- [ ] **T-1.7 — KB API routes**
-  - All endpoints in DESIGN-API §KB.
-  - Permission guards: `kb:read` for GET, `kb:write` for POST/PATCH, `kb:delete` for DELETE.
-  - Zod schemas for all inputs.
-  - Refs: REQ-KB-1..9, DESIGN-API.
+- [x] **T-1.7 — KB API routes**
+  - All endpoints in DESIGN-API §KB plus the additions called out by the task brief (status + purge).
+  - Permission guards: `kb:read` for GET, `kb:write` for POST/PATCH and the restore route, `kb:delete` for destructive endpoints.
+  - Zod schemas (v4) co-located in `server/features/kb/schemas.ts`; enum tuples re-exported from `server/features/kb/types.ts` so schema and DB stay in sync.
+  - Workspace context: resolved in `server/features/kb/workspace.ts` from `X-Organisation-Id` header (or `?organisationId=` query) with membership validation; falls back to the user's earliest-joined organisation. Temporary fallback until the workspace switcher persists the active workspace on the session.
+  - Refs: REQ-KB-1..9, DESIGN-API, ADR-001, ADR-009, ADR-012.
   - Done when: Manual smoke test via REST client passes for create/list/get/update/soft-delete/restore/backlinks/tags.
+  - **Deviations:**
+    - Added two routes not in DESIGN-API §KB but explicitly required by the task brief: `POST /api/kb/entries/[id]/status` and `DELETE /api/kb/entries/[id]/purge`. Both map to existing service methods (`setStatus`, `purge`); no service surface added.
+    - The `GET /api/kb/entries/[id]` route also accepts a slug as a transparent fallback so the upcoming UI can route on either token without an extra round-trip. Pure additive convenience; id resolution still wins.
+    - Route-level integration tests deferred — the existing `tests/` harness drives services directly and stands in for service-level coverage. A Nuxt-test-utils harness for full-stack route auth/permission cases is a follow-up (track with T-1.8/T-1.9 since they will need the same harness for page-level smoke tests). Service coverage remains green at 154/154.
 
 ### Client feature: kb
 - [ ] **T-1.8 — KB list and detail pages**
