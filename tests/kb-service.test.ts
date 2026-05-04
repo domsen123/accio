@@ -7,6 +7,11 @@ import {
   createKbEntryService,
   createKbTagService,
 } from '../server/features/kb/service'
+import {
+  KB_ENTRY_STATUSES,
+  KbCannotPurgeActiveError,
+  KbInvalidStatusTransitionError,
+} from '../server/features/kb/types'
 import { getDatabase } from '../server/infrastructure/database/client'
 import { createItemService } from '../server/infrastructure/database/item-service'
 
@@ -533,5 +538,222 @@ describe('kbEntryService — wikilinks and backlinks', () => {
     const stillUnresolved = await linksOf(sourceA.id)
     expect(stillUnresolved[0]!.toEntryId).toBeNull()
     expect(stillUnresolved[0]!.organisationId).toBe(orgId)
+  })
+})
+
+describe('kbEntryService — status lifecycle (T-1.6)', () => {
+  let orgId: string
+
+  beforeEach(async () => {
+    orgId = (await setupOrg()).id
+  })
+
+  // REQ-KB-7: the user can transition any entry between any of the four
+  // statuses. We assert all 4×4 ordered pairs (including same-status no-ops)
+  // succeed via setStatus, and that the final stored status matches.
+  it.each(
+    KB_ENTRY_STATUSES.flatMap(from => KB_ENTRY_STATUSES.map(to => [from, to] as const)),
+  )('setStatus allows transition %s -> %s', async (from, to) => {
+    const entry = await kbEntryService.create({
+      organisationId: orgId,
+      title: `transition-${from}-${to}`,
+      status: from,
+    })
+    const updated = await kbEntryService.setStatus(entry.id, to)
+    expect(updated.status).toBe(to)
+  })
+
+  it('setStatus throws KbInvalidStatusTransitionError for an unknown enum value', async () => {
+    const entry = await kbEntryService.create({ organisationId: orgId, title: 'bad-status' })
+    await expect(
+      kbEntryService.setStatus(entry.id, 'bogus' as never),
+    ).rejects.toBeInstanceOf(KbInvalidStatusTransitionError)
+  })
+
+  it('update({ status }) reuses the same transition validation', async () => {
+    const entry = await kbEntryService.create({
+      organisationId: orgId,
+      title: 'update-status',
+      status: 'inbox',
+    })
+    const updated = await kbEntryService.update(entry.id, { status: 'verified' })
+    expect(updated.status).toBe('verified')
+
+    await expect(
+      kbEntryService.update(entry.id, { status: 'bogus' as never }),
+    ).rejects.toBeInstanceOf(KbInvalidStatusTransitionError)
+  })
+
+  it('ai-authored create defaults to inbox (ADR-007)', async () => {
+    const entry = await kbEntryService.create({
+      organisationId: orgId,
+      title: 'AI Note',
+      authorType: 'ai',
+      authorName: 'orchestrator',
+    })
+    expect(entry.status).toBe('inbox')
+    expect(entry.authorType).toBe('ai')
+  })
+
+  it('ai-authored create honours an explicit status override', async () => {
+    const entry = await kbEntryService.create({
+      organisationId: orgId,
+      title: 'AI Direct',
+      authorType: 'ai',
+      authorName: 'orchestrator',
+      status: 'draft',
+    })
+    expect(entry.status).toBe('draft')
+  })
+
+  it('listInbox returns inbox-only entries sorted by created_at desc', async () => {
+    const a = await kbEntryService.create({ organisationId: orgId, title: 'A', status: 'inbox' })
+    // Force temporal ordering: bump A's createdAt back so B is newer.
+    await db
+      .update(schema.kbEntries)
+      .set({ createdAt: new Date(Date.now() - 60_000) })
+      .where(eq(schema.kbEntries.id, a.id))
+    const b = await kbEntryService.create({ organisationId: orgId, title: 'B', status: 'inbox' })
+    await kbEntryService.create({ organisationId: orgId, title: 'Drafty', status: 'draft' })
+
+    const inbox = await kbEntryService.listInbox({ organisationId: orgId })
+    expect(inbox.map(e => e.id)).toEqual([b.id, a.id])
+    // Hydrated relations: each entry has tags + category populated.
+    expect(inbox[0].tags).toEqual([])
+    expect(inbox[0].category).toBeNull()
+  })
+
+  it('listInbox excludes soft-deleted inbox entries', async () => {
+    const live = await kbEntryService.create({ organisationId: orgId, title: 'Live', status: 'inbox' })
+    const trashed = await kbEntryService.create({ organisationId: orgId, title: 'Trashed', status: 'inbox' })
+    await kbEntryService.softDelete(trashed.id)
+
+    const inbox = await kbEntryService.listInbox({ organisationId: orgId })
+    expect(inbox.map(e => e.id)).toEqual([live.id])
+  })
+
+  it('listTrash returns soft-deleted entries regardless of status, sorted by deleted_at desc', async () => {
+    const a = await kbEntryService.create({ organisationId: orgId, title: 'Trashed Draft' })
+    const b = await kbEntryService.create({ organisationId: orgId, title: 'Trashed Verified', status: 'verified' })
+    const c = await kbEntryService.create({ organisationId: orgId, title: 'Trashed Archived', status: 'archived' })
+    await kbEntryService.create({ organisationId: orgId, title: 'Live Note' })
+
+    await kbEntryService.softDelete(a.id)
+    // Push a's deletedAt earlier so b/c sort newer.
+    await db
+      .update(schema.kbEntries)
+      .set({ deletedAt: new Date(Date.now() - 120_000) })
+      .where(eq(schema.kbEntries.id, a.id))
+    await kbEntryService.softDelete(b.id)
+    await db
+      .update(schema.kbEntries)
+      .set({ deletedAt: new Date(Date.now() - 60_000) })
+      .where(eq(schema.kbEntries.id, b.id))
+    await kbEntryService.softDelete(c.id)
+
+    const trash = await kbEntryService.listTrash({ organisationId: orgId })
+    expect(trash.map(e => e.id)).toEqual([c.id, b.id, a.id])
+    // Statuses are preserved (trash spans every status).
+    expect(trash.map(e => e.status).sort()).toEqual(['archived', 'draft', 'verified'])
+  })
+
+  it('softDelete -> restore round-trip preserves the entry status', async () => {
+    const entry = await kbEntryService.create({ organisationId: orgId, title: 'Round-trip', status: 'verified' })
+    await kbEntryService.softDelete(entry.id)
+    const restored = await kbEntryService.restore(entry.id)
+    expect(restored.status).toBe('verified')
+    expect(restored.deletedAt).toBeNull()
+  })
+
+  it('purge hard-deletes a soft-deleted entry and cascades junction rows', async () => {
+    const target = await kbEntryService.create({ organisationId: orgId, title: 'Target' })
+    const entry = await kbEntryService.create({
+      organisationId: orgId,
+      title: 'Doomed',
+      tagNames: ['alpha', 'beta'],
+      body: 'See [[target]].',
+    })
+    // Junction rows exist before purge.
+    const tagsBefore = await db.select().from(schema.kbEntryTags).where(eq(schema.kbEntryTags.entryId, entry.id))
+    expect(tagsBefore).toHaveLength(2)
+    const linksBefore = await db.select().from(schema.kbEntryLinks).where(eq(schema.kbEntryLinks.fromEntryId, entry.id))
+    expect(linksBefore).toHaveLength(1)
+
+    await kbEntryService.softDelete(entry.id)
+    await kbEntryService.purge({ id: entry.id, organisationId: orgId })
+
+    // findBySlug returns null for both default and includeDeleted scopes.
+    expect(
+      await kbEntryService.findBySlug({ organisationId: orgId, slug: entry.slug }),
+    ).toBeNull()
+    expect(
+      await kbEntryService.findBySlug({ organisationId: orgId, slug: entry.slug, includeDeleted: true }),
+    ).toBeNull()
+
+    // Junction rows cascade.
+    const tagsAfter = await db.select().from(schema.kbEntryTags).where(eq(schema.kbEntryTags.entryId, entry.id))
+    expect(tagsAfter).toHaveLength(0)
+    const linksAfter = await db.select().from(schema.kbEntryLinks).where(eq(schema.kbEntryLinks.fromEntryId, entry.id))
+    expect(linksAfter).toHaveLength(0)
+
+    // The unrelated target row is untouched.
+    expect(
+      await kbEntryService.findBySlug({ organisationId: orgId, slug: target.slug }),
+    ).not.toBeNull()
+  })
+
+  it('purge throws KbCannotPurgeActiveError for a live entry', async () => {
+    const entry = await kbEntryService.create({ organisationId: orgId, title: 'Still Alive' })
+    await expect(
+      kbEntryService.purge({ id: entry.id, organisationId: orgId }),
+    ).rejects.toBeInstanceOf(KbCannotPurgeActiveError)
+  })
+
+  it('list default scope excludes both archived and soft-deleted', async () => {
+    const live = await kbEntryService.create({ organisationId: orgId, title: 'Live' })
+    const archived = await kbEntryService.create({ organisationId: orgId, title: 'Archived', status: 'archived' })
+    const trashed = await kbEntryService.create({ organisationId: orgId, title: 'Trashed' })
+    await kbEntryService.softDelete(trashed.id)
+
+    const ids = (await kbEntryService.list({ organisationId: orgId })).map(e => e.id)
+    expect(ids).toEqual([live.id])
+    expect(ids).not.toContain(archived.id)
+    expect(ids).not.toContain(trashed.id)
+  })
+
+  it('list({ includeDeleted: true }) includes deleted but still excludes archived', async () => {
+    const live = await kbEntryService.create({ organisationId: orgId, title: 'Live' })
+    const archived = await kbEntryService.create({ organisationId: orgId, title: 'Archived', status: 'archived' })
+    const trashed = await kbEntryService.create({ organisationId: orgId, title: 'Trashed' })
+    await kbEntryService.softDelete(trashed.id)
+
+    const ids = (await kbEntryService.list({ organisationId: orgId, includeDeleted: true })).map(e => e.id)
+    expect(ids).toContain(live.id)
+    expect(ids).toContain(trashed.id)
+    expect(ids).not.toContain(archived.id)
+  })
+
+  it('list({ includeArchived: true, includeDeleted: true }) includes everything', async () => {
+    const live = await kbEntryService.create({ organisationId: orgId, title: 'Live' })
+    const archived = await kbEntryService.create({ organisationId: orgId, title: 'Archived', status: 'archived' })
+    const trashed = await kbEntryService.create({ organisationId: orgId, title: 'Trashed' })
+    await kbEntryService.softDelete(trashed.id)
+
+    const ids = (await kbEntryService.list({
+      organisationId: orgId,
+      includeArchived: true,
+      includeDeleted: true,
+    })).map(e => e.id)
+    expect(ids.sort()).toEqual([live.id, archived.id, trashed.id].sort())
+  })
+
+  it('list({ status: "archived" }) returns archived entries even without includeArchived', async () => {
+    const archived = await kbEntryService.create({
+      organisationId: orgId,
+      title: 'Archived',
+      status: 'archived',
+    })
+    const ids = (await kbEntryService.list({ organisationId: orgId, status: 'archived' })).map(e => e.id)
+    expect(ids).toEqual([archived.id])
   })
 })

@@ -111,10 +111,11 @@ Mark tasks done by changing `[ ]` to `[x]`. Add a brief note when deviating from
   - Refs: REQ-KB-5, DESIGN-DATA, DESIGN-RANK.
   - Done when: Search test fixture returns entries ranked by title match before body match.
 
-- [ ] **T-1.6 — Status lifecycle and inbox/trash views**
+- [x] **T-1.6 — Status lifecycle and inbox/trash views**
   - Service methods `setStatus`, `softDelete`, `restore`. Default scope filters `deleted_at IS NULL` and excludes `archived` unless asked.
   - Refs: REQ-KB-7, REQ-KB-8, REQ-KB-9.
   - Done when: Tests cover all status transitions and the default exclusion of `archived`/`deleted`.
+  - **Deviation:** the task brief suggested a constrained transition matrix (e.g. `verified` cannot go back to `inbox`). REQ-KB-7 explicitly states "THE SYSTEM SHALL allow the user to transition any entry between any of the four statuses", so the implementation honours the looser rule: `isValidStatusTransition` accepts every ordered pair of valid enum values, including same-status no-ops. The validation/error infrastructure (`KbInvalidStatusTransitionError`, shared between `setStatus` and `update({ status })`) is in place so a future tightening is one function edit. The error fires today only for unknown enum values (defence in depth at the service layer).
 
 ### API
 - [ ] **T-1.7 — KB API routes**

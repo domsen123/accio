@@ -10,11 +10,16 @@ import type {
   ListKbEntriesInput,
   UpdateKbEntryInput,
 } from './types'
-import { and, asc, desc, eq, inArray, isNull, ne, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, inArray, isNotNull, isNull, ne, sql } from 'drizzle-orm'
 import { ulid } from 'ulid'
 import * as schema from '../../database/schema'
 import { parseWikilinks } from './markdown'
 import { resolveUniqueSlug, slugify } from './slug'
+import {
+  KB_ENTRY_STATUSES,
+  KbCannotPurgeActiveError,
+  KbInvalidStatusTransitionError,
+} from './types'
 
 // Drizzle transaction handle for our schema. We don't pin the dialect generic
 // because db.transaction's callback type is structurally compatible.
@@ -193,6 +198,24 @@ export type KbTagService = ReturnType<typeof createKbTagService>
  * Returns `null` when sanitisation yields zero tokens — callers should treat
  * this as "no match" (zero results) per the task brief, not "no search".
  */
+/**
+ * Validate a status transition. REQ-KB-7 lets the user transition any entry
+ * between the four valid statuses, so this function's responsibility is to
+ * (a) reject unknown enum values and (b) provide a single seam where future
+ * business rules (e.g. "verified can't go straight back to inbox") can be
+ * tightened. Same-status transitions are idempotent and always allowed.
+ */
+export const isValidStatusTransition = (
+  from: KbEntryStatus,
+  to: KbEntryStatus,
+): boolean => {
+  if (!KB_ENTRY_STATUSES.includes(from))
+    return false
+  if (!KB_ENTRY_STATUSES.includes(to))
+    return false
+  return true
+}
+
 export const buildTsQuery = (raw: string): string | null => {
   // Strip every operator char tsquery cares about, plus backslash. This is a
   // superset of what would crash `to_tsquery('simple', …)` so we err safe.
@@ -343,8 +366,11 @@ export const createKbEntryService = (deps: CreateKbEntryServiceDeps) => {
       base,
     })
 
-    const status: KbEntryStatus = input.status ?? 'draft'
     const authorType: KbEntryAuthorType = input.authorType ?? 'human'
+    // ADR-007: AI-authored entries default to `inbox` so the user can triage
+    // them; human-authored entries default to `draft`. Caller-supplied status
+    // wins in both cases.
+    const status: KbEntryStatus = input.status ?? (authorType === 'ai' ? 'inbox' : 'draft')
     const sourceType: KbEntrySourceType = input.sourceType ?? 'manual'
     const body = input.body ?? ''
 
@@ -398,15 +424,34 @@ export const createKbEntryService = (deps: CreateKbEntryServiceDeps) => {
   }
 
   /**
+   * Assert that `to` is a valid transition from `from`, throwing
+   * {@link KbInvalidStatusTransitionError} otherwise. Shared between
+   * {@link setStatus} and {@link update} so the rule lives in one place.
+   */
+  const assertValidStatusTransition = (
+    from: KbEntryStatus,
+    to: KbEntryStatus,
+  ) => {
+    if (!isValidStatusTransition(from, to))
+      throw new KbInvalidStatusTransitionError(from, to)
+  }
+
+  /**
    * Partial update. If `tagNames` is supplied the junction is replaced.
    * Slugs are intentionally stable across edits per REQ-KB-1; we do not
    * regenerate the slug when the title changes.
+   *
+   * If `status` is supplied it is validated against
+   * {@link isValidStatusTransition} — the same gate as {@link setStatus}.
    */
   const update = async (id: string, patch: UpdateKbEntryInput) => {
     const existing = await kbEntriesItemService.readOne(id)
     if (!existing) {
       throw createError({ statusCode: 404, statusMessage: 'KB entry not found' })
     }
+
+    if (patch.status !== undefined)
+      assertValidStatusTransition(existing.status as KbEntryStatus, patch.status)
 
     const data: Record<string, unknown> = {}
     if (patch.title !== undefined)
@@ -605,7 +650,15 @@ export const createKbEntryService = (deps: CreateKbEntryServiceDeps) => {
     return query
   }
 
+  /**
+   * Move an entry to a new status, enforcing
+   * {@link isValidStatusTransition}. Same-status calls are idempotent.
+   */
   const setStatus = async (id: string, status: KbEntryStatus) => {
+    const existing = await kbEntriesItemService.readOne(id)
+    if (!existing)
+      throw createError({ statusCode: 404, statusMessage: 'KB entry not found' })
+    assertValidStatusTransition(existing.status as KbEntryStatus, status)
     return kbEntriesItemService.update(id, { status })
   }
 
@@ -615,6 +668,125 @@ export const createKbEntryService = (deps: CreateKbEntryServiceDeps) => {
 
   const restore = async (id: string) => {
     return kbEntriesItemService.update(id, { deletedAt: null })
+  }
+
+  /**
+   * Hard-delete a KB entry. The ONLY hard-delete entry point in the system
+   * (ADR-009): orchestrator/AI tools must never call this — only the user-
+   * driven Trash UI (T-1.10) does. The runtime guard here is "must already be
+   * soft-deleted"; an additional RBAC guard at the API layer is added in T-1.7.
+   *
+   * Junction tables (`kb_entry_tags`, `kb_entry_links.from_entry_id`) cascade
+   * via the schema's `ON DELETE CASCADE`. Inbound links
+   * (`kb_entry_links.to_entry_id`) flip to NULL via `ON DELETE SET NULL`.
+   */
+  const purge = async (input: { id: string, organisationId: string }) => {
+    const existing = await kbEntriesItemService.readOne(input.id)
+    if (!existing)
+      throw createError({ statusCode: 404, statusMessage: 'KB entry not found' })
+    if (existing.organisationId !== input.organisationId)
+      throw createError({ statusCode: 404, statusMessage: 'KB entry not found' })
+    if (existing.deletedAt === null)
+      throw new KbCannotPurgeActiveError(input.id)
+
+    await db.delete(schema.kbEntries).where(eq(schema.kbEntries.id, input.id))
+  }
+
+  /**
+   * Hydrate a list of entries with their category and tags. Mirrors the shape
+   * returned by {@link findBySlug} so list consumers and detail consumers
+   * share a single relational shape.
+   */
+  const hydrateRelations = async (
+    entryIds: string[],
+  ): Promise<KbEntryWithRelations[]> => {
+    if (entryIds.length === 0)
+      return []
+
+    const rows = await db.query.kbEntries.findMany({
+      where: (e, { inArray: ia }) => ia(e.id, entryIds),
+      with: {
+        category: true,
+        entryTags: {
+          with: { tag: true },
+        },
+      },
+    })
+
+    const byId = new Map(rows.map((row) => {
+      const { entryTags, category, ...rest } = row as typeof row & {
+        entryTags: Array<{ tag: typeof schema.kbTags.$inferSelect }>
+        category: typeof schema.kbCategories.$inferSelect | null
+      }
+      const hydrated: KbEntryWithRelations = {
+        ...(rest as typeof schema.kbEntries.$inferSelect),
+        category: category ?? null,
+        tags: entryTags.map(et => et.tag),
+      }
+      return [row.id, hydrated] as const
+    }))
+
+    // Preserve the input order — callers rely on the sort produced by their
+    // upstream query (e.g. created_at desc for inbox, deleted_at desc for trash).
+    return entryIds.flatMap((id) => {
+      const hit = byId.get(id)
+      return hit ? [hit] : []
+    })
+  }
+
+  /**
+   * Inbox view (REQ-KB-8): live entries with status `inbox`, sorted by
+   * `created_at desc`. Returns hydrated entries (category + tags).
+   */
+  const listInbox = async (input: {
+    organisationId: string
+    limit?: number
+    offset?: number
+  }): Promise<KbEntryWithRelations[]> => {
+    let q = db
+      .select({ id: schema.kbEntries.id })
+      .from(schema.kbEntries)
+      .where(and(
+        eq(schema.kbEntries.organisationId, input.organisationId),
+        eq(schema.kbEntries.status, 'inbox'),
+        isNull(schema.kbEntries.deletedAt),
+      ))
+      .orderBy(desc(schema.kbEntries.createdAt))
+      .$dynamic()
+    if (input.limit !== undefined)
+      q = q.limit(input.limit)
+    if (input.offset !== undefined)
+      q = q.offset(input.offset)
+
+    const ids = (await q).map(r => r.id)
+    return hydrateRelations(ids)
+  }
+
+  /**
+   * Trash view (REQ-KB-9): soft-deleted entries regardless of status, sorted
+   * by `deleted_at desc`. Returns hydrated entries.
+   */
+  const listTrash = async (input: {
+    organisationId: string
+    limit?: number
+    offset?: number
+  }): Promise<KbEntryWithRelations[]> => {
+    let q = db
+      .select({ id: schema.kbEntries.id })
+      .from(schema.kbEntries)
+      .where(and(
+        eq(schema.kbEntries.organisationId, input.organisationId),
+        isNotNull(schema.kbEntries.deletedAt),
+      ))
+      .orderBy(desc(schema.kbEntries.deletedAt))
+      .$dynamic()
+    if (input.limit !== undefined)
+      q = q.limit(input.limit)
+    if (input.offset !== undefined)
+      q = q.offset(input.offset)
+
+    const ids = (await q).map(r => r.id)
+    return hydrateRelations(ids)
   }
 
   const linkTag = async (input: { entryId: string, tagId: string }) => {
@@ -688,9 +860,12 @@ export const createKbEntryService = (deps: CreateKbEntryServiceDeps) => {
     findById: kbEntriesItemService.readOne,
     findBySlug,
     list,
+    listInbox,
+    listTrash,
     setStatus,
     softDelete,
     restore,
+    purge,
     linkTag,
     unlinkTag,
     getBacklinks,
