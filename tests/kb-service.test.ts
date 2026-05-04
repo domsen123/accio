@@ -202,7 +202,7 @@ describe('kbEntryService', () => {
     expect(includingArchived.map(e => e.id)).toContain(archived.id)
   })
 
-  it('list with search matches title via ILIKE', async () => {
+  it('list with search matches title and body via FTS (T-1.5)', async () => {
     await kbEntryService.create({ organisationId: orgId, title: 'Foobar Recipes', body: '' })
     await kbEntryService.create({ organisationId: orgId, title: 'Other Topic', body: 'mentions foobar inside' })
     await kbEntryService.create({ organisationId: orgId, title: 'Unrelated', body: 'nothing here' })

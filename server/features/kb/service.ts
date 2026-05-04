@@ -10,7 +10,7 @@ import type {
   ListKbEntriesInput,
   UpdateKbEntryInput,
 } from './types'
-import { and, asc, desc, eq, ilike, inArray, isNull, ne, or, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, inArray, isNull, ne, sql } from 'drizzle-orm'
 import { ulid } from 'ulid'
 import * as schema from '../../database/schema'
 import { parseWikilinks } from './markdown'
@@ -179,6 +179,29 @@ export type KbTagService = ReturnType<typeof createKbTagService>
 // ---------------------------------------------------------------------------
 // KB Entry service
 // ---------------------------------------------------------------------------
+
+/**
+ * Build a Postgres `to_tsquery` expression from arbitrary user input.
+ *
+ * Strategy (REQ-KB-5, DESIGN-DATA, DESIGN-RANK):
+ *   1. Replace every tsquery operator character (`& | ! ( ) : ' < > *`) and
+ *      the backslash with a space — user input is uncontrolled and any of
+ *      these would crash `to_tsquery`. Spaces collapse into token boundaries.
+ *   2. Tokenise on whitespace and drop empties.
+ *   3. Append `:*` to each token for prefix matching, then AND them with `&`.
+ *
+ * Returns `null` when sanitisation yields zero tokens — callers should treat
+ * this as "no match" (zero results) per the task brief, not "no search".
+ */
+export const buildTsQuery = (raw: string): string | null => {
+  // Strip every operator char tsquery cares about, plus backslash. This is a
+  // superset of what would crash `to_tsquery('simple', …)` so we err safe.
+  const cleaned = raw.replace(/[\\&|!():'"<>*]/g, ' ')
+  const tokens = cleaned.split(/\s+/).filter(t => t.length > 0)
+  if (tokens.length === 0)
+    return null
+  return tokens.map(t => `${t}:*`).join(' & ')
+}
 
 export interface CreateKbEntryServiceDeps {
   db: DatabaseClient
@@ -485,6 +508,25 @@ export const createKbEntryService = (deps: CreateKbEntryServiceDeps) => {
     }
   }
 
+  /**
+   * List KB entries with filters, optional FTS, sort, and pagination.
+   *
+   * Routing decision (T-1.5): there is exactly ONE entry point for the API
+   * layer. When `search` is a non-empty string, `list` routes through the
+   * Postgres full-text search path (REQ-KB-5):
+   *   - tsquery built from sanitised tokens with prefix matching (`:*`)
+   *   - match condition `body_search @@ to_tsquery('simple', …)`
+   *   - rank via `ts_rank_cd(body_search, …)` (cover-density, proximity-aware)
+   *   - results ordered by rank DESC, `created_at` DESC tiebreaker
+   *
+   * The tsvector column is `setweight(title,'A') || setweight(body,'B')`, so
+   * title matches naturally rank above body matches (DESIGN-DATA §KB).
+   *
+   * Edge cases:
+   *   - whitespace-only `search` → behaves as if `search` was unset
+   *   - search yielding zero tokens after sanitisation (e.g. `"!()"`) → returns
+   *     zero results without running the query (no false matches, no crash)
+   */
   const list = async (input: ListKbEntriesInput) => {
     const conditions = [eq(schema.kbEntries.organisationId, input.organisationId)]
 
@@ -508,17 +550,6 @@ export const createKbEntryService = (deps: CreateKbEntryServiceDeps) => {
     if (input.sourceType)
       conditions.push(eq(schema.kbEntries.sourceType, input.sourceType))
 
-    if (input.search) {
-      // INTERIM: simple ILIKE on title/body. Real FTS lands in T-1.5.
-      const pattern = `%${input.search}%`
-      const searchCond = or(
-        ilike(schema.kbEntries.title, pattern),
-        ilike(schema.kbEntries.bodyMd, pattern),
-      )
-      if (searchCond)
-        conditions.push(searchCond)
-    }
-
     if (input.tagId) {
       const tagged = db
         .select({ id: schema.kbEntryTags.entryId })
@@ -527,6 +558,32 @@ export const createKbEntryService = (deps: CreateKbEntryServiceDeps) => {
       conditions.push(inArray(schema.kbEntries.id, tagged))
     }
 
+    // FTS routing: a non-empty `search` after trimming activates the FTS path.
+    const trimmed = input.search?.trim() ?? ''
+    if (trimmed.length > 0) {
+      const tsquery = buildTsQuery(trimmed)
+      // Sanitised to nothing → zero results (no false matches, no crash).
+      if (tsquery === null)
+        return [] as (typeof schema.kbEntries.$inferSelect)[]
+
+      conditions.push(sql`${schema.kbEntries.bodySearch} @@ to_tsquery('simple', ${tsquery})`)
+
+      const rankExpr = sql`ts_rank_cd(${schema.kbEntries.bodySearch}, to_tsquery('simple', ${tsquery}))`
+
+      let query = db
+        .select()
+        .from(schema.kbEntries)
+        .where(and(...conditions))
+        .orderBy(desc(rankExpr), desc(schema.kbEntries.createdAt))
+        .$dynamic()
+      if (input.limit !== undefined)
+        query = query.limit(input.limit)
+      if (input.offset !== undefined)
+        query = query.offset(input.offset)
+      return query
+    }
+
+    // Non-search path: honour caller-supplied sort, default to `-updatedAt`.
     const sortFields = input.sort && input.sort.length > 0 ? input.sort : ['-updatedAt']
     const orderColumns = sortFields.flatMap((field) => {
       const isDesc = field.startsWith('-')

@@ -106,7 +106,7 @@ Mark tasks done by changing `[ ]` to `[x]`. Add a brief note when deviating from
     - Slug normalisation: the parser returns the literal slug as written (whitespace-trimmed). DESIGN-WIKILINKS says the resolution slug is "lowercased and slugified the same way as title-derived slugs"; the service-side resolver currently performs an exact-string lookup against `kb_entries.slug` (no extra slugifying step). All test fixtures use already-canonical lowercase slugs, matching how the editor will emit them in T-1.9. If a future requirement demands `[[Foo Bar]]` to resolve against slug `foo-bar`, that's a one-line `slugify(targetSlug)` in `rebuildEntryLinks` — out of scope for this task.
     - Dedup happens at the service layer (one `kb_entry_links` row per unique `to_slug` per source entry, per DESIGN-WIKILINKS step 2). The parser deliberately preserves duplicates so renderers can keep their occurrence count.
 
-- [ ] **T-1.5 — Full-text search**
+- [x] **T-1.5 — Full-text search**
   - Generated tsvector column with weighted title (A) + body (B). Query via `to_tsquery` with prefix matching.
   - Refs: REQ-KB-5, DESIGN-DATA, DESIGN-RANK.
   - Done when: Search test fixture returns entries ranked by title match before body match.
