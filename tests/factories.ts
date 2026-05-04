@@ -35,3 +35,37 @@ export const createTeamMemberData = (teamId: string, userId: string, overrides =
   userId,
   ...overrides,
 })
+
+// --- KB factories (T-1.2) ---
+
+export const createKbCategoryData = (organisationId: string, overrides = {}) => {
+  const name = faker.commerce.department()
+  return {
+    organisationId,
+    name,
+    slug: faker.helpers.slugify(`${name}-${faker.string.alphanumeric(6)}`).toLowerCase(),
+    ...overrides,
+  }
+}
+
+export const createKbTagData = (organisationId: string, overrides = {}) => ({
+  organisationId,
+  name: faker.lorem.word(),
+  ...overrides,
+})
+
+export const createKbEntryData = (organisationId: string, overrides: Record<string, unknown> = {}) => {
+  const title = faker.lorem.sentence({ min: 2, max: 4 })
+  const slug = faker.helpers.slugify(`${title}-${faker.string.alphanumeric(6)}`).toLowerCase()
+  return {
+    organisationId,
+    title,
+    slug,
+    bodyMd: faker.lorem.paragraphs(2),
+    status: 'draft' as const,
+    authorType: 'human' as const,
+    authorName: '',
+    sourceType: 'manual' as const,
+    ...overrides,
+  }
+}

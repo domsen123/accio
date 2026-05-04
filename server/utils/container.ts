@@ -8,6 +8,7 @@ import type { FileStoreProvider } from '../features/files/file-store-provider.in
 import type { FileService } from '../features/files/files.service'
 import type { ImageProcessingService } from '../features/files/image-processing.service'
 import type { MediaLibraryService } from '../features/files/media-library.service'
+import type { KbCategoryService, KbEntryService, KbTagService } from '../features/kb/service'
 import type { OrganisationInvitationsService } from '../features/organisation-invitations/organisation-invitations.service'
 import type { OrganisationMembersService } from '../features/organisation-members/organisation-members.service'
 import type { OrganisationsService } from '../features/organisations/organisations.service'
@@ -26,6 +27,7 @@ import { createFileService } from '../features/files/files.service'
 import { createImageProcessingService } from '../features/files/image-processing.service'
 import { createMediaLibraryService } from '../features/files/media-library.service'
 import { createLocalFileStoreProvider } from '../features/files/providers/local.provider'
+import { createKbCategoryService, createKbEntryService, createKbTagService } from '../features/kb/service'
 import { createOrganisationInvitationsService } from '../features/organisation-invitations/organisation-invitations.service'
 import { createOrganisationMembersService } from '../features/organisation-members/organisation-members.service'
 import { createOrganisationsService } from '../features/organisations/organisations.service'
@@ -168,6 +170,18 @@ const getContentCreatorClustersItemService = lazy(() =>
 const getFileMetadataItemService = lazy(() =>
   createItemService({ db: getDatabase('app'), table: schema.fileMetadata, tableName: 'fileMetadata', eventBus: getEventBus() }),
 )
+const getKbEntriesItemService = lazy(() =>
+  createItemService({ db: getDatabase('app'), table: schema.kbEntries, tableName: 'kbEntries', eventBus: getEventBus() }),
+)
+const getKbCategoriesItemService = lazy(() =>
+  createItemService({ db: getDatabase('app'), table: schema.kbCategories, tableName: 'kbCategories', eventBus: getEventBus() }),
+)
+const getKbTagsItemService = lazy(() =>
+  createItemService({ db: getDatabase('app'), table: schema.kbTags, tableName: 'kbTags', eventBus: getEventBus() }),
+)
+const getKbEntryTagsItemService = lazy(() =>
+  createItemService({ db: getDatabase('app'), table: schema.kbEntryTags, tableName: 'kbEntryTags', eventBus: getEventBus() }),
+)
 
 // RBAC Service (depends on ItemServices above)
 const getRbacService = lazy(() =>
@@ -255,6 +269,28 @@ const getMediaLibraryService = lazy(() =>
   }),
 )
 
+// KB Services (T-1.2)
+const getKbCategoryService = lazy(() =>
+  createKbCategoryService({
+    kbCategoriesItemService: getKbCategoriesItemService(),
+  }),
+)
+
+const getKbTagService = lazy(() =>
+  createKbTagService({
+    db: getDatabase('app'),
+    kbTagsItemService: getKbTagsItemService(),
+  }),
+)
+
+const getKbEntryService = lazy(() =>
+  createKbEntryService({
+    db: getDatabase('app'),
+    kbEntriesItemService: getKbEntriesItemService(),
+    kbTagService: getKbTagService(),
+  }),
+)
+
 // Public exports
 export const container = {
   get authService(): AuthService {
@@ -296,6 +332,15 @@ export const container = {
   get mediaLibraryService(): MediaLibraryService {
     return getMediaLibraryService()
   },
+  get kbCategoryService(): KbCategoryService {
+    return getKbCategoryService()
+  },
+  get kbTagService(): KbTagService {
+    return getKbTagService()
+  },
+  get kbEntryService(): KbEntryService {
+    return getKbEntryService()
+  },
   get eventBus(): EventBus {
     return getEventBus()
   },
@@ -321,5 +366,9 @@ export const container = {
     get contentCreatorPillars() { return getContentCreatorPillarsItemService() },
     get contentCreatorClusters() { return getContentCreatorClustersItemService() },
     get fileMetadata() { return getFileMetadataItemService() },
+    get kbEntries() { return getKbEntriesItemService() },
+    get kbCategories() { return getKbCategoriesItemService() },
+    get kbTags() { return getKbTagsItemService() },
+    get kbEntryTags() { return getKbEntryTagsItemService() },
   },
 }
