@@ -11,8 +11,14 @@ import type {
   UpdateKbEntryInput,
 } from './types'
 import { and, asc, desc, eq, ilike, inArray, isNull, ne, or, sql } from 'drizzle-orm'
+import { ulid } from 'ulid'
 import * as schema from '../../database/schema'
+import { parseWikilinks } from './markdown'
 import { resolveUniqueSlug, slugify } from './slug'
+
+// Drizzle transaction handle for our schema. We don't pin the dialect generic
+// because db.transaction's callback type is structurally compatible.
+type Tx = Parameters<Parameters<DatabaseClient['transaction']>[0]>[0]
 
 // ---------------------------------------------------------------------------
 // KB Category service
@@ -184,29 +190,117 @@ export const createKbEntryService = (deps: CreateKbEntryServiceDeps) => {
   const { db, kbEntriesItemService, kbTagService } = deps
 
   /**
-   * Replace the tag set for an entry. Used by both create and update.
-   * Resolves tag names via `kbTagService.findOrCreate`, then rewrites the
-   * junction transactionally.
+   * Resolve a list of tag names (unique by case-insensitive normal form) into
+   * `kb_tags` rows. `findOrCreate` is idempotent; we run it outside any open
+   * transaction so two callers racing on the same name don't deadlock on the
+   * row-level lock that a transactional insert would hold.
    */
-  const replaceTags = async (entryId: string, organisationId: string, tagNames: string[]) => {
+  const resolveTagRows = async (organisationId: string, tagNames: string[]) => {
     const uniqueNames = Array.from(
       new Map(tagNames.map(n => [n.trim().toLowerCase(), n.trim()] as const)).values(),
     ).filter(n => n.length > 0)
-
-    const tagRows = await Promise.all(
+    return Promise.all(
       uniqueNames.map(name => kbTagService.findOrCreate({ organisationId, name })),
     )
+  }
 
-    await db.transaction(async (tx) => {
-      await tx.delete(schema.kbEntryTags).where(eq(schema.kbEntryTags.entryId, entryId))
-      if (tagRows.length > 0) {
-        await tx.insert(schema.kbEntryTags).values(
-          tagRows.map(t => ({ entryId, tagId: t.id })),
-        )
+  /**
+   * Rewrite the entry-tag junction inside an existing transaction. Caller is
+   * responsible for resolving tag rows beforehand (see {@link resolveTagRows}).
+   */
+  const rewriteEntryTags = async (
+    tx: Tx,
+    entryId: string,
+    tagRows: { id: string }[],
+  ) => {
+    await tx.delete(schema.kbEntryTags).where(eq(schema.kbEntryTags.entryId, entryId))
+    if (tagRows.length > 0) {
+      await tx.insert(schema.kbEntryTags).values(
+        tagRows.map(t => ({ entryId, tagId: t.id })),
+      )
+    }
+  }
+
+  /**
+   * Rebuild `kb_entry_links` for a single entry inside an existing transaction
+   * (DESIGN-WIKILINKS step 2).
+   *
+   * Behaviour:
+   *   - Parse the body for wikilinks.
+   *   - Deduplicate by `targetSlug` so the same target is stored exactly once,
+   *     even if it appears multiple times in the body.
+   *   - For each unique target, look up an existing live entry in the same
+   *     workspace; on hit, set `to_entry_id` and `resolved=true`. On miss the
+   *     row stays unresolved (`to_entry_id IS NULL`, `resolved=false`).
+   *   - Replace all existing `from_entry_id = entryId` rows wholesale — this
+   *     is the canonical "rewrite on save" semantics.
+   */
+  const rebuildEntryLinks = async (
+    tx: Tx,
+    params: { entryId: string, organisationId: string, body: string },
+  ) => {
+    const { entryId, organisationId, body } = params
+    const refs = parseWikilinks(body)
+    const uniqueSlugs = Array.from(new Set(refs.map(r => r.targetSlug)))
+
+    await tx.delete(schema.kbEntryLinks).where(eq(schema.kbEntryLinks.fromEntryId, entryId))
+
+    if (uniqueSlugs.length === 0)
+      return
+
+    const existingTargets = await tx
+      .select({ id: schema.kbEntries.id, slug: schema.kbEntries.slug })
+      .from(schema.kbEntries)
+      .where(
+        and(
+          eq(schema.kbEntries.organisationId, organisationId),
+          inArray(schema.kbEntries.slug, uniqueSlugs),
+          isNull(schema.kbEntries.deletedAt),
+        ),
+      )
+    const slugToId = new Map(existingTargets.map(r => [r.slug, r.id]))
+
+    const now = new Date()
+    const rows = uniqueSlugs.map((slug) => {
+      const toEntryId = slugToId.get(slug) ?? null
+      return {
+        id: ulid(),
+        organisationId,
+        fromEntryId: entryId,
+        toEntryId,
+        toSlug: slug,
+        resolved: toEntryId !== null,
+        createdAt: now,
+        updatedAt: now,
       }
     })
 
-    return tagRows
+    await tx.insert(schema.kbEntryLinks).values(rows)
+  }
+
+  /**
+   * Back-fill `to_entry_id` on previously-unresolved links that pointed at
+   * the slug `targetSlug` — used inside the create transaction for a fresh
+   * entry so dangling references auto-heal as their target appears.
+   */
+  const resolveBackrefsForNewEntry = async (
+    tx: Tx,
+    params: { organisationId: string, slug: string, entryId: string },
+  ) => {
+    await tx
+      .update(schema.kbEntryLinks)
+      .set({
+        toEntryId: params.entryId,
+        resolved: true,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(schema.kbEntryLinks.organisationId, params.organisationId),
+          eq(schema.kbEntryLinks.toSlug, params.slug),
+          isNull(schema.kbEntryLinks.toEntryId),
+        ),
+      )
   }
 
   /**
@@ -229,24 +323,53 @@ export const createKbEntryService = (deps: CreateKbEntryServiceDeps) => {
     const status: KbEntryStatus = input.status ?? 'draft'
     const authorType: KbEntryAuthorType = input.authorType ?? 'human'
     const sourceType: KbEntrySourceType = input.sourceType ?? 'manual'
+    const body = input.body ?? ''
 
-    const entry = await kbEntriesItemService.create({
-      organisationId: input.organisationId,
-      slug,
-      title: input.title,
-      bodyMd: input.body ?? '',
-      categoryId: input.categoryId ?? null,
-      status,
-      authorType,
-      authorName: input.authorName ?? '',
-      sourceType,
-      sourceRef: input.sourceRef ?? null,
-      createdBy: input.createdBy ?? null,
+    // Resolve tag rows up-front (each `findOrCreate` is its own short tx)
+    // before opening the entry-creation transaction. Keeps lock scope small.
+    const tagRows = input.tagNames && input.tagNames.length > 0
+      ? await resolveTagRows(input.organisationId, input.tagNames)
+      : []
+
+    const now = new Date()
+    const entryId = ulid()
+
+    const entry = await db.transaction(async (tx) => {
+      const [row] = await tx
+        .insert(schema.kbEntries)
+        .values({
+          id: entryId,
+          organisationId: input.organisationId,
+          slug,
+          title: input.title,
+          bodyMd: body,
+          categoryId: input.categoryId ?? null,
+          status,
+          authorType,
+          authorName: input.authorName ?? '',
+          sourceType,
+          sourceRef: input.sourceRef ?? null,
+          createdBy: input.createdBy ?? null,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .returning()
+
+      if (tagRows.length > 0)
+        await rewriteEntryTags(tx, entryId, tagRows)
+
+      // Outgoing wikilinks for this entry's body.
+      await rebuildEntryLinks(tx, { entryId, organisationId: input.organisationId, body })
+
+      // Auto-heal: any pre-existing unresolved link pointing at this slug.
+      await resolveBackrefsForNewEntry(tx, {
+        organisationId: input.organisationId,
+        slug,
+        entryId,
+      })
+
+      return row
     })
-
-    if (input.tagNames && input.tagNames.length > 0) {
-      await replaceTags(entry.id, input.organisationId, input.tagNames)
-    }
 
     return entry
   }
@@ -280,15 +403,44 @@ export const createKbEntryService = (deps: CreateKbEntryServiceDeps) => {
     if (patch.sourceRef !== undefined)
       data.sourceRef = patch.sourceRef
 
-    const updated = Object.keys(data).length > 0
-      ? await kbEntriesItemService.update(id, data)
-      : existing
+    // Resolve tag rows outside the transaction (see {@link resolveTagRows}).
+    const tagRows = patch.tagNames !== undefined
+      ? await resolveTagRows(existing.organisationId, patch.tagNames)
+      : null
 
-    if (patch.tagNames !== undefined) {
-      await replaceTags(id, existing.organisationId, patch.tagNames)
-    }
+    const willTouchEntry = Object.keys(data).length > 0
+    const willTouchTags = tagRows !== null
+    const willRebuildLinks = patch.body !== undefined
 
-    return updated
+    if (!willTouchEntry && !willTouchTags && !willRebuildLinks)
+      return existing
+
+    return db.transaction(async (tx) => {
+      let updated = existing
+      if (willTouchEntry) {
+        const [row] = await tx
+          .update(schema.kbEntries)
+          .set({ ...data, updatedAt: new Date() })
+          .where(eq(schema.kbEntries.id, id))
+          .returning()
+        if (!row)
+          throw createError({ statusCode: 404, statusMessage: 'KB entry not found' })
+        updated = row
+      }
+
+      if (willTouchTags)
+        await rewriteEntryTags(tx, id, tagRows!)
+
+      if (willRebuildLinks) {
+        await rebuildEntryLinks(tx, {
+          entryId: id,
+          organisationId: existing.organisationId,
+          body: patch.body ?? '',
+        })
+      }
+
+      return updated
+    })
   }
 
   /**
@@ -440,6 +592,39 @@ export const createKbEntryService = (deps: CreateKbEntryServiceDeps) => {
       )
   }
 
+  /**
+   * Resolved entries that link to the given target entry (REQ-KB-4 backlinks).
+   * Soft-deleted source entries are excluded by default — backlinks shouldn't
+   * surface trashed authors. The link rows themselves are kept in place even
+   * when the source is deleted, so a restore reinstates the backlink.
+   */
+  const getBacklinks = async (input: {
+    organisationId: string
+    entryId: string
+    includeDeleted?: boolean
+  }): Promise<Array<{ id: string, slug: string, title: string }>> => {
+    const conditions = [
+      eq(schema.kbEntryLinks.organisationId, input.organisationId),
+      eq(schema.kbEntryLinks.toEntryId, input.entryId),
+    ]
+    if (!input.includeDeleted)
+      conditions.push(isNull(schema.kbEntries.deletedAt))
+
+    return db
+      .select({
+        id: schema.kbEntries.id,
+        slug: schema.kbEntries.slug,
+        title: schema.kbEntries.title,
+      })
+      .from(schema.kbEntryLinks)
+      .innerJoin(
+        schema.kbEntries,
+        eq(schema.kbEntryLinks.fromEntryId, schema.kbEntries.id),
+      )
+      .where(and(...conditions))
+      .orderBy(asc(schema.kbEntries.title))
+  }
+
   return {
     create,
     update,
@@ -451,6 +636,7 @@ export const createKbEntryService = (deps: CreateKbEntryServiceDeps) => {
     restore,
     linkTag,
     unlinkTag,
+    getBacklinks,
   }
 }
 

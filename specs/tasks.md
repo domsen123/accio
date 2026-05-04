@@ -96,11 +96,15 @@ Mark tasks done by changing `[ ]` to `[x]`. Add a brief note when deviating from
   - Refs: REQ-KB-1.
   - Done when: Tests cover umlauts, punctuation, collision suffixing.
 
-- [ ] **T-1.4 — Markdown + wikilink parsing**
+- [x] **T-1.4 — Markdown + wikilink parsing**
   - `server/features/kb/markdown.ts`: extract `[[slug]]` and `[[Title|slug]]` patterns; expose `parseWikilinks(body)`.
   - On entry save, transactionally rebuild `kb_entry_links` for that entry.
   - Refs: REQ-KB-4, DESIGN-WIKILINKS.
   - Done when: Tests cover both syntaxes, escaping, code-block exclusion (links inside ``` blocks must not match).
+  - **Deviation:** Indented (4-space) code blocks are NOT treated as code by the parser — only fenced (``` and ~~~) and inline (`` `...` ``) code is excluded. CommonMark would also exclude 4-space-indented blocks; we scoped to fenced + inline per the task brief because indented blocks are rare in practice and adding paragraph-context tracking to a regex pre-pass adds disproportionate complexity. If this becomes a real problem we'd swap the masker for a CommonMark AST walker.
+  - **Notes:**
+    - Slug normalisation: the parser returns the literal slug as written (whitespace-trimmed). DESIGN-WIKILINKS says the resolution slug is "lowercased and slugified the same way as title-derived slugs"; the service-side resolver currently performs an exact-string lookup against `kb_entries.slug` (no extra slugifying step). All test fixtures use already-canonical lowercase slugs, matching how the editor will emit them in T-1.9. If a future requirement demands `[[Foo Bar]]` to resolve against slug `foo-bar`, that's a one-line `slugify(targetSlug)` in `rebuildEntryLinks` — out of scope for this task.
+    - Dedup happens at the service layer (one `kb_entry_links` row per unique `to_slug` per source entry, per DESIGN-WIKILINKS step 2). The parser deliberately preserves duplicates so renderers can keep their occurrence count.
 
 - [ ] **T-1.5 — Full-text search**
   - Generated tsvector column with weighted title (A) + body (B). Query via `to_tsquery` with prefix matching.

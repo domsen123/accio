@@ -1,3 +1,4 @@
+import { eq } from 'drizzle-orm'
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import * as schema from '../server/database/schema'
@@ -284,5 +285,253 @@ describe('kbEntryService', () => {
     expect(a.slug).toBe('shared-title')
     expect(b.slug).toBe('shared-title')
     expect(a.organisationId).not.toBe(b.organisationId)
+  })
+})
+
+describe('kbEntryService — wikilinks and backlinks', () => {
+  let orgId: string
+
+  const linksOf = async (entryId: string) => {
+    return db
+      .select()
+      .from(schema.kbEntryLinks)
+      .where(eq(schema.kbEntryLinks.fromEntryId, entryId))
+  }
+
+  beforeEach(async () => {
+    orgId = (await setupOrg()).id
+  })
+
+  it('records an unresolved link when target slug does not yet exist', async () => {
+    const source = await kbEntryService.create({
+      organisationId: orgId,
+      title: 'Source',
+      body: 'See [[other]] for context.',
+    })
+
+    const links = await linksOf(source.id)
+    expect(links).toHaveLength(1)
+    expect(links[0]!.toSlug).toBe('other')
+    expect(links[0]!.toEntryId).toBeNull()
+    expect(links[0]!.resolved).toBe(false)
+    expect(links[0]!.organisationId).toBe(orgId)
+  })
+
+  it('back-fills a previously-unresolved link when the target is created', async () => {
+    const source = await kbEntryService.create({
+      organisationId: orgId,
+      title: 'Source',
+      body: 'See [[other]].',
+    })
+    const target = await kbEntryService.create({
+      organisationId: orgId,
+      title: 'Other',
+    })
+    expect(target.slug).toBe('other')
+
+    const links = await linksOf(source.id)
+    expect(links).toHaveLength(1)
+    expect(links[0]!.toEntryId).toBe(target.id)
+    expect(links[0]!.resolved).toBe(true)
+  })
+
+  it('resolves links to existing entries on create', async () => {
+    const target = await kbEntryService.create({ organisationId: orgId, title: 'Existing' })
+    expect(target.slug).toBe('existing')
+
+    const source = await kbEntryService.create({
+      organisationId: orgId,
+      title: 'Source',
+      body: 'Refers to [[existing]].',
+    })
+
+    const links = await linksOf(source.id)
+    expect(links).toHaveLength(1)
+    expect(links[0]!.toEntryId).toBe(target.id)
+    expect(links[0]!.resolved).toBe(true)
+  })
+
+  it('rebuilds links on update: removing a wikilink deletes the row', async () => {
+    const source = await kbEntryService.create({
+      organisationId: orgId,
+      title: 'Source',
+      body: 'Has [[one]] and [[two]].',
+    })
+    expect(await linksOf(source.id)).toHaveLength(2)
+
+    await kbEntryService.update(source.id, { body: 'Only [[one]] now.' })
+
+    const links = await linksOf(source.id)
+    expect(links.map(l => l.toSlug)).toEqual(['one'])
+  })
+
+  it('rebuilds links on update: adding a wikilink inserts the row', async () => {
+    const source = await kbEntryService.create({
+      organisationId: orgId,
+      title: 'Source',
+      body: 'No links.',
+    })
+    expect(await linksOf(source.id)).toHaveLength(0)
+
+    await kbEntryService.update(source.id, { body: 'Now there is [[fresh]].' })
+
+    const links = await linksOf(source.id)
+    expect(links.map(l => l.toSlug)).toEqual(['fresh'])
+  })
+
+  it('deduplicates: same target appearing twice in the body produces one link row', async () => {
+    const source = await kbEntryService.create({
+      organisationId: orgId,
+      title: 'Source',
+      body: 'Mentions [[same]] and again [[same]].',
+    })
+    const links = await linksOf(source.id)
+    expect(links).toHaveLength(1)
+    expect(links[0]!.toSlug).toBe('same')
+  })
+
+  it('does not resolve to an entry in another workspace', async () => {
+    const otherOrg = (await organisationsItemService.create(createOrganisationData())).id
+    // Create a same-slug entry in workspace 2.
+    const otherEntry = await kbEntryService.create({ organisationId: otherOrg, title: 'Bar' })
+    expect(otherEntry.slug).toBe('bar')
+
+    const source = await kbEntryService.create({
+      organisationId: orgId,
+      title: 'Source A',
+      body: 'I want [[bar]].',
+    })
+
+    const links = await linksOf(source.id)
+    expect(links).toHaveLength(1)
+    expect(links[0]!.toEntryId).toBeNull()
+    expect(links[0]!.organisationId).toBe(orgId)
+  })
+
+  it('getBacklinks returns entries that link to the target, sorted by title', async () => {
+    const target = await kbEntryService.create({ organisationId: orgId, title: 'Target' })
+    const a = await kbEntryService.create({
+      organisationId: orgId,
+      title: 'Alpha',
+      body: 'Talks about [[target]].',
+    })
+    const b = await kbEntryService.create({
+      organisationId: orgId,
+      title: 'Beta',
+      body: 'Also references [[target]].',
+    })
+    // Unrelated entry (no link).
+    await kbEntryService.create({
+      organisationId: orgId,
+      title: 'Charlie',
+      body: 'Nothing here.',
+    })
+
+    const backlinks = await kbEntryService.getBacklinks({
+      organisationId: orgId,
+      entryId: target.id,
+    })
+    expect(backlinks.map(bl => bl.id)).toEqual([a.id, b.id])
+    expect(backlinks.map(bl => bl.title)).toEqual(['Alpha', 'Beta'])
+  })
+
+  it('getBacklinks excludes soft-deleted source entries by default', async () => {
+    const target = await kbEntryService.create({ organisationId: orgId, title: 'Target' })
+    const a = await kbEntryService.create({
+      organisationId: orgId,
+      title: 'Alpha',
+      body: '[[target]]',
+    })
+    const b = await kbEntryService.create({
+      organisationId: orgId,
+      title: 'Beta',
+      body: '[[target]]',
+    })
+    await kbEntryService.softDelete(a.id)
+
+    const visible = await kbEntryService.getBacklinks({
+      organisationId: orgId,
+      entryId: target.id,
+    })
+    expect(visible.map(bl => bl.id)).toEqual([b.id])
+
+    const all = await kbEntryService.getBacklinks({
+      organisationId: orgId,
+      entryId: target.id,
+      includeDeleted: true,
+    })
+    expect(all.map(bl => bl.id).sort()).toEqual([a.id, b.id].sort())
+  })
+
+  it('does not parse wikilinks inside fenced code blocks', async () => {
+    const body = [
+      'prose [[real]]',
+      '```ts',
+      'const fake = "[[skip]]"',
+      '```',
+    ].join('\n')
+
+    const source = await kbEntryService.create({
+      organisationId: orgId,
+      title: 'CodeFences',
+      body,
+    })
+    const links = await linksOf(source.id)
+    expect(links.map(l => l.toSlug)).toEqual(['real'])
+  })
+
+  it('soft-delete and restore do not touch outgoing link rows', async () => {
+    const target = await kbEntryService.create({ organisationId: orgId, title: 'Target' })
+    const source = await kbEntryService.create({
+      organisationId: orgId,
+      title: 'Source',
+      body: 'Refers to [[target]].',
+    })
+    const before = await linksOf(source.id)
+    expect(before).toHaveLength(1)
+    expect(before[0]!.toEntryId).toBe(target.id)
+
+    await kbEntryService.softDelete(source.id)
+    const afterDelete = await linksOf(source.id)
+    expect(afterDelete).toHaveLength(1)
+
+    await kbEntryService.restore(source.id)
+    const afterRestore = await linksOf(source.id)
+    expect(afterRestore).toHaveLength(1)
+  })
+
+  it('update without body does not touch existing link rows', async () => {
+    const source = await kbEntryService.create({
+      organisationId: orgId,
+      title: 'Source',
+      body: 'Has [[one]].',
+    })
+    const before = await linksOf(source.id)
+    expect(before).toHaveLength(1)
+    const beforeId = before[0]!.id
+
+    await kbEntryService.update(source.id, { title: 'Different Title' })
+
+    const after = await linksOf(source.id)
+    expect(after).toHaveLength(1)
+    expect(after[0]!.id).toBe(beforeId)
+  })
+
+  it('back-resolution is workspace-scoped', async () => {
+    // Workspace 1 has an unresolved link to slug `bar`.
+    const sourceA = await kbEntryService.create({
+      organisationId: orgId,
+      title: 'Source A',
+      body: 'Wants [[bar]].',
+    })
+    expect((await linksOf(sourceA.id))[0]!.toEntryId).toBeNull()
+
+    // Creating `bar` in workspace 2 must NOT resolve workspace 1's link.
+    const otherOrg = (await organisationsItemService.create(createOrganisationData())).id
+    await kbEntryService.create({ organisationId: otherOrg, title: 'Bar' })
+
+    const stillUnresolved = await linksOf(sourceA.id)
+    expect(stillUnresolved[0]!.toEntryId).toBeNull()
+    expect(stillUnresolved[0]!.organisationId).toBe(orgId)
   })
 })
