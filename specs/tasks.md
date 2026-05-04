@@ -20,7 +20,7 @@ Mark tasks done by changing `[ ]` to `[x]`. Add a brief note when deviating from
     - 3 flaky `item-service.test.ts` filter tests (`_eq`, `_ilike`, `_in`) caused by parallel test files sharing the dev DB while `afterEach` truncates. Fixed by setting `fileParallelism: false` in `vitest.config.ts`.
   - **Follow-up:** A dedicated test DB (or per-worker schema) is needed before integration test volume grows. Tracked as new task **T-0.0a** below; address before tests start to feel slow.
 
-- [ ] **T-0.2 — Enable `pgvector` extension**
+- [x] **T-0.2 — Enable `pgvector` extension**
   - Add migration: `CREATE EXTENSION IF NOT EXISTS vector;`
   - Refs: REQ-COMMON-4.
   - Done when: Migration applies cleanly; no schema uses vector columns yet.
