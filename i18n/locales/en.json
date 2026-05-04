@@ -7,6 +7,37 @@
     "close": "Close",
     "try-again": "Try again"
   },
+  "app": {
+    "shell": {
+      "nav": {
+        "overview": "Overview",
+        "kb": "Knowledge Base",
+        "todos": "Todos",
+        "projects": "Projects",
+        "orchestrator": "Orchestrator",
+        "settings": "Settings"
+      },
+      "search": {
+        "placeholder": "Global search..."
+      },
+      "workspaceSwitcher": {
+        "label": "Workspace",
+        "placeholder": "My Workspace"
+      },
+      "orchestrator": {
+        "launch": "Orchestrator"
+      }
+    },
+    "welcome": {
+      "title": "Welcome to your hub",
+      "subtitle": "Your personal workspace for knowledge, todos, and projects.",
+      "stats": {
+        "kb": "Knowledge base entries",
+        "todos": "Open todos",
+        "activity": "Activity (7 days)"
+      }
+    }
+  },
   "shell": {
     "header": {
       "signed-in-as": "Signed in as {email}",

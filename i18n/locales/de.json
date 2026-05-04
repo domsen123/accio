@@ -7,6 +7,37 @@
     "close": "Schließen",
     "try-again": "Erneut versuchen"
   },
+  "app": {
+    "shell": {
+      "nav": {
+        "overview": "Übersicht",
+        "kb": "Wissensdatenbank",
+        "todos": "Aufgaben",
+        "projects": "Projekte",
+        "orchestrator": "Orchestrator",
+        "settings": "Einstellungen"
+      },
+      "search": {
+        "placeholder": "Globale Suche..."
+      },
+      "workspaceSwitcher": {
+        "label": "Arbeitsbereich",
+        "placeholder": "Mein Arbeitsbereich"
+      },
+      "orchestrator": {
+        "launch": "Orchestrator"
+      }
+    },
+    "welcome": {
+      "title": "Willkommen in deinem Hub",
+      "subtitle": "Dein persönlicher Arbeitsbereich für Wissen, Aufgaben und Projekte.",
+      "stats": {
+        "kb": "Einträge in der Wissensdatenbank",
+        "todos": "Offene Aufgaben",
+        "activity": "Aktivität (7 Tage)"
+      }
+    }
+  },
   "shell": {
     "header": {
       "signed-in-as": "Angemeldet als {email}",
