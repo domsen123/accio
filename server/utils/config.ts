@@ -76,6 +76,13 @@ export const config = {
     maxFileSize: Number.parseInt(process.env.NUXT_STORAGE_MAX_FILE_SIZE || String(5 * 1024 * 1024)), // 5MB
     allowedMimeTypes: (process.env.NUXT_STORAGE_ALLOWED_MIME_TYPES || 'image/jpeg,image/png,image/webp,image/gif').split(','),
   },
+  orchestrator: {
+    historyLimit: Number.parseInt(process.env.NUXT_ORCHESTRATOR_HISTORY_LIMIT || '30'),
+  },
+  github: {
+    syncIntervalMinutes: Number.parseInt(process.env.NUXT_GITHUB_SYNC_INTERVAL_MINUTES || '15'),
+    commitsPerSync: Number.parseInt(process.env.NUXT_GITHUB_COMMITS_PER_SYNC || '50'),
+  },
 }
 
 export default config

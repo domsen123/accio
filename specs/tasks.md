@@ -25,10 +25,12 @@ Mark tasks done by changing `[ ]` to `[x]`. Add a brief note when deviating from
   - Refs: REQ-COMMON-4.
   - Done when: Migration applies cleanly; no schema uses vector columns yet.
 
-- [ ] **T-0.3 — Add new env vars**
+- [x] **T-0.3 — Add new env vars**
   - Add Orchestrator and GitHub vars to `.env.example` and `nuxt.config.ts` runtimeConfig.
   - Refs: DESIGN-ENV.
   - Done when: New vars are typed and accessible via `useRuntimeConfig()`.
+  - **Deviation:** Codebase has no `runtimeConfig` block — all existing env vars (DB, auth, email, storage) are read via `server/utils/config.ts` from `process.env` into a typed `config` object. New vars (`NUXT_ORCHESTRATOR_HISTORY_LIMIT`, `NUXT_GITHUB_SYNC_INTERVAL_MINUTES`, `NUXT_GITHUB_COMMITS_PER_SYNC`) follow the same pattern (added to `.env.example` and to `config.orchestrator` / `config.github` in `server/utils/config.ts`). See **ADR-016** for the rationale.
+  - **Out of scope here:** `NUXT_PUBLIC_I18N_DEFAULT_LOCALE` from DESIGN-ENV is deferred to T-0.5, which is the i18n install task.
 
 - [ ] **T-0.4 — Add new permissions and seed**
   - Extend `server/features/rbac/permissions.ts` with the 13 new permissions (incl. `ai:read`, `ai:manage`).

@@ -252,3 +252,23 @@ Format: short. Status is `accepted` unless explicitly superseded.
 - Hub at `/` with marketing eventually displacing it. Rejected — would require a painful URL migration if SaaS-fication happens.
 - Hub at `/dashboard/**`. Rejected — `dashboard` implies a single page; `app` better signals "the application part of this site".
 - Subdomain split (`app.example.com` vs `example.com`). Rejected — operationally heavier, and not needed at this scale.
+
+---
+
+## ADR-016 — Env vars accessed via `server/utils/config.ts`, not `useRuntimeConfig()`
+
+**Status:** accepted
+
+**Context.** DESIGN-ENV and T-0.3 specify "add to `nuxt.config.ts` runtimeConfig, accessible via `useRuntimeConfig()`". When T-0.3 was implemented the codebase was inspected and found to have no `runtimeConfig` block at all — every existing env var (DB, auth, email, storage) is read in `server/utils/config.ts` from `process.env` into a typed `config` object, and nothing in the repo calls `useRuntimeConfig()`.
+
+**Decision.** Keep using the existing `server/utils/config.ts` pattern for new env vars too. Do not introduce a parallel `useRuntimeConfig()` path just for the new vars. The spec language is treated as descriptive of "the var must be typed and accessible from server code" rather than prescriptive of the Nuxt API used.
+
+**Consequences.**
+- Single, consistent config-access pattern across the codebase.
+- `nuxt.config.ts` stays clean — env-var typing happens in one place (`server/utils/config.ts`'s exported `Config` type).
+- Vars defined this way are server-only by default; if a future var needs to be exposed to the client (e.g. `NUXT_PUBLIC_*`), that case warrants a fresh look at whether to introduce `runtimeConfig.public` then.
+- The spec text in DESIGN-ENV and T-0.3 reads slightly inaccurately for this codebase but is left unchanged so historical context is preserved; this ADR is the authoritative answer.
+
+**Alternatives considered.**
+- Strict spec compliance (add `runtimeConfig` for new vars only). Rejected — creates two coexisting patterns with no migration plan; future readers will be confused about which to use.
+- Migrate everything to `useRuntimeConfig()`. Rejected for now — out of T-0.3 scope, no functional gain, and the existing pattern works for both Nitro server code and Nitro tasks (which Nuxt's runtimeConfig in scheduled tasks has historically had rough edges with). Could be revisited if a client-side need emerges.
