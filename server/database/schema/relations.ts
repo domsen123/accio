@@ -7,6 +7,11 @@ import { contentCreatorClusters } from './content-creator-clusters'
 import { contentCreatorPillars } from './content-creator-pillars'
 import { fileMetadata } from './file-metadata'
 import { files } from './files'
+import { kbCategories } from './kb-categories'
+import { kbEntries } from './kb-entries'
+import { kbEntryLinks } from './kb-entry-links'
+import { kbEntryTags } from './kb-entry-tags'
+import { kbTags } from './kb-tags'
 import { organisationInvitations } from './organisation-invitations'
 import { organisationMembers } from './organisation-members'
 import { organisations } from './organisations'
@@ -50,6 +55,9 @@ export const organisationsRelations = relations(organisations, ({ many }) => ({
   members: many(organisationMembers),
   customRoles: many(roles),
   invitations: many(organisationInvitations),
+  kbEntries: many(kbEntries),
+  kbCategories: many(kbCategories),
+  kbTags: many(kbTags),
 }))
 
 export const organisationInvitationsRelations = relations(organisationInvitations, ({ one }) => ({
@@ -201,5 +209,74 @@ export const contentCreatorClustersRelations = relations(contentCreatorClusters,
   blogPost: one(blogPosts, {
     fields: [contentCreatorClusters.blogPostId],
     references: [blogPosts.id],
+  }),
+}))
+
+// KB Relations (DESIGN-DATA §KB)
+export const kbEntriesRelations = relations(kbEntries, ({ one, many }) => ({
+  organisation: one(organisations, {
+    fields: [kbEntries.organisationId],
+    references: [organisations.id],
+  }),
+  category: one(kbCategories, {
+    fields: [kbEntries.categoryId],
+    references: [kbCategories.id],
+  }),
+  createdByUser: one(users, {
+    fields: [kbEntries.createdBy],
+    references: [users.id],
+  }),
+  entryTags: many(kbEntryTags),
+  outgoingLinks: many(kbEntryLinks, { relationName: 'fromEntry' }),
+  incomingLinks: many(kbEntryLinks, { relationName: 'toEntry' }),
+}))
+
+export const kbCategoriesRelations = relations(kbCategories, ({ one, many }) => ({
+  organisation: one(organisations, {
+    fields: [kbCategories.organisationId],
+    references: [organisations.id],
+  }),
+  parent: one(kbCategories, {
+    fields: [kbCategories.parentId],
+    references: [kbCategories.id],
+    relationName: 'kbCategoryTree',
+  }),
+  children: many(kbCategories, { relationName: 'kbCategoryTree' }),
+  entries: many(kbEntries),
+}))
+
+export const kbTagsRelations = relations(kbTags, ({ one, many }) => ({
+  organisation: one(organisations, {
+    fields: [kbTags.organisationId],
+    references: [organisations.id],
+  }),
+  entryTags: many(kbEntryTags),
+}))
+
+export const kbEntryTagsRelations = relations(kbEntryTags, ({ one }) => ({
+  entry: one(kbEntries, {
+    fields: [kbEntryTags.entryId],
+    references: [kbEntries.id],
+  }),
+  tag: one(kbTags, {
+    fields: [kbEntryTags.tagId],
+    references: [kbTags.id],
+  }),
+}))
+
+export const kbEntryLinksRelations = relations(kbEntryLinks, ({ one }) => ({
+  organisation: one(organisations, {
+    fields: [kbEntryLinks.organisationId],
+    references: [organisations.id],
+  }),
+  fromEntry: one(kbEntries, {
+    fields: [kbEntryLinks.fromEntryId],
+    references: [kbEntries.id],
+    relationName: 'fromEntry',
+  }),
+  toEntry: one(kbEntries, {
+    fields: [kbEntryLinks.toEntryId],
+    references: [kbEntries.id],
+    relationName: 'toEntry',
   }),
 }))

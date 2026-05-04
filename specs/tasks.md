@@ -78,7 +78,7 @@ Mark tasks done by changing `[ ]` to `[x]`. Add a brief note when deviating from
 ## Phase 1 — Knowledge Base
 
 ### Schema
-- [ ] **T-1.1 — Drizzle schema for KB tables**
+- [x] **T-1.1 — Drizzle schema for KB tables**
   - Tables: `kb_entries`, `kb_categories`, `kb_tags`, `kb_entry_tags`, `kb_entry_links`.
   - Add tsvector generated column on `kb_entries.body_search` and a GIN index.
   - Refs: DESIGN-DATA §KB.
