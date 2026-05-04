@@ -55,11 +55,12 @@ Mark tasks done by changing `[ ]` to `[x]`. Add a brief note when deviating from
     - Anonymous users' locale is persisted in a cookie (`i18n_locale`); authenticated users persist it on `users.locale` via `PUT /api/profile`.
   - **Process reminder (per ADR-012):** any future task that introduces user-facing strings must update both `i18n/locales/de.json` and `i18n/locales/en.json` in the same change. Strings outside the auth pages and immediate shell are intentionally left as-is for this task and should be retro-fitted by the owning task.
 
-- [ ] **T-0.6 — Shared crypto utility**
+- [x] **T-0.6 — Shared crypto utility**
   - Implement `server/utils/crypto.ts` with `encryptForOrg` / `decryptForOrg` per DESIGN-CRYPTO.
   - Unit tests cover round-trip, tamper detection, salt isolation between orgs.
   - Refs: DESIGN-CRYPTO.
   - Done when: Tests pass; module is ready to be consumed by GitHub and AI features.
+  - **Deviation:** the implemented signatures take the org's `crypto_salt` directly (`encryptForOrg(plaintext, orgSalt)` / `decryptForOrg(blob, orgSalt)`) rather than the `orgId`-based shape sketched in DESIGN-CRYPTO. The salt is the only piece of the organisation that actually feeds key derivation, and decoupling the utility from the database keeps it pure (no DI / no DB lookup). Consumers (GitHub, AI) will load `organisations.cryptoSalt` once and pass it in. Blob format is `base64(iv):base64(tag):base64(ciphertext)`, matching the design's "`<iv>:<ciphertext>:<tag>` base64-joined" with the tag and ciphertext order swapped so decryption can validate IV/tag length before allocating the ciphertext buffer.
 
 - [ ] **T-0.7 — `/app` layout and shell**
   - Create `app/layouts/app.vue` with the hub's top nav (workspace switcher, global search placeholder, language toggle, orchestrator launcher placeholder) and side nav (KB / Todos / Projects / Orchestrator / Settings — entries can be stubs that link to not-yet-existing pages).
