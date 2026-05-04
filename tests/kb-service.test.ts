@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import * as schema from '../server/database/schema'
-import { KbSlugConflictError } from '../server/features/kb/errors'
 import {
   createKbCategoryService,
   createKbEntryService,
@@ -266,11 +265,14 @@ describe('kbEntryService', () => {
     expect(restored.deletedAt).toBeNull()
   })
 
-  it('throws KbSlugConflictError on duplicate-title creates in the same workspace', async () => {
-    await kbEntryService.create({ organisationId: orgId, title: 'Same Title' })
-    await expect(
-      kbEntryService.create({ organisationId: orgId, title: 'Same Title' }),
-    ).rejects.toBeInstanceOf(KbSlugConflictError)
+  it('auto-suffixes duplicate-title creates in the same workspace', async () => {
+    const a = await kbEntryService.create({ organisationId: orgId, title: 'Same Title' })
+    const b = await kbEntryService.create({ organisationId: orgId, title: 'Same Title' })
+    const c = await kbEntryService.create({ organisationId: orgId, title: 'Same Title' })
+
+    expect(a.slug).toBe('same-title')
+    expect(b.slug).toBe('same-title-2')
+    expect(c.slug).toBe('same-title-3')
   })
 
   it('allows two workspaces to independently use the same slug', async () => {

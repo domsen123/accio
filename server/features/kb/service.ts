@@ -12,8 +12,7 @@ import type {
 } from './types'
 import { and, asc, desc, eq, ilike, inArray, isNull, ne, or, sql } from 'drizzle-orm'
 import * as schema from '../../database/schema'
-import { KbSlugConflictError } from './errors'
-import { slugify } from './slug'
+import { resolveUniqueSlug, slugify } from './slug'
 
 // ---------------------------------------------------------------------------
 // KB Category service
@@ -184,23 +183,6 @@ export interface CreateKbEntryServiceDeps {
 export const createKbEntryService = (deps: CreateKbEntryServiceDeps) => {
   const { db, kbEntriesItemService, kbTagService } = deps
 
-  const isUniqueViolation = (err: unknown): boolean => {
-    if (!err || typeof err !== 'object')
-      return false
-    // Drizzle wraps the postgres-js DatabaseError; the SQLSTATE `code`
-    // (`23505` = unique_violation) lives on the wrapper, on `cause`, or on
-    // the message string (`code: '23505'`). Cover all three so we are
-    // robust to drizzle wrapping changes between minor versions.
-    const candidate = err as { code?: unknown, cause?: { code?: unknown }, message?: unknown }
-    if (candidate.code === '23505')
-      return true
-    if (candidate.cause && candidate.cause.code === '23505')
-      return true
-    if (typeof candidate.message === 'string' && candidate.message.includes('23505'))
-      return true
-    return false
-  }
-
   /**
    * Replace the tag set for an entry. Used by both create and update.
    * Resolves tag names via `kbTagService.findOrCreate`, then rewrites the
@@ -228,43 +210,39 @@ export const createKbEntryService = (deps: CreateKbEntryServiceDeps) => {
   }
 
   /**
-   * Create a KB entry. Generates a slug via the interim {@link slugify} and
-   * raises {@link KbSlugConflictError} on unique-violation against
-   * `(organisation_id, slug)`. T-1.3 will add transparent suffixing.
+   * Create a KB entry. Derives the slug via {@link slugify}, then resolves
+   * collisions in the workspace via {@link resolveUniqueSlug} so duplicate
+   * titles transparently get `-2`, `-3`, ... suffixes.
+   *
+   * Race note: a simultaneous create that picks the same suffix will hit the
+   * `(organisation_id, slug)` unique constraint and bubble. This is rare in
+   * single-user dev and we deliberately don't add transactional locking.
    */
   const create = async (input: CreateKbEntryInput) => {
-    const slug = slugify(input.title)
-    if (!slug) {
-      throw createError({ statusCode: 400, statusMessage: 'Title produces an empty slug' })
-    }
+    const base = slugify(input.title)
+    const slug = await resolveUniqueSlug({
+      db,
+      organisationId: input.organisationId,
+      base,
+    })
 
     const status: KbEntryStatus = input.status ?? 'draft'
     const authorType: KbEntryAuthorType = input.authorType ?? 'human'
     const sourceType: KbEntrySourceType = input.sourceType ?? 'manual'
 
-    let entry
-    try {
-      entry = await kbEntriesItemService.create({
-        organisationId: input.organisationId,
-        slug,
-        title: input.title,
-        bodyMd: input.body ?? '',
-        categoryId: input.categoryId ?? null,
-        status,
-        authorType,
-        authorName: input.authorName ?? '',
-        sourceType,
-        sourceRef: input.sourceRef ?? null,
-        createdBy: input.createdBy ?? null,
-      })
-    }
-    catch (err) {
-      // TODO(T-1.3): replace this branch with transparent suffixing.
-      if (isUniqueViolation(err)) {
-        throw new KbSlugConflictError(input.organisationId, slug)
-      }
-      throw err
-    }
+    const entry = await kbEntriesItemService.create({
+      organisationId: input.organisationId,
+      slug,
+      title: input.title,
+      bodyMd: input.body ?? '',
+      categoryId: input.categoryId ?? null,
+      status,
+      authorType,
+      authorName: input.authorName ?? '',
+      sourceType,
+      sourceRef: input.sourceRef ?? null,
+      createdBy: input.createdBy ?? null,
+    })
 
     if (input.tagNames && input.tagNames.length > 0) {
       await replaceTags(entry.id, input.organisationId, input.tagNames)

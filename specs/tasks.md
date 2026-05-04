@@ -91,7 +91,7 @@ Mark tasks done by changing `[ ]` to `[x]`. Add a brief note when deviating from
   - Done when: Unit tests cover create, update, find by slug, list with filters.
   - **Deviation:** Slug-collision suffixing is intentionally deferred to T-1.3 per the task spec. `kbEntryService.create` calls a minimal `slugify` (lowercase + non-alphanum-to-`-`, no umlaut handling) and on `(organisation_id, slug)` unique violation throws `KbSlugConflictError`. T-1.3 will replace this branch with transparent `-2`/`-3`/... suffixing; until then duplicate-title creates raise the error rather than auto-suffixing. Both behaviours are covered by tests.
 
-- [ ] **T-1.3 — Slug generation**
+- [x] **T-1.3 — Slug generation**
   - `slugify(title)` plus collision suffix per workspace.
   - Refs: REQ-KB-1.
   - Done when: Tests cover umlauts, punctuation, collision suffixing.
