@@ -33,6 +33,7 @@
     "@nuxt/content": "catalog:",
     "@nuxt/image": "catalog:",
     "@nuxt/ui": "catalog:",
+    "@nuxtjs/i18n": "catalog:",
     "@nuxtjs/seo": "catalog:",
     "@pinia/colada": "catalog:",
     "@pinia/colada-nuxt": "catalog:",

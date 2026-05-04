@@ -4,6 +4,7 @@ export interface AuthUser {
   name: string | null
   authProvider: string
   emailVerified: boolean
+  locale: string
   createdAt: string
   updatedAt: string
 }

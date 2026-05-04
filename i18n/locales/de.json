@@ -1,0 +1,191 @@
+{
+  "common": {
+    "guest": "Gast",
+    "loading": "Wird geladen...",
+    "cancel": "Abbrechen",
+    "save": "Speichern",
+    "close": "Schließen",
+    "try-again": "Erneut versuchen"
+  },
+  "shell": {
+    "header": {
+      "signed-in-as": "Angemeldet als {email}",
+      "sign-in": "Anmelden",
+      "sign-up": "Registrieren",
+      "sign-out": "Abmelden",
+      "signing-out": "Wird abgemeldet...",
+      "settings": "Einstellungen",
+      "admin-dashboard": "Admin-Dashboard",
+      "stop-impersonating": "Identitätsannahme beenden",
+      "stopping-impersonation": "Beende...",
+      "back-to-app": "Zurück zur App"
+    },
+    "footer": {
+      "built-with": "Gebaut mit Nuxt UI"
+    },
+    "logo": {
+      "label": "Anwendungslogo"
+    },
+    "language-switcher": {
+      "label": "Sprache",
+      "aria-label": "Sprache ändern"
+    },
+    "email-verification-banner": {
+      "title": "Bitte bestätige deine E-Mail-Adresse.",
+      "description": "Sieh in deinem Posteingang nach einem Bestätigungslink.",
+      "resend": "E-Mail erneut senden",
+      "resend-success-title": "Bestätigungs-E-Mail gesendet",
+      "resend-failed-title": "E-Mail konnte nicht gesendet werden",
+      "resend-failed-description": "Bitte versuche es später erneut.",
+      "dismiss": "Schließen"
+    },
+    "toasts": {
+      "signed-out-title": "Abgemeldet",
+      "signed-out-description": "Bis bald!",
+      "impersonation-ended-title": "Identitätsannahme beendet",
+      "impersonation-ended-description": "Du bist wieder mit deinem Admin-Konto angemeldet.",
+      "impersonation-failed-title": "Identitätsannahme konnte nicht beendet werden",
+      "impersonation-failed-description": "Bitte versuche es erneut."
+    }
+  },
+  "auth": {
+    "common": {
+      "email-label": "E-Mail",
+      "email-placeholder": "Gib deine E-Mail-Adresse ein",
+      "password-label": "Passwort",
+      "password-placeholder": "Gib dein Passwort ein",
+      "confirm-password-label": "Passwort bestätigen",
+      "confirm-password-placeholder": "Bestätige dein Passwort",
+      "name-label": "Name",
+      "name-placeholder": "Gib deinen Namen ein",
+      "remember-me": "Angemeldet bleiben",
+      "providers": {
+        "google": "Google",
+        "github": "GitHub",
+        "google-coming-soon": "Anmeldung mit Google (in Kürze verfügbar)",
+        "github-coming-soon": "Anmeldung mit GitHub (in Kürze verfügbar)",
+        "google-signup-coming-soon": "Registrierung mit Google (in Kürze verfügbar)",
+        "github-signup-coming-soon": "Registrierung mit GitHub (in Kürze verfügbar)"
+      },
+      "errors": {
+        "invalid-email": "Ungültige E-Mail-Adresse",
+        "password-min": "Muss mindestens 8 Zeichen lang sein",
+        "name-required": "Name ist erforderlich",
+        "passwords-no-match": "Passwörter stimmen nicht überein",
+        "confirm-password-required": "Bitte bestätige dein Passwort"
+      }
+    },
+    "sign-in": {
+      "page-title": "Anmelden",
+      "page-description": "Melde dich an, um fortzufahren",
+      "title": "Willkommen zurück",
+      "submit": "Anmelden",
+      "no-account": "Noch kein Konto?",
+      "sign-up-link": "Registrieren",
+      "forgot-password": "Passwort vergessen?",
+      "footer-prefix": "Mit der Anmeldung stimmst du unseren",
+      "terms-link": "Nutzungsbedingungen",
+      "footer-suffix": "zu.",
+      "welcome-back": "Willkommen zurück!",
+      "login-failed": "Anmeldung fehlgeschlagen"
+    },
+    "sign-up": {
+      "page-title": "Registrieren",
+      "page-description": "Erstelle ein Konto, um loszulegen",
+      "title": "Konto erstellen",
+      "submit": "Konto erstellen",
+      "have-account": "Bereits ein Konto?",
+      "sign-in-link": "Anmelden",
+      "footer-prefix": "Mit der Registrierung stimmst du unseren",
+      "footer-suffix": "zu.",
+      "account-created-title": "Konto erstellt!",
+      "account-created-description": "Willkommen an Bord.",
+      "email-exists": "Es existiert bereits ein Konto mit dieser E-Mail-Adresse",
+      "registration-failed": "Registrierung fehlgeschlagen"
+    },
+    "forgot-password": {
+      "page-title": "Passwort vergessen",
+      "page-description": "Setze dein Passwort zurück",
+      "title": "Passwort vergessen?",
+      "description": "Gib deine E-Mail-Adresse ein und wir senden dir einen Link zum Zurücksetzen deines Passworts.",
+      "submit": "Reset-Link senden",
+      "remember": "Erinnerst du dich an dein Passwort?",
+      "sign-in-link": "Anmelden",
+      "request-failed": "Anfrage fehlgeschlagen",
+      "submitted-title": "E-Mail prüfen",
+      "submitted-description": "Wenn ein Konto mit dieser E-Mail existiert, erhältst du Anweisungen zum Zurücksetzen des Passworts.",
+      "no-email-hint": "Keine E-Mail erhalten? Prüfe deinen Spam-Ordner oder",
+      "try-again": "versuche es erneut",
+      "back-to-sign-in": "Zurück zur Anmeldung",
+      "check-email-toast": "E-Mail prüfen"
+    },
+    "reset-password": {
+      "page-title": "Passwort zurücksetzen",
+      "page-description": "Erstelle ein neues Passwort für dein Konto",
+      "title": "Passwort zurücksetzen",
+      "description": "Gib unten dein neues Passwort ein.",
+      "new-password-label": "Neues Passwort",
+      "new-password-placeholder": "Gib dein neues Passwort ein",
+      "submit": "Passwort zurücksetzen",
+      "remember": "Erinnerst du dich an dein Passwort?",
+      "sign-in-link": "Anmelden",
+      "reset-failed": "Zurücksetzen des Passworts fehlgeschlagen",
+      "success-title": "Passwort erfolgreich zurückgesetzt",
+      "invalid-link-title": "Ungültiger Reset-Link",
+      "invalid-link-description": "Bitte fordere einen neuen Reset-Link an.",
+      "expired-link-title": "Reset-Link abgelaufen",
+      "expired-link-description": "Dieser Link zum Zurücksetzen des Passworts ist abgelaufen oder wurde bereits verwendet. Bitte fordere einen neuen an."
+    },
+    "verify-email": {
+      "page-title": "E-Mail bestätigen",
+      "page-description": "Bestätige deine E-Mail-Adresse",
+      "verifying-title": "E-Mail wird bestätigt...",
+      "verifying-description": "Bitte warte, während wir deine E-Mail-Adresse bestätigen.",
+      "already-verified-title": "Bereits bestätigt",
+      "already-verified-description": "Deine E-Mail-Adresse wurde bereits bestätigt. Du kannst dein Konto weiterhin nutzen.",
+      "verified-title": "E-Mail bestätigt!",
+      "verified-description": "Deine E-Mail-Adresse wurde erfolgreich bestätigt. Du kannst nun alle Funktionen deines Kontos nutzen.",
+      "go-to-dashboard": "Zum Dashboard",
+      "failed-title": "Bestätigung fehlgeschlagen",
+      "invalid-link": "Der Bestätigungslink ist ungültig oder abgelaufen.",
+      "missing-token": "Ungültiger Bestätigungslink. Bitte überprüfe deine E-Mail auf den korrekten Link.",
+      "go-to-sign-in": "Anmelden",
+      "resend-hint": "Wenn du einen neuen Bestätigungslink benötigst, melde dich an und fordere einen aus deinen Kontoeinstellungen an.",
+      "toast-already-verified-title": "Bereits bestätigt",
+      "toast-already-verified-description": "Deine E-Mail-Adresse wurde bereits bestätigt.",
+      "toast-verified-title": "E-Mail bestätigt!",
+      "toast-verified-description": "Deine E-Mail-Adresse wurde erfolgreich bestätigt."
+    },
+    "confirm-email": {
+      "missing-token-title": "Ungültiger Link",
+      "missing-token-description": "Diesem E-Mail-Bestätigungslink fehlt ein Token. Bitte verwende den Link aus deiner E-Mail.",
+      "loading": "E-Mail-Änderung wird bestätigt...",
+      "success-title": "E-Mail geändert",
+      "success-description": "Deine E-Mail-Adresse wurde erfolgreich geändert auf {email}.",
+      "error-title": "E-Mail-Änderung fehlgeschlagen",
+      "error-invalid": "Dieser Link ist ungültig oder abgelaufen. Bitte fordere eine neue E-Mail-Änderung an.",
+      "error-conflict": "Diese E-Mail-Adresse ist nicht mehr verfügbar. Bitte versuche eine andere.",
+      "error-generic": "Es ist ein unerwarteter Fehler aufgetreten. Bitte versuche es erneut.",
+      "go-to-settings": "Zu den Einstellungen"
+    },
+    "accept-invitation": {
+      "page-title": "Einladung annehmen",
+      "page-description": "Nimm deine Organisations-Einladung an und erstelle dein Konto",
+      "title": "Einladung annehmen",
+      "submit": "Konto erstellen & beitreten",
+      "name-placeholder": "Gib deinen Namen ein (optional)",
+      "password-placeholder": "Erstelle ein Passwort",
+      "description-line-1": "Du wurdest eingeladen, {organisation} beizutreten.",
+      "description-line-2": "Erstelle dein Konto mit {email}",
+      "have-account": "Bereits ein Konto?",
+      "sign-in-link": "Anmelden",
+      "invalid-link-title": "Ungültiger Einladungslink",
+      "invalid-link-description": "Bitte überprüfe deine E-Mail auf den korrekten Einladungslink.",
+      "invalid-invitation-title": "Ungültige Einladung",
+      "invalid-invitation-description": "Dieser Einladungslink ist abgelaufen oder ungültig.",
+      "welcome-title": "Willkommen!",
+      "welcome-description": "Du bist {organisation} beigetreten. Du wirst weitergeleitet...",
+      "accept-failed": "Einladung konnte nicht angenommen werden"
+    }
+  }
+}

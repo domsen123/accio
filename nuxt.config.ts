@@ -1,3 +1,5 @@
+import process from 'node:process'
+
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   modules: [
@@ -9,9 +11,19 @@ export default defineNuxtConfig({
     'nuxt-og-image',
     '@pinia/nuxt',
     '@pinia/colada-nuxt',
+    '@nuxtjs/i18n',
     'nuxt-mcp-dev',
     '@nuxt/test-utils/module',
   ],
+
+  i18n: {
+    defaultLocale: process.env.NUXT_PUBLIC_I18N_DEFAULT_LOCALE || 'de',
+    strategy: 'no_prefix',
+    locales: [
+      { code: 'de', file: 'de.json', name: 'Deutsch' },
+      { code: 'en', file: 'en.json', name: 'English' },
+    ],
+  },
 
   devtools: {
     enabled: true,

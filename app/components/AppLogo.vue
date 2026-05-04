@@ -12,7 +12,7 @@ defineProps<{
       </div>
     </div>
     <div v-if="!collapsed">
-      Application Logo
+      {{ $t('shell.logo.label') }}
     </div>
   </div>
 </template>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 const { user, isAnonymous } = useSession()
 const toast = useToast()
+const { t } = useI18n()
 const { mutateAsync: resendVerification, asyncStatus } = useResendVerification()
 
 const dismissed = ref(false)
@@ -15,7 +16,7 @@ const handleResend = async () => {
   try {
     const response = await resendVerification()
     toast.add({
-      title: 'Verification email sent',
+      title: t('shell.email-verification-banner.resend-success-title'),
       description: response.message,
       color: 'success',
     })
@@ -23,8 +24,8 @@ const handleResend = async () => {
   catch (error) {
     const err = error as { data?: { statusMessage?: string }, message?: string }
     toast.add({
-      title: 'Failed to send email',
-      description: err.data?.statusMessage || err.message || 'Please try again later.',
+      title: t('shell.email-verification-banner.resend-failed-title'),
+      description: err.data?.statusMessage || err.message || t('shell.email-verification-banner.resend-failed-description'),
       color: 'error',
     })
   }
@@ -48,8 +49,8 @@ const handleDismiss = () => {
             class="w-5 h-5 text-warning shrink-0"
           />
           <p class="text-sm">
-            <span class="font-medium">Please verify your email address.</span>
-            <span class="text-muted hidden sm:inline"> Check your inbox for a verification link.</span>
+            <span class="font-medium">{{ $t('shell.email-verification-banner.title') }}</span>
+            <span class="text-muted hidden sm:inline"> {{ $t('shell.email-verification-banner.description') }}</span>
           </p>
         </div>
         <div class="flex items-center gap-2 shrink-0">
@@ -60,14 +61,14 @@ const handleDismiss = () => {
             :loading="isLoading"
             @click="handleResend"
           >
-            Resend email
+            {{ $t('shell.email-verification-banner.resend') }}
           </UButton>
           <UButton
             size="xs"
             color="neutral"
             variant="ghost"
             icon="i-lucide-x"
-            aria-label="Dismiss"
+            :aria-label="$t('shell.email-verification-banner.dismiss')"
             @click="handleDismiss"
           />
         </div>

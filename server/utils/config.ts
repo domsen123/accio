@@ -83,6 +83,9 @@ export const config = {
     syncIntervalMinutes: Number.parseInt(process.env.NUXT_GITHUB_SYNC_INTERVAL_MINUTES || '15'),
     commitsPerSync: Number.parseInt(process.env.NUXT_GITHUB_COMMITS_PER_SYNC || '50'),
   },
+  i18n: {
+    defaultLocale: process.env.NUXT_PUBLIC_I18N_DEFAULT_LOCALE || 'de',
+  },
 }
 
 export default config

@@ -6,9 +6,11 @@ definePageMeta({
   layout: 'auth',
 })
 
+const { t } = useI18n()
+
 useSeoMeta({
-  title: 'Reset Password',
-  description: 'Create a new password for your account',
+  title: () => t('auth.reset-password.page-title'),
+  description: () => t('auth.reset-password.page-description'),
 })
 
 const router = useRouter()
@@ -27,11 +29,11 @@ watch(isAuthenticated, (authenticated) => {
 }, { immediate: true })
 
 // Redirect if no token
-watch(token, (t) => {
-  if (!t) {
+watch(token, (tk) => {
+  if (!tk) {
     toast.add({
-      title: 'Invalid reset link',
-      description: 'Please request a new password reset link.',
+      title: t('auth.reset-password.invalid-link-title'),
+      description: t('auth.reset-password.invalid-link-description'),
       color: 'error',
     })
     router.push(ROUTES.auth.forgotPassword)
@@ -45,8 +47,8 @@ const { data: tokenValidation, status: validationStatus } = useValidateResetToke
 watch(tokenValidation, (validation) => {
   if (validation && !validation.valid) {
     toast.add({
-      title: 'Reset link expired',
-      description: 'This password reset link has expired or been used. Please request a new one.',
+      title: t('auth.reset-password.expired-link-title'),
+      description: t('auth.reset-password.expired-link-description'),
       color: 'error',
     })
     router.push(ROUTES.auth.forgotPassword)
@@ -55,25 +57,25 @@ watch(tokenValidation, (validation) => {
 
 const { mutateAsync: resetPassword, asyncStatus, error: resetPasswordError } = useResetPassword()
 
-const fields = [{
+const fields = computed(() => [{
   name: 'password',
   type: 'password' as const,
-  label: 'New Password',
-  placeholder: 'Enter your new password',
+  label: t('auth.reset-password.new-password-label'),
+  placeholder: t('auth.reset-password.new-password-placeholder'),
   required: true,
 }, {
   name: 'confirmPassword',
   type: 'password' as const,
-  label: 'Confirm Password',
-  placeholder: 'Confirm your new password',
+  label: t('auth.common.confirm-password-label'),
+  placeholder: t('auth.common.confirm-password-placeholder'),
   required: true,
-}]
+}])
 
 const schema = z.object({
-  password: z.string().min(8, 'Password must be at least 8 characters'),
-  confirmPassword: z.string().min(1, 'Please confirm your password'),
+  password: z.string().min(8, t('auth.common.errors.password-min')),
+  confirmPassword: z.string().min(1, t('auth.common.errors.confirm-password-required')),
 }).refine(data => data.password === data.confirmPassword, {
-  message: 'Passwords do not match',
+  message: t('auth.common.errors.passwords-no-match'),
   path: ['confirmPassword'],
 })
 
@@ -84,7 +86,7 @@ const apiError = computed(() => {
   if (!resetPasswordError.value)
     return null
   const err = resetPasswordError.value as { data?: { statusMessage?: string }, message?: string }
-  return err.data?.statusMessage || err.message || 'Password reset failed'
+  return err.data?.statusMessage || err.message || t('auth.reset-password.reset-failed')
 })
 
 const onSubmit = (payload: FormSubmitEvent<Schema>) => {
@@ -97,7 +99,7 @@ const onSubmit = (payload: FormSubmitEvent<Schema>) => {
   })
     .then((response) => {
       toast.add({
-        title: 'Password reset successful',
+        title: t('auth.reset-password.success-title'),
         description: response.message,
         color: 'success',
       })
@@ -121,13 +123,13 @@ const isValidating = computed(() => validationStatus.value === 'pending')
     v-else-if="tokenValidation?.valid"
     :fields="fields"
     :schema="schema"
-    title="Reset your password"
+    :title="$t('auth.reset-password.title')"
     icon="i-lucide-lock-keyhole"
-    :submit="{ label: 'Reset password', loading: isLoading }"
+    :submit="{ label: $t('auth.reset-password.submit'), loading: isLoading }"
     @submit="onSubmit"
   >
     <template #description>
-      Enter your new password below.
+      {{ $t('auth.reset-password.description') }}
     </template>
 
     <template v-if="apiError" #validation>
@@ -139,11 +141,12 @@ const isValidating = computed(() => validationStatus.value === 'pending')
     </template>
 
     <template #footer>
-      Remember your password? <ULink
+      {{ $t('auth.reset-password.remember') }}
+      <ULink
         :to="ROUTES.auth.signIn"
         class="text-primary font-medium"
       >
-        Sign in
+        {{ $t('auth.reset-password.sign-in-link') }}
       </ULink>.
     </template>
   </UAuthForm>

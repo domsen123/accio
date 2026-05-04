@@ -11,66 +11,72 @@ import { permissionsKeys } from '~/features/permissions/api/permissions.keys'
  * Also pre-fetches auth state during SSR for:
  * 1. Middleware access via useServerAuth() (reads from nuxtApp.payload.auth)
  * 2. Seeds Pinia Colada cache so useSession() doesn't re-fetch
+ *
+ * Named so the i18n-locale plugin can `dependsOn: ['api']` and reliably read
+ * the SSR-prefetched session from Pinia Colada when picking the active locale.
  */
-export default defineNuxtPlugin(async (nuxtApp) => {
-  const cookieString = useRequestHeader('cookie')
+export default defineNuxtPlugin({
+  name: 'api',
+  async setup(nuxtApp) {
+    const cookieString = useRequestHeader('cookie')
 
-  const api = $fetch.create({
-    credentials: 'include',
-    onRequest({ options }) {
-      if (import.meta.server && cookieString) {
-        const headers = options.headers ??= new Headers()
-        if (headers instanceof Headers) {
-          headers.set('cookie', cookieString)
+    const api = $fetch.create({
+      credentials: 'include',
+      onRequest({ options }) {
+        if (import.meta.server && cookieString) {
+          const headers = options.headers ??= new Headers()
+          if (headers instanceof Headers) {
+            headers.set('cookie', cookieString)
+          }
+        }
+      },
+    })
+
+    // Pre-fetch auth during SSR for middleware and seed Pinia Colada cache
+    if (import.meta.server) {
+      try {
+        const session = await api<SessionResponse>('/api/auth/session')
+
+        // Fetch permissions if authenticated
+        let permissions: PermissionsResponse | null = null
+        if (session?.user) {
+          permissions = await api<PermissionsResponse>('/api/me/permissions').catch(() => null)
+        }
+
+        const defaultPermissions: PermissionsResponse = {
+          userId: '',
+          global: [],
+          organisations: {},
+          teams: {},
+        }
+
+        // Store in payload for middleware (useServerAuth reads this)
+        nuxtApp.payload.auth = {
+          user: session?.user ?? null,
+          impersonation: session?.impersonation ?? null,
+          permissions: permissions ?? defaultPermissions,
+        }
+
+        // Seed Pinia Colada cache so useSession() doesn't re-fetch
+        const queryCache = useQueryCache()
+        queryCache.setQueryData(authKeys.session(), {
+          user: session?.user ?? null,
+          impersonation: session?.impersonation ?? null,
+        })
+
+        if (session?.user && permissions) {
+          queryCache.setQueryData(permissionsKeys.my(), permissions)
         }
       }
-    },
-  })
-
-  // Pre-fetch auth during SSR for middleware and seed Pinia Colada cache
-  if (import.meta.server) {
-    try {
-      const session = await api<SessionResponse>('/api/auth/session')
-
-      // Fetch permissions if authenticated
-      let permissions: PermissionsResponse | null = null
-      if (session?.user) {
-        permissions = await api<PermissionsResponse>('/api/me/permissions').catch(() => null)
-      }
-
-      const defaultPermissions: PermissionsResponse = {
-        userId: '',
-        global: [],
-        organisations: {},
-        teams: {},
-      }
-
-      // Store in payload for middleware (useServerAuth reads this)
-      nuxtApp.payload.auth = {
-        user: session?.user ?? null,
-        impersonation: session?.impersonation ?? null,
-        permissions: permissions ?? defaultPermissions,
-      }
-
-      // Seed Pinia Colada cache so useSession() doesn't re-fetch
-      const queryCache = useQueryCache()
-      queryCache.setQueryData(authKeys.session(), {
-        user: session?.user ?? null,
-        impersonation: session?.impersonation ?? null,
-      })
-
-      if (session?.user && permissions) {
-        queryCache.setQueryData(permissionsKeys.my(), permissions)
+      catch {
+        nuxtApp.payload.auth = {
+          user: null,
+          impersonation: null,
+          permissions: { userId: '', global: [], organisations: {}, teams: {} },
+        }
       }
     }
-    catch {
-      nuxtApp.payload.auth = {
-        user: null,
-        impersonation: null,
-        permissions: { userId: '', global: [], organisations: {}, teams: {} },
-      }
-    }
-  }
 
-  return { provide: { api } }
+    return { provide: { api } }
+  },
 })

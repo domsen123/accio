@@ -1,4 +1,4 @@
-import { boolean, pgTable, text, timestamp } from 'drizzle-orm/pg-core'
+import { boolean, pgTable, text, timestamp, varchar } from 'drizzle-orm/pg-core'
 
 export const users = pgTable('users', {
   id: text('id').primaryKey(), // ULID
@@ -7,6 +7,8 @@ export const users = pgTable('users', {
   name: text('name'),
   authProvider: text('auth_provider').notNull().default('credentials'),
   emailVerified: boolean('email_verified').notNull().default(false),
+  // Per-user UI language preference; one of the locales configured in nuxt.config.ts (default 'de')
+  locale: varchar('locale', { length: 8 }).notNull().default('de'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 })

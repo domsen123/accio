@@ -5,6 +5,8 @@ definePageMeta({
   layout: 'auth',
 })
 
+const { t } = useI18n()
+
 const route = useRoute()
 const router = useRouter()
 
@@ -25,10 +27,10 @@ const apiError = computed(() => {
   if (!err)
     return null
   if (err.statusCode === 400)
-    return 'This link is invalid or has expired. Please request a new email change.'
+    return t('auth.confirm-email.error-invalid')
   if (err.statusCode === 409)
-    return 'This email is no longer available. Please try a different email address.'
-  return err.data?.statusMessage || err.message || 'An unexpected error occurred. Please try again.'
+    return t('auth.confirm-email.error-conflict')
+  return err.data?.statusMessage || err.message || t('auth.confirm-email.error-generic')
 })
 
 const confirmChange = async () => {
@@ -65,13 +67,13 @@ onMounted(() => {
         <UIcon name="i-lucide-x" class="w-6 h-6 text-error-500" />
       </div>
       <h2 class="text-xl font-semibold text-highlighted mb-2">
-        Invalid Link
+        {{ $t('auth.confirm-email.missing-token-title') }}
       </h2>
       <p class="text-sm text-muted mb-6">
-        This email confirmation link is missing a token. Please use the link from your email.
+        {{ $t('auth.confirm-email.missing-token-description') }}
       </p>
       <UButton @click="goToSettings">
-        Go to Settings
+        {{ $t('auth.confirm-email.go-to-settings') }}
       </UButton>
     </div>
 
@@ -79,7 +81,7 @@ onMounted(() => {
     <div v-else-if="isLoading" class="text-center py-8">
       <UIcon name="i-lucide-loader-2" class="w-8 h-8 text-primary-500 animate-spin mx-auto mb-4" />
       <p class="text-sm text-muted">
-        Confirming your email change...
+        {{ $t('auth.confirm-email.loading') }}
       </p>
     </div>
 
@@ -89,13 +91,17 @@ onMounted(() => {
         <UIcon name="i-lucide-check" class="w-6 h-6 text-success-500" />
       </div>
       <h2 class="text-xl font-semibold text-highlighted mb-2">
-        Email Changed
+        {{ $t('auth.confirm-email.success-title') }}
       </h2>
       <p class="text-sm text-muted mb-6">
-        Your email has been successfully changed to <strong>{{ newEmail }}</strong>.
+        <i18n-t keypath="auth.confirm-email.success-description">
+          <template #email>
+            <strong>{{ newEmail }}</strong>
+          </template>
+        </i18n-t>
       </p>
       <UButton @click="goToSettings">
-        Go to Settings
+        {{ $t('auth.confirm-email.go-to-settings') }}
       </UButton>
     </div>
 
@@ -105,13 +111,13 @@ onMounted(() => {
         <UIcon name="i-lucide-x" class="w-6 h-6 text-(--ui-color-error-500)" />
       </div>
       <h2 class="text-xl font-semibold text-(--ui-text-highlighted) mb-2">
-        Unable to Change Email
+        {{ $t('auth.confirm-email.error-title') }}
       </h2>
       <p class="text-sm text-(--ui-text-muted) mb-6">
         {{ apiError }}
       </p>
       <UButton @click="goToSettings">
-        Go to Settings
+        {{ $t('auth.confirm-email.go-to-settings') }}
       </UButton>
     </div>
   </div>

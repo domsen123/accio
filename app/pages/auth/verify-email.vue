@@ -3,9 +3,11 @@ definePageMeta({
   layout: 'auth',
 })
 
+const { t } = useI18n()
+
 useSeoMeta({
-  title: 'Verify Email',
-  description: 'Verify your email address',
+  title: () => t('auth.verify-email.page-title'),
+  description: () => t('auth.verify-email.page-description'),
 })
 
 const router = useRouter()
@@ -24,7 +26,7 @@ const verificationError = ref<string | null>(null)
 // Verify email on mount
 onMounted(async () => {
   if (!token.value) {
-    verificationError.value = 'Invalid verification link. Please check your email for the correct link.'
+    verificationError.value = t('auth.verify-email.missing-token')
     isVerifying.value = false
     return
   }
@@ -39,17 +41,19 @@ onMounted(async () => {
 
     if (response.success) {
       toast.add({
-        title: response.alreadyVerified ? 'Already verified' : 'Email verified!',
+        title: response.alreadyVerified
+          ? t('auth.verify-email.toast-already-verified-title')
+          : t('auth.verify-email.toast-verified-title'),
         description: response.alreadyVerified
-          ? 'Your email was already verified.'
-          : 'Your email has been successfully verified.',
+          ? t('auth.verify-email.toast-already-verified-description')
+          : t('auth.verify-email.toast-verified-description'),
         color: 'success',
       })
     }
   }
   catch (error) {
     const err = error as { data?: { statusMessage?: string }, message?: string }
-    verificationError.value = err.data?.statusMessage || err.message || 'Verification failed'
+    verificationError.value = err.data?.statusMessage || err.message || t('auth.verify-email.failed-title')
   }
   finally {
     isVerifying.value = false
@@ -71,10 +75,10 @@ const goToHome = () => {
     <div v-if="isVerifying" class="text-center">
       <UIcon name="i-lucide-loader-circle" class="w-12 h-12 animate-spin text-primary mb-4" />
       <h2 class="text-xl font-semibold">
-        Verifying your email...
+        {{ $t('auth.verify-email.verifying-title') }}
       </h2>
       <p class="text-muted mt-2">
-        Please wait while we verify your email address.
+        {{ $t('auth.verify-email.verifying-description') }}
       </p>
     </div>
 
@@ -84,12 +88,12 @@ const goToHome = () => {
         <UIcon name="i-lucide-check-circle" class="w-8 h-8 text-success" />
       </div>
       <h2 class="text-2xl font-semibold mb-2">
-        {{ alreadyVerified ? 'Already Verified' : 'Email Verified!' }}
+        {{ alreadyVerified ? $t('auth.verify-email.already-verified-title') : $t('auth.verify-email.verified-title') }}
       </h2>
       <p class="text-muted mb-6">
         {{ alreadyVerified
-          ? 'Your email address was already verified. You can continue using your account.'
-          : 'Your email address has been successfully verified. You can now enjoy all features of your account.'
+          ? $t('auth.verify-email.already-verified-description')
+          : $t('auth.verify-email.verified-description')
         }}
       </p>
       <div class="flex gap-3 justify-center">
@@ -98,7 +102,7 @@ const goToHome = () => {
           size="lg"
           @click="goToHome"
         >
-          Go to Dashboard
+          {{ $t('auth.verify-email.go-to-dashboard') }}
         </UButton>
       </div>
     </div>
@@ -109,10 +113,10 @@ const goToHome = () => {
         <UIcon name="i-lucide-x-circle" class="w-8 h-8 text-error" />
       </div>
       <h2 class="text-2xl font-semibold mb-2">
-        Verification Failed
+        {{ $t('auth.verify-email.failed-title') }}
       </h2>
       <p class="text-muted mb-6">
-        {{ verificationError || 'The verification link is invalid or has expired.' }}
+        {{ verificationError || $t('auth.verify-email.invalid-link') }}
       </p>
       <div class="flex gap-3 justify-center">
         <UButton
@@ -121,11 +125,11 @@ const goToHome = () => {
           size="lg"
           @click="goToSignIn"
         >
-          Sign In
+          {{ $t('auth.verify-email.go-to-sign-in') }}
         </UButton>
       </div>
       <p class="text-sm text-muted mt-4">
-        If you need a new verification link, sign in and request one from your account settings.
+        {{ $t('auth.verify-email.resend-hint') }}
       </p>
     </div>
   </div>

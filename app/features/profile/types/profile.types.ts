@@ -2,6 +2,7 @@ export interface UserProfile {
   id: string
   email: string
   name: string | null
+  locale: string
   createdAt: string
   updatedAt: string
 }
@@ -12,6 +13,7 @@ export interface ProfileResponse {
 
 export interface UpdateProfileInput {
   name?: string
+  locale?: string
 }
 
 export interface ChangePasswordInput {

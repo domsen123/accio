@@ -3,6 +3,10 @@ import { faker } from '@faker-js/faker'
 export const createOrganisationData = (overrides = {}) => ({
   name: faker.company.name(),
   slug: faker.helpers.slugify(faker.company.name()).toLowerCase(),
+  // organisations.crypto_salt is NOT NULL with no default (DESIGN-CRYPTO).
+  // The real organisationsService.create generates this; tests that bypass
+  // the service layer (item-service, event-bus) need a stable test value.
+  cryptoSalt: faker.string.hexadecimal({ length: 32, casing: 'lower', prefix: '' }),
   ...overrides,
 })
 

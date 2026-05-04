@@ -15,12 +15,14 @@ export interface UserProfile {
   id: string
   email: string | null
   name: string | null
+  locale: string
   createdAt: Date
   updatedAt: Date
 }
 
 export interface UpdateProfileInput {
   name?: string
+  locale?: string
 }
 
 export interface ChangePasswordInput {
@@ -61,13 +63,14 @@ export const createProfileService = (deps: CreateProfileServiceDeps) => {
       id: user.id,
       email: user.email,
       name: user.name,
+      locale: user.locale,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     }
   }
 
   /**
-   * Update user profile (name only - email changes require verification)
+   * Update user profile (name and locale - email changes require verification)
    */
   const updateProfile = async (
     userId: string,
@@ -79,10 +82,14 @@ export const createProfileService = (deps: CreateProfileServiceDeps) => {
       throw createError({ statusCode: 404, statusMessage: 'User not found' })
     }
 
-    const updateData: Partial<{ name: string | null }> = {}
+    const updateData: Partial<{ name: string | null, locale: string }> = {}
 
     if (input.name !== undefined) {
       updateData.name = input.name || null
+    }
+
+    if (input.locale !== undefined) {
+      updateData.locale = input.locale
     }
 
     const updatedUser = await usersItemService.update(userId, updateData)
@@ -91,6 +98,7 @@ export const createProfileService = (deps: CreateProfileServiceDeps) => {
       id: updatedUser.id,
       email: updatedUser.email,
       name: updatedUser.name,
+      locale: updatedUser.locale,
       createdAt: updatedUser.createdAt,
       updatedAt: updatedUser.updatedAt,
     }

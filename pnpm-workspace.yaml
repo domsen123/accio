@@ -10,6 +10,7 @@ catalog:
   '@nuxt/image': ^2.0.0
   '@nuxt/test-utils': ^4.0.0
   '@nuxt/ui': ^4.5.1
+  '@nuxtjs/i18n': ^10.3.0
   '@nuxtjs/seo': ^3.4.0
   '@pinia/colada': ^0.21.7
   '@pinia/colada-nuxt': ^0.3.2

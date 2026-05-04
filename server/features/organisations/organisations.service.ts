@@ -2,7 +2,12 @@ import type { organisations, roles, users } from '~~/server/database/schema'
 import type { ItemService } from '~~/server/infrastructure/database/item-service'
 import type { OrganisationMembersService } from '../organisation-members/organisation-members.service'
 import type { CreateOrganisationInput, OrganisationWithOwner } from './organisations.types'
+import { randomBytes } from 'node:crypto'
 import { getSystemRoleId } from '../rbac/rbac.seed'
+
+// Per-organisation HKDF salt for AES-256-GCM key derivation (DESIGN-CRYPTO).
+// 16 random bytes encoded as 32 hex chars; stable across the org's lifetime.
+const generateCryptoSalt = () => randomBytes(16).toString('hex')
 
 export interface CreateOrganisationsServiceDeps {
   organisationsItemService: ItemService<typeof organisations>
@@ -39,8 +44,12 @@ export const createOrganisationsService = (deps: CreateOrganisationsServiceDeps)
       throw createError({ statusCode: 409, statusMessage: 'An organisation with this slug already exists' })
     }
 
-    // Create the organisation
-    const organisation = await organisationsItemService.create({ name, slug })
+    // Create the organisation with a fresh per-org crypto salt (DESIGN-CRYPTO).
+    const organisation = await organisationsItemService.create({
+      name,
+      slug,
+      cryptoSalt: generateCryptoSalt(),
+    })
 
     // Get the Owner role ID
     const ownerRoleId = await getSystemRoleId(rolesItemService, 'Owner', 'organisation')

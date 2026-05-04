@@ -1,0 +1,191 @@
+{
+  "common": {
+    "guest": "Guest",
+    "loading": "Loading...",
+    "cancel": "Cancel",
+    "save": "Save",
+    "close": "Close",
+    "try-again": "Try again"
+  },
+  "shell": {
+    "header": {
+      "signed-in-as": "Signed in as {email}",
+      "sign-in": "Sign in",
+      "sign-up": "Sign up",
+      "sign-out": "Sign out",
+      "signing-out": "Signing out...",
+      "settings": "Settings",
+      "admin-dashboard": "Admin Dashboard",
+      "stop-impersonating": "Stop Impersonating",
+      "stopping-impersonation": "Stopping...",
+      "back-to-app": "Back to App"
+    },
+    "footer": {
+      "built-with": "Built with Nuxt UI"
+    },
+    "logo": {
+      "label": "Application Logo"
+    },
+    "language-switcher": {
+      "label": "Language",
+      "aria-label": "Change language"
+    },
+    "email-verification-banner": {
+      "title": "Please verify your email address.",
+      "description": "Check your inbox for a verification link.",
+      "resend": "Resend email",
+      "resend-success-title": "Verification email sent",
+      "resend-failed-title": "Failed to send email",
+      "resend-failed-description": "Please try again later.",
+      "dismiss": "Dismiss"
+    },
+    "toasts": {
+      "signed-out-title": "Signed out",
+      "signed-out-description": "See you soon!",
+      "impersonation-ended-title": "Impersonation ended",
+      "impersonation-ended-description": "You are now back to your admin account.",
+      "impersonation-failed-title": "Failed to stop impersonation",
+      "impersonation-failed-description": "Please try again."
+    }
+  },
+  "auth": {
+    "common": {
+      "email-label": "Email",
+      "email-placeholder": "Enter your email",
+      "password-label": "Password",
+      "password-placeholder": "Enter your password",
+      "confirm-password-label": "Confirm Password",
+      "confirm-password-placeholder": "Confirm your password",
+      "name-label": "Name",
+      "name-placeholder": "Enter your name",
+      "remember-me": "Remember me",
+      "providers": {
+        "google": "Google",
+        "github": "GitHub",
+        "google-coming-soon": "Login with Google (coming soon)",
+        "github-coming-soon": "Login with GitHub (coming soon)",
+        "google-signup-coming-soon": "Sign up with Google (coming soon)",
+        "github-signup-coming-soon": "Sign up with GitHub (coming soon)"
+      },
+      "errors": {
+        "invalid-email": "Invalid email",
+        "password-min": "Must be at least 8 characters",
+        "name-required": "Name is required",
+        "passwords-no-match": "Passwords do not match",
+        "confirm-password-required": "Please confirm your password"
+      }
+    },
+    "sign-in": {
+      "page-title": "Login",
+      "page-description": "Login to your account to continue",
+      "title": "Welcome back",
+      "submit": "Sign in",
+      "no-account": "Don't have an account?",
+      "sign-up-link": "Sign up",
+      "forgot-password": "Forgot password?",
+      "footer-prefix": "By signing in, you agree to our",
+      "terms-link": "Terms of Service",
+      "footer-suffix": ".",
+      "welcome-back": "Welcome back!",
+      "login-failed": "Login failed"
+    },
+    "sign-up": {
+      "page-title": "Sign up",
+      "page-description": "Create an account to get started",
+      "title": "Create an account",
+      "submit": "Create account",
+      "have-account": "Already have an account?",
+      "sign-in-link": "Login",
+      "footer-prefix": "By signing up, you agree to our",
+      "footer-suffix": ".",
+      "account-created-title": "Account created!",
+      "account-created-description": "Welcome aboard.",
+      "email-exists": "An account with this email already exists",
+      "registration-failed": "Registration failed"
+    },
+    "forgot-password": {
+      "page-title": "Forgot Password",
+      "page-description": "Reset your password",
+      "title": "Forgot password?",
+      "description": "Enter your email address and we'll send you a link to reset your password.",
+      "submit": "Send reset link",
+      "remember": "Remember your password?",
+      "sign-in-link": "Sign in",
+      "request-failed": "Request failed",
+      "submitted-title": "Check your email",
+      "submitted-description": "If an account exists with this email, you will receive password reset instructions.",
+      "no-email-hint": "Didn't receive an email? Check your spam folder or",
+      "try-again": "try again",
+      "back-to-sign-in": "Back to sign in",
+      "check-email-toast": "Check your email"
+    },
+    "reset-password": {
+      "page-title": "Reset Password",
+      "page-description": "Create a new password for your account",
+      "title": "Reset your password",
+      "description": "Enter your new password below.",
+      "new-password-label": "New Password",
+      "new-password-placeholder": "Enter your new password",
+      "submit": "Reset password",
+      "remember": "Remember your password?",
+      "sign-in-link": "Sign in",
+      "reset-failed": "Password reset failed",
+      "success-title": "Password reset successful",
+      "invalid-link-title": "Invalid reset link",
+      "invalid-link-description": "Please request a new password reset link.",
+      "expired-link-title": "Reset link expired",
+      "expired-link-description": "This password reset link has expired or been used. Please request a new one."
+    },
+    "verify-email": {
+      "page-title": "Verify Email",
+      "page-description": "Verify your email address",
+      "verifying-title": "Verifying your email...",
+      "verifying-description": "Please wait while we verify your email address.",
+      "already-verified-title": "Already Verified",
+      "already-verified-description": "Your email address was already verified. You can continue using your account.",
+      "verified-title": "Email Verified!",
+      "verified-description": "Your email address has been successfully verified. You can now enjoy all features of your account.",
+      "go-to-dashboard": "Go to Dashboard",
+      "failed-title": "Verification Failed",
+      "invalid-link": "The verification link is invalid or has expired.",
+      "missing-token": "Invalid verification link. Please check your email for the correct link.",
+      "go-to-sign-in": "Sign In",
+      "resend-hint": "If you need a new verification link, sign in and request one from your account settings.",
+      "toast-already-verified-title": "Already verified",
+      "toast-already-verified-description": "Your email was already verified.",
+      "toast-verified-title": "Email verified!",
+      "toast-verified-description": "Your email has been successfully verified."
+    },
+    "confirm-email": {
+      "missing-token-title": "Invalid Link",
+      "missing-token-description": "This email confirmation link is missing a token. Please use the link from your email.",
+      "loading": "Confirming your email change...",
+      "success-title": "Email Changed",
+      "success-description": "Your email has been successfully changed to {email}.",
+      "error-title": "Unable to Change Email",
+      "error-invalid": "This link is invalid or has expired. Please request a new email change.",
+      "error-conflict": "This email is no longer available. Please try a different email address.",
+      "error-generic": "An unexpected error occurred. Please try again.",
+      "go-to-settings": "Go to Settings"
+    },
+    "accept-invitation": {
+      "page-title": "Accept Invitation",
+      "page-description": "Accept your organisation invitation and create your account",
+      "title": "Accept Invitation",
+      "submit": "Create Account & Join",
+      "name-placeholder": "Enter your name (optional)",
+      "password-placeholder": "Create a password",
+      "description-line-1": "You've been invited to join {organisation}.",
+      "description-line-2": "Create your account using {email}",
+      "have-account": "Already have an account?",
+      "sign-in-link": "Sign in",
+      "invalid-link-title": "Invalid invitation link",
+      "invalid-link-description": "Please check your email for the correct invitation link.",
+      "invalid-invitation-title": "Invalid invitation",
+      "invalid-invitation-description": "This invitation link has expired or is invalid.",
+      "welcome-title": "Welcome!",
+      "welcome-description": "You've joined {organisation}. Redirecting...",
+      "accept-failed": "Failed to accept invitation"
+    }
+  }
+}

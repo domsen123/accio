@@ -3,6 +3,7 @@ import { useStopImpersonation } from '~/features/admin/composables/useImpersonat
 
 const router = useRouter()
 const toast = useToast()
+const { t } = useI18n()
 
 const { user, isAuthenticated, isAnonymous, isLoading, isImpersonating } = useSession()
 const { isGlobalAdmin } = usePermissions()
@@ -14,7 +15,10 @@ const items = computed(() => [])
 const handleLogout = () => {
   logout()
     .then(() => {
-      toast.add({ title: 'Signed out', description: 'See you soon!' })
+      toast.add({
+        title: t('shell.toasts.signed-out-title'),
+        description: t('shell.toasts.signed-out-description'),
+      })
       router.push(ROUTES.start)
     })
     .catch(() => {
@@ -26,16 +30,16 @@ const handleStopImpersonation = () => {
   stopImpersonation()
     .then(() => {
       toast.add({
-        title: 'Impersonation ended',
-        description: 'You are now back to your admin account.',
+        title: t('shell.toasts.impersonation-ended-title'),
+        description: t('shell.toasts.impersonation-ended-description'),
         color: 'success',
       })
       router.push(ROUTES.admin.users)
     })
     .catch(() => {
       toast.add({
-        title: 'Failed to stop impersonation',
-        description: 'Please try again.',
+        title: t('shell.toasts.impersonation-failed-title'),
+        description: t('shell.toasts.impersonation-failed-description'),
         color: 'error',
       })
     })
@@ -53,26 +57,28 @@ const userMenuItems = computed(() => {
   }]
 
   const stopImpersonationItem = [{
-    label: isStoppingImpersonation.value ? 'Stopping...' : 'Stop Impersonating',
+    label: isStoppingImpersonation.value
+      ? t('shell.header.stopping-impersonation')
+      : t('shell.header.stop-impersonating'),
     icon: 'i-lucide-user-x',
     onSelect: handleStopImpersonation,
     disabled: isStoppingImpersonation.value,
   }]
 
   const settingsItem = [{
-    label: 'Settings',
+    label: t('shell.header.settings'),
     icon: 'i-lucide-settings',
     to: ROUTES.settings.profile,
   }]
 
   const adminItem = [{
-    label: 'Admin Dashboard',
+    label: t('shell.header.admin-dashboard'),
     icon: 'i-lucide-shield',
     to: ROUTES.admin.home,
   }]
 
   const signOutItem = [{
-    label: 'Sign out',
+    label: t('shell.header.sign-out'),
     icon: 'i-lucide-log-out',
     onSelect: handleLogout,
   }]
@@ -104,6 +110,7 @@ const userMenuItems = computed(() => {
     />
 
     <template #right>
+      <AppLocaleSwitcher />
       <UColorModeButton />
 
       <!-- Loading state -->
@@ -124,7 +131,7 @@ const userMenuItems = computed(() => {
               size="2xs"
             />
             <span class="hidden lg:inline truncate max-w-32">
-              {{ user.name || user.email || 'Guest' }}
+              {{ user.name || user.email || $t('common.guest') }}
             </span>
             <UIcon name="i-lucide-chevron-down" class="hidden lg:inline" />
           </UButton>
@@ -142,7 +149,7 @@ const userMenuItems = computed(() => {
         />
 
         <UButton
-          label="Sign in"
+          :label="$t('shell.header.sign-in')"
           color="neutral"
           variant="outline"
           :to="ROUTES.auth.signIn"
@@ -150,7 +157,7 @@ const userMenuItems = computed(() => {
         />
 
         <UButton
-          label="Sign up"
+          :label="$t('shell.header.sign-up')"
           color="neutral"
           trailing-icon="i-lucide-arrow-right"
           class="hidden lg:inline-flex"
@@ -171,11 +178,11 @@ const userMenuItems = computed(() => {
       <!-- Mobile menu auth section -->
       <template v-if="isAuthenticated && user && !isAnonymous">
         <div class="px-2.5 py-2 text-sm text-muted">
-          Signed in as {{ user.email ?? 'Guest' }}
+          {{ $t('shell.header.signed-in-as', { email: user.email ?? $t('common.guest') }) }}
         </div>
         <UButton
           v-if="isImpersonating"
-          label="Stop Impersonating"
+          :label="$t('shell.header.stop-impersonating')"
           color="warning"
           variant="subtle"
           icon="i-lucide-user-x"
@@ -185,7 +192,7 @@ const userMenuItems = computed(() => {
           @click="handleStopImpersonation"
         />
         <UButton
-          label="Settings"
+          :label="$t('shell.header.settings')"
           color="neutral"
           variant="subtle"
           icon="i-lucide-settings"
@@ -195,7 +202,7 @@ const userMenuItems = computed(() => {
         />
         <UButton
           v-if="isGlobalAdmin && !isImpersonating"
-          label="Admin Dashboard"
+          :label="$t('shell.header.admin-dashboard')"
           color="neutral"
           variant="subtle"
           icon="i-lucide-shield"
@@ -204,7 +211,7 @@ const userMenuItems = computed(() => {
           class="mb-3"
         />
         <UButton
-          label="Sign out"
+          :label="$t('shell.header.sign-out')"
           color="neutral"
           variant="subtle"
           icon="i-lucide-log-out"
@@ -215,7 +222,7 @@ const userMenuItems = computed(() => {
       </template>
       <template v-else>
         <UButton
-          label="Sign in"
+          :label="$t('shell.header.sign-in')"
           color="neutral"
           variant="subtle"
           :to="ROUTES.auth.signIn"
@@ -223,7 +230,7 @@ const userMenuItems = computed(() => {
           class="mb-3"
         />
         <UButton
-          label="Sign up"
+          :label="$t('shell.header.sign-up')"
           color="neutral"
           :to="ROUTES.auth.signUp"
           block

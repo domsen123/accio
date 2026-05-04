@@ -1,9 +1,11 @@
 import * as z from 'zod'
 import { requireAuth } from '~~/server/features/auth/auth.guard'
 import { container } from '~~/server/utils/container'
+import { SUPPORTED_LOCALES } from '~~/shared/i18n.constants'
 
 const updateProfileSchema = z.object({
   name: z.string().trim().max(100, 'Name must be 100 characters or less').optional(),
+  locale: z.enum(SUPPORTED_LOCALES).optional(),
 })
 
 export default defineEventHandler(async (event) => {
