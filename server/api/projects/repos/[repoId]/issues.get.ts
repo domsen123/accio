@@ -1,0 +1,66 @@
+/**
+ * GET /api/projects/repos/[repoId]/issues — paginated, filterable view of
+ * cached issues (T-4.6, REQ-PROJ-5).
+ *
+ * Filters: `state` (`open`|`closed`|`all`, default `open`), `labels` (any-of),
+ * `q` (LIKE on title), `limit`/`offset`, `sort`. Cross-org / soft-deleted
+ * `repoId` returns 404 `gh.repo.not_found`.
+ *
+ * Permission: `project:read`.
+ */
+import { resolveWorkspace } from '~~/server/features/kb/workspace'
+import {
+  issuesListQuerySchema,
+  serialiseIssue,
+} from '~~/server/features/projects/api-schemas'
+import {
+  getRequiredParam,
+  projectsThrow,
+  readProjectsQuery,
+  runProjectsServiceCall,
+} from '~~/server/features/projects/api-utils'
+import {
+  ISSUES_LIST_DEFAULT_LIMIT,
+} from '~~/server/features/projects/read.service'
+import { PERMISSIONS } from '~~/server/features/rbac/permissions'
+import { requirePermission } from '~~/server/features/rbac/rbac.guard'
+import { container } from '~~/server/utils/container'
+
+export default defineEventHandler(async (event) => {
+  const ws = await resolveWorkspace(event)
+
+  await requirePermission(event, {
+    permission: PERMISSIONS.PROJECT_READ,
+    scope: 'organisation',
+    getScopeId: () => ws.organisationId,
+  })
+
+  const repoId = getRequiredParam(event, 'repoId', 'gh.repo.id_required')
+  const q = readProjectsQuery(event, issuesListQuerySchema)
+
+  const result = await runProjectsServiceCall(() =>
+    container.ghProjectsReadService.listIssues({
+      organisationId: ws.organisationId,
+      repoId,
+      filter: {
+        state: q.state,
+        labels: q.labels,
+        q: q.q,
+      },
+      pagination: { limit: q.limit, offset: q.offset },
+      sort: q.sort,
+    }),
+  )
+
+  if (!result) {
+    projectsThrow(404, 'gh.repo.not_found', { repoId })
+    return undefined as never
+  }
+
+  return {
+    rows: result.rows.map(serialiseIssue),
+    total: result.total,
+    limit: q.limit ?? ISSUES_LIST_DEFAULT_LIMIT,
+    offset: q.offset ?? 0,
+  }
+})

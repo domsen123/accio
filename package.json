@@ -36,6 +36,7 @@
     "@nuxt/ui": "catalog:",
     "@nuxtjs/i18n": "catalog:",
     "@nuxtjs/seo": "catalog:",
+    "@octokit/rest": "catalog:",
     "@pinia/colada": "catalog:",
     "@pinia/colada-nuxt": "catalog:",
     "@pinia/nuxt": "catalog:",

@@ -10,6 +10,11 @@ import { contentCreatorClusters } from './content-creator-clusters'
 import { contentCreatorPillars } from './content-creator-pillars'
 import { fileMetadata } from './file-metadata'
 import { files } from './files'
+import { ghCommits } from './gh-commits'
+import { ghConnections } from './gh-connections'
+import { ghIssues } from './gh-issues'
+import { ghPulls } from './gh-pulls'
+import { ghRepos } from './gh-repos'
 import { kbCategories } from './kb-categories'
 import { kbEntries } from './kb-entries'
 import { kbEntryLinks } from './kb-entry-links'
@@ -76,6 +81,11 @@ export const organisationsRelations = relations(organisations, ({ one, many }) =
   orchestratorConversations: many(orchestratorConversations),
   orchestratorActions: many(orchestratorActions),
   orchestratorWorkspaceSettings: one(orchestratorWorkspaceSettings),
+  ghConnection: one(ghConnections),
+  ghRepos: many(ghRepos),
+  ghIssues: many(ghIssues),
+  ghPulls: many(ghPulls),
+  ghCommits: many(ghCommits),
 }))
 
 export const organisationInvitationsRelations = relations(organisationInvitations, ({ one }) => ({
@@ -431,5 +441,61 @@ export const orchestratorWorkspaceSettingsRelations = relations(orchestratorWork
   defaultModel: one(aiModels, {
     fields: [orchestratorWorkspaceSettings.defaultModelId],
     references: [aiModels.id],
+  }),
+}))
+
+// Projects (GitHub) Relations (DESIGN-DATA §Projects)
+export const ghConnectionsRelations = relations(ghConnections, ({ one, many }) => ({
+  organisation: one(organisations, {
+    fields: [ghConnections.organisationId],
+    references: [organisations.id],
+  }),
+  repos: many(ghRepos),
+}))
+
+export const ghReposRelations = relations(ghRepos, ({ one, many }) => ({
+  organisation: one(organisations, {
+    fields: [ghRepos.organisationId],
+    references: [organisations.id],
+  }),
+  connection: one(ghConnections, {
+    fields: [ghRepos.connectionId],
+    references: [ghConnections.id],
+  }),
+  issues: many(ghIssues),
+  pulls: many(ghPulls),
+  commits: many(ghCommits),
+}))
+
+export const ghIssuesRelations = relations(ghIssues, ({ one }) => ({
+  organisation: one(organisations, {
+    fields: [ghIssues.organisationId],
+    references: [organisations.id],
+  }),
+  repo: one(ghRepos, {
+    fields: [ghIssues.repoId],
+    references: [ghRepos.id],
+  }),
+}))
+
+export const ghPullsRelations = relations(ghPulls, ({ one }) => ({
+  organisation: one(organisations, {
+    fields: [ghPulls.organisationId],
+    references: [organisations.id],
+  }),
+  repo: one(ghRepos, {
+    fields: [ghPulls.repoId],
+    references: [ghRepos.id],
+  }),
+}))
+
+export const ghCommitsRelations = relations(ghCommits, ({ one }) => ({
+  organisation: one(organisations, {
+    fields: [ghCommits.organisationId],
+    references: [organisations.id],
+  }),
+  repo: one(ghRepos, {
+    fields: [ghCommits.repoId],
+    references: [ghRepos.id],
   }),
 }))

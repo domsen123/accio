@@ -1,5 +1,14 @@
 import process from 'node:process'
 
+// GitHub sync cron expression — REQ-PROJ-3 default 15 min, configurable via
+// NUXT_GITHUB_SYNC_INTERVAL_MINUTES. Resolved at config load time; restart to
+// change.
+const githubSyncIntervalMinutes = (() => {
+  const raw = Number.parseInt(process.env.NUXT_GITHUB_SYNC_INTERVAL_MINUTES || '15', 10)
+  return Number.isFinite(raw) && raw > 0 ? Math.min(raw, 60) : 15
+})()
+const githubSyncCron = `*/${githubSyncIntervalMinutes} * * * *`
+
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   modules: [
@@ -62,6 +71,9 @@ export default defineNuxtConfig({
       '0 3 * * *': ['cleanup:tokens'],
       // Run content creator queue processing daily at 9:00 AM
       '0 9 * * *': ['content-creator:generate'],
+      // Sync GitHub data for every workspace with tracked repos
+      // (REQ-PROJ-3, default every 15 min, configurable).
+      [githubSyncCron]: ['gh:sync-all'],
     },
     prerender: {
       routes: [

@@ -163,6 +163,566 @@
       }
     }
   },
+  "settings": {
+    "index": {
+      "title": "Einstellungen",
+      "subtitle": "Diesen Workspace konfigurieren.",
+      "cards": {
+        "ai": {
+          "title": "KI-Konfiguration",
+          "description": "Provider-Zugangsdaten, Standardmodell und Anzeigeeinstellungen des Orchestrators."
+        },
+        "audit": {
+          "title": "Orchestrator-Audit-Log",
+          "description": "Alle Schreib-Aktionen des Orchestrators in diesem Workspace einsehen."
+        }
+      }
+    }
+  },
+  "audit": {
+    "title": "Orchestrator-Audit-Log",
+    "subtitle": "Jede Schreib-Aktion des Orchestrators wird hier protokolliert. Mit den Filtern eingrenzen oder eine Zeile anklicken, um die vollständigen Daten anzusehen.",
+    "permissions": {
+      "denied": {
+        "title": "Kein Zugriff auf das Audit-Log",
+        "description": "Zum Ansehen des Audit-Logs ist die Berechtigung orchestrator:audit:view erforderlich. Bitte den Workspace-Owner um Freigabe."
+      }
+    },
+    "error": {
+      "load": "Audit-Log konnte nicht geladen werden"
+    },
+    "filters": {
+      "title": "Filter",
+      "clear": "Zurücksetzen",
+      "toolName": {
+        "label": "Tool-Name",
+        "placeholder": "z. B. kb_update_entry"
+      },
+      "status": {
+        "label": "Status",
+        "placeholder": "Alle Status"
+      },
+      "class": {
+        "label": "Klasse",
+        "placeholder": "Alle Klassen"
+      },
+      "since": {
+        "label": "Von"
+      },
+      "until": {
+        "label": "Bis"
+      }
+    },
+    "table": {
+      "title": "Aktionen",
+      "total": "{total} insgesamt",
+      "empty": "Keine Aktionen entsprechen den aktuellen Filtern."
+    },
+    "columns": {
+      "createdAt": "Zeit",
+      "toolName": "Tool",
+      "class": "Klasse",
+      "status": "Status",
+      "affectedCount": "Betroffen",
+      "model": "Modell",
+      "user": "Nutzer"
+    },
+    "class": {
+      "auto": "Auto",
+      "confirm": "Bestätigt"
+    },
+    "status": {
+      "pending_confirmation": "Wartet",
+      "confirmed": "Bestätigt",
+      "cancelled": "Abgebrochen",
+      "executed": "Ausgeführt",
+      "failed": "Fehlgeschlagen"
+    },
+    "pagination": {
+      "indicator": "Seite {page} von {totalPages}",
+      "prev": "Zurück",
+      "next": "Weiter"
+    },
+    "detail": {
+      "title": "Aktions-Detail",
+      "conversation": "Gespräch",
+      "createdAt": "Erstellt",
+      "executedAt": "Ausgeführt",
+      "confirmedAt": "Bestätigt",
+      "cancelledAt": "Abgebrochen",
+      "parameters": "Parameter",
+      "result": "Ergebnis",
+      "error": "Fehler"
+    }
+  },
+  "orchestrator": {
+    "permissions": {
+      "denied": {
+        "title": "Kein Zugriff auf den Orchestrator",
+        "description": "Zur Nutzung des Orchestrators ist die Berechtigung orchestrator:use erforderlich. Bitte den Workspace-Owner um Freigabe."
+      },
+      "write": {
+        "tooltip": "Zum Wechsel in den Lese- und Schreibmodus ist die Berechtigung orchestrator:write erforderlich."
+      }
+    },
+    "errors": {
+      "load": {
+        "title": "Gespräch konnte nicht geladen werden"
+      },
+      "update": {
+        "title": "Änderungen konnten nicht gespeichert werden"
+      }
+    },
+    "modes": {
+      "read_only": "Nur lesen",
+      "read_write": "Lesen & schreiben"
+    },
+    "list": {
+      "title": "Orchestrator",
+      "subtitle": "Vergangene Gespräche mit dem Assistenten. Öffne eines, um fortzufahren, oder starte ein neues.",
+      "actions": {
+        "create": "Neues Gespräch"
+      },
+      "filters": {
+        "search": {
+          "label": "Suche",
+          "placeholder": "Nach Titel filtern..."
+        },
+        "sort": {
+          "label": "Sortierung"
+        },
+        "includeDeleted": "Gelöschte anzeigen"
+      },
+      "sort": {
+        "updatedDesc": "Zuletzt aktualisiert",
+        "updatedAsc": "Älteste Aktualisierung",
+        "createdDesc": "Neueste zuerst",
+        "createdAsc": "Älteste zuerst"
+      },
+      "table": {
+        "title": "Gespräche",
+        "total": "{total} insgesamt"
+      },
+      "empty": {
+        "title": "Noch keine Gespräche.",
+        "subtitle": "Starte ein neues Gespräch, um Fragen zu deinem Workspace zu stellen."
+      },
+      "row": {
+        "untitled": "Unbenanntes Gespräch",
+        "deleted": "Gelöscht",
+        "lastMessage": "letzte Nachricht {when}",
+        "noMessages": "noch keine Nachrichten",
+        "model": {
+          "default": "Workspace-Standard",
+          "unknown": "Modell nicht konfiguriert"
+        },
+        "actions": {
+          "open": "Öffnen",
+          "delete": "Löschen"
+        }
+      },
+      "pagination": {
+        "indicator": "Seite {page} von {totalPages}",
+        "prev": "Zurück",
+        "next": "Weiter"
+      },
+      "delete": {
+        "title": "Dieses Gespräch löschen?",
+        "body": "\"{title}\" wird aus der Liste ausgeblendet. Das Audit-Log behält die Referenz zur Nachverfolgung.",
+        "confirm": "Löschen"
+      },
+      "toast": {
+        "deleted": {
+          "title": "Gespräch gelöscht"
+        },
+        "error": {
+          "title": "Aktion fehlgeschlagen"
+        }
+      }
+    },
+    "chat": {
+      "title": "Gespräch",
+      "back": "Zurück zur Übersicht",
+      "titleField": {
+        "label": "Titel",
+        "description": "Wird beim Verlassen des Feldes automatisch gespeichert.",
+        "placeholder": "Unbenanntes Gespräch"
+      },
+      "mode": {
+        "enableWrite": "Lesen & schreiben aktivieren",
+        "disableWrite": "Auf Nur-Lesen umschalten",
+        "confirm": {
+          "title": "Schreibzugriff für den Orchestrator erlauben?",
+          "body": "Im Lese- und Schreibmodus kann der Assistent Schreib-Tools ausführen (Wissensdatenbank-Einträge, Todos usw. anlegen oder ändern). Risikobehaftete Aktionen erfordern weiterhin eine ausdrückliche Bestätigung.",
+          "action": "Lesen & schreiben aktivieren"
+        }
+      },
+      "modelPicker": {
+        "label": "Modell",
+        "description": "Es werden nur Modelle mit hinterlegten Zugangsdaten sowie Tool- und Streaming-Unterstützung angezeigt.",
+        "default": "Workspace-Standard"
+      },
+      "noModels": {
+        "title": "Keine Modelle verfügbar",
+        "description": "Hinterlege in den Workspace-Einstellungen Provider-Zugangsdaten, um den Orchestrator zu nutzen.",
+        "action": "AI-Einstellungen öffnen"
+      },
+      "messages": {
+        "title": "Nachrichten",
+        "count": "{n} insgesamt",
+        "empty": "Noch keine Nachrichten in diesem Gespräch.",
+        "emptyBlock": "(kein darstellbarer Inhalt)",
+        "toolCallPlaceholder": "[Tool-Aufruf: {tool}]",
+        "toolResultPlaceholder": "[Tool-Ergebnis: {tool}]"
+      },
+      "role": {
+        "user": "Du",
+        "assistant": "Assistent",
+        "tool_result": "Tool"
+      },
+      "composer": {
+        "label": "Nachricht",
+        "description": "Enter sendet. Shift+Enter fügt einen Zeilenumbruch ein.",
+        "placeholder": "Nachricht eingeben...",
+        "send": "Senden",
+        "stop": "Stopp",
+        "retry": "Erneut versuchen",
+        "noModelsTooltip": "Hinterlege Provider-Zugangsdaten, um Nachrichten zu senden.",
+        "noPermissionTooltip": "Zum Senden ist die Berechtigung orchestrator:use erforderlich."
+      },
+      "stream": {
+        "live": {
+          "label": "Live",
+          "assistant": "Assistent"
+        },
+        "errors": {
+          "title": "Streaming-Fehler",
+          "connection_lost": "Die Verbindung wurde unterbrochen. Klicke auf erneut versuchen.",
+          "generic": "Das Gespräch konnte nicht gestreamt werden."
+        }
+      },
+      "toast": {
+        "modelSaved": "Modell gespeichert",
+        "writeEnabled": "Lesen & schreiben aktiviert",
+        "writeDisabled": "Nur-Lesen aktiviert",
+        "aborted": "Streaming gestoppt"
+      }
+    },
+    "toolCall": {
+      "parameters": "Parameter",
+      "copyId": "Tool-Call-ID kopieren",
+      "copied": "Tool-Call-ID kopiert",
+      "copyFailed": "Kopieren nicht möglich"
+    },
+    "toolResult": {
+      "untitled": "Tool-Ergebnis",
+      "output": "Ausgabe",
+      "cancelledMessage": "Aktion vom Nutzer abgebrochen.",
+      "status": {
+        "executed": "Ausgeführt",
+        "cancelled": "Abgebrochen",
+        "failed": "Fehlgeschlagen"
+      }
+    },
+    "confirmation": {
+      "title": "Bestätigung erforderlich",
+      "parameters": "Parameter",
+      "vaultWarning": "Das Secret wird an den LLM-Anbieter gesendet. Nur bestätigen, wenn nötig.",
+      "reason": {
+        "class": "Dieses Tool ist als bestätigungspflichtig eingestuft.",
+        "bulk": "Dieses Tool würde {n} Einträge betreffen (Massenänderungs-Regel)."
+      },
+      "actions": {
+        "confirm": "Bestätigen",
+        "cancel": "Abbrechen"
+      },
+      "errors": {
+        "confirm": "Aktion konnte nicht bestätigt werden",
+        "cancel": "Aktion konnte nicht abgebrochen werden"
+      }
+    }
+  },
+  "projects": {
+    "permissions": {
+      "denied": {
+        "title": "Du hast keinen Zugriff auf Projekte",
+        "description": "Projekte ansehen erfordert die Berechtigung project:read. Bitte einen Workspace-Owner um Zugriff."
+      },
+      "manage": {
+        "tooltip": "Verbindungen, Tracking und Sync verwalten erfordert die Berechtigung project:manage."
+      }
+    },
+    "errors": {
+      "load": {
+        "title": "Projekte konnten nicht geladen werden"
+      },
+      "action": {
+        "title": "Aktion fehlgeschlagen"
+      }
+    },
+    "list": {
+      "title": "Projekte",
+      "subtitle": "Verfolgte GitHub-Repositories, die in diesen Workspace synchronisiert werden. Öffne eines, um Issues, PRs und Commits zu sehen.",
+      "actions": {
+        "addRepo": "Repository hinzufügen",
+        "manageConnection": "Verbindung verwalten",
+        "connect": "GitHub verbinden"
+      },
+      "filters": {
+        "search": {
+          "label": "Suche",
+          "placeholder": "Nach vollem Namen filtern..."
+        },
+        "tracked": {
+          "label": "Tracking",
+          "all": "Alle",
+          "tracked": "Verfolgt",
+          "untracked": "Nicht verfolgt"
+        }
+      },
+      "table": {
+        "title": "Repositories",
+        "total": "{total} insgesamt",
+        "columns": {
+          "repo": "Repository",
+          "tracked": "Verfolgt",
+          "lastSync": "Letzter Sync",
+          "actions": "Aktionen"
+        }
+      },
+      "row": {
+        "private": "Privat",
+        "public": "Öffentlich",
+        "tracked": "Verfolgt",
+        "untracked": "Nicht verfolgt",
+        "neverSynced": "Nie synchronisiert",
+        "lastSyncAgo": "Synchronisiert {when}",
+        "actions": {
+          "open": "Öffnen",
+          "syncNow": "Jetzt synchronisieren",
+          "track": "Verfolgen",
+          "untrack": "Nicht mehr verfolgen",
+          "openInGithubDev": "In github.dev öffnen",
+          "delete": "Entfernen"
+        }
+      },
+      "empty": {
+        "tracked": {
+          "title": "Noch keine verfolgten Repositories.",
+          "subtitle": "Füge ein Repository aus deinem GitHub-Account hinzu, um Issues, Pulls und Commits zu synchronisieren."
+        },
+        "filtered": {
+          "title": "Keine Repositories passen.",
+          "subtitle": "Passe die Filter an, um mehr Ergebnisse zu sehen."
+        }
+      },
+      "pagination": {
+        "indicator": "Seite {page} von {totalPages}",
+        "prev": "Zurück",
+        "next": "Weiter"
+      },
+      "delete": {
+        "title": "Dieses Repository entfernen?",
+        "body": "{full} wird aus dem Workspace entfernt und gecachte Issues, Pulls und Commits werden gelöscht.",
+        "confirm": "Entfernen"
+      },
+      "toast": {
+        "synced": {
+          "title": "Sync abgeschlossen",
+          "description": "{issues} Issues · {pulls} Pulls · {commits} Commits"
+        },
+        "tracked": {
+          "title": "Repository verfolgt"
+        },
+        "untracked": {
+          "title": "Repository nicht mehr verfolgt"
+        },
+        "deleted": {
+          "title": "Repository entfernt"
+        },
+        "error": {
+          "title": "Aktion fehlgeschlagen"
+        }
+      }
+    },
+    "connection": {
+      "title": "GitHub-Verbindung",
+      "subtitle": "Verbinde ein Personal Access Token, damit Repositories synchronisiert werden können.",
+      "back": "Zurück zu den Projekten",
+      "status": {
+        "title": "Status",
+        "connected": "Verbunden",
+        "notConnected": "Nicht verbunden",
+        "ghUserLogin": "GitHub-Benutzer",
+        "scopes": "Scopes",
+        "scopesEmpty": "(Fine-Grained-PAT — Scope-Erkennung nicht verfügbar)",
+        "lastValidatedAt": "Zuletzt geprüft",
+        "never": "nie",
+        "updatedAt": "Aktualisiert"
+      },
+      "form": {
+        "title": "Personal Access Token",
+        "subtitle": "Tokens werden verschlüsselt gespeichert und nach dem Speichern nie wieder angezeigt.",
+        "tokenLabel": "Token",
+        "tokenPlaceholder": "ghp_... oder github_pat_...",
+        "tokenHelp": "Klassische PATs benötigen den Scope repo. Fine-Grained-PATs benötigen Lesezugriff auf Repository-Inhalte, Issues und Pull Requests.",
+        "save": "Speichern und prüfen",
+        "replace": "Token ersetzen"
+      },
+      "validate": {
+        "label": "Jetzt prüfen",
+        "successTitle": "Token ist gültig",
+        "failureTitle": "Token-Prüfung fehlgeschlagen",
+        "reasons": {
+          "no_connection": "Es ist keine Verbindung konfiguriert.",
+          "invalid_token": "Das Token ist ungültig oder wurde widerrufen.",
+          "insufficient_scope": "Das Token hat nicht die benötigten Scopes.",
+          "validation_failed": "Das Token konnte nicht bei GitHub geprüft werden."
+        }
+      },
+      "revoke": {
+        "title": "Verbindung widerrufen",
+        "subtitle": "Beim Widerruf werden Synchronisationen gestoppt. Gecachte Repositories und Issues bleiben erhalten, sofern die Lösch-Option nicht aktiviert ist.",
+        "purgeLabel": "Auch gecachte Repositories, Issues, Pulls und Commits löschen",
+        "action": "Widerrufen",
+        "confirmTitle": "Diese Verbindung widerrufen?",
+        "confirmBody": "Hintergrund-Syncs werden gestoppt. {purge}",
+        "confirmBodyKeep": "Gecachte Daten bleiben erhalten, bis du einzelne Repositories entfernst.",
+        "confirmBodyPurge": "Alle gecachten Repositories, Issues, Pulls und Commits werden ebenfalls gelöscht.",
+        "confirm": "Verbindung widerrufen"
+      },
+      "toast": {
+        "saved": {
+          "title": "Verbindung gespeichert"
+        },
+        "validated": {
+          "title": "Token erneut geprüft"
+        },
+        "revoked": {
+          "title": "Verbindung widerrufen"
+        },
+        "error": {
+          "title": "Aktion fehlgeschlagen"
+        }
+      }
+    },
+    "picker": {
+      "title": "Repository hinzufügen",
+      "subtitle": "Repositories, auf die der verbundene GitHub-Account Zugriff hat. Verfolgte Repos werden automatisch synchronisiert.",
+      "back": "Zurück zu den Projekten",
+      "search": {
+        "placeholder": "Nach Name oder Beschreibung filtern..."
+      },
+      "filters": {
+        "showTrackedOnly": "Nur verfolgte",
+        "showCachedOnly": "Bereits hinzugefügt"
+      },
+      "row": {
+        "private": "Privat",
+        "public": "Öffentlich",
+        "cached": "Gecached",
+        "tracked": "Verfolgt",
+        "actions": {
+          "track": "Verfolgen",
+          "untrack": "Nicht mehr verfolgen",
+          "open": "Öffnen"
+        }
+      },
+      "empty": {
+        "title": "Keine Repositories gefunden.",
+        "subtitle": "Stelle sicher, dass dein Token Zugriff auf mindestens ein Repository hat."
+      },
+      "noConnection": {
+        "title": "GitHub zuerst verbinden",
+        "description": "Du musst ein Personal Access Token hinzufügen, bevor du Repositories durchsuchen kannst.",
+        "action": "Verbinden"
+      }
+    },
+    "detail": {
+      "back": "Zurück zu den Projekten",
+      "header": {
+        "tracked": "Verfolgt",
+        "untracked": "Nicht verfolgt",
+        "private": "Privat",
+        "public": "Öffentlich",
+        "lastSyncedAt": "Letzter Sync",
+        "neverSynced": "nie synchronisiert",
+        "defaultBranch": "Standard-Branch"
+      },
+      "actions": {
+        "syncNow": "Jetzt synchronisieren",
+        "openInGithubDev": "In github.dev öffnen",
+        "openOnGithub": "Auf github.com öffnen",
+        "track": "Verfolgen",
+        "untrack": "Nicht mehr verfolgen"
+      },
+      "tabs": {
+        "issues": "Issues",
+        "pulls": "Pull Requests",
+        "commits": "Commits"
+      },
+      "filters": {
+        "state": {
+          "label": "Status",
+          "open": "Offen",
+          "closed": "Geschlossen",
+          "merged": "Gemerged",
+          "all": "Alle"
+        },
+        "search": {
+          "placeholder": "Titel suchen..."
+        },
+        "labels": {
+          "placeholder": "Nach Label filtern"
+        },
+        "since": {
+          "label": "Seit"
+        },
+        "author": {
+          "label": "Autor",
+          "placeholder": "Login oder Name"
+        }
+      },
+      "issues": {
+        "empty": {
+          "title": "Keine passenden Issues.",
+          "subtitle": "Probiere einen anderen Status oder entferne Filter."
+        },
+        "row": {
+          "openedBy": "von {login}",
+          "openedAt": "geöffnet {when}",
+          "closedAt": "geschlossen {when}",
+          "comments": "{n} Kommentare",
+          "openOnGithub": "Auf GitHub öffnen"
+        }
+      },
+      "pulls": {
+        "empty": {
+          "title": "Keine passenden Pull Requests.",
+          "subtitle": "Probiere einen anderen Status oder entferne Filter."
+        },
+        "row": {
+          "openedBy": "von {login}",
+          "draft": "Entwurf",
+          "merged": "Gemerged",
+          "closed": "Geschlossen",
+          "open": "Offen",
+          "branches": "{base} ← {head}",
+          "openOnGithub": "Auf GitHub öffnen"
+        }
+      },
+      "commits": {
+        "empty": {
+          "title": "Keine Commits gecached.",
+          "subtitle": "Synchronisiere, um die letzten 50 Commits zu laden."
+        },
+        "row": {
+          "by": "von {who}",
+          "openOnGithub": "Auf GitHub öffnen"
+        }
+      }
+    }
+  },
   "kb": {
     "list": {
       "title": "Wissensdatenbank",

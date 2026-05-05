@@ -10,10 +10,19 @@ import type { FileService } from '../features/files/files.service'
 import type { ImageProcessingService } from '../features/files/image-processing.service'
 import type { MediaLibraryService } from '../features/files/media-library.service'
 import type { KbCategoryService, KbEntryService, KbTagService } from '../features/kb/service'
+import type { OrchestratorAiClient } from '../features/orchestrator/ai-client'
+import type { AuditService } from '../features/orchestrator/audit'
+import type { ConversationsService } from '../features/orchestrator/conversations.service'
+import type { McpServer } from '../features/orchestrator/mcp-server'
+import type { MessagesService } from '../features/orchestrator/messages.service'
 import type { OrganisationInvitationsService } from '../features/organisation-invitations/organisation-invitations.service'
 import type { OrganisationMembersService } from '../features/organisation-members/organisation-members.service'
 import type { OrganisationsService } from '../features/organisations/organisations.service'
 import type { ProfileService } from '../features/profile/profile.service'
+import type { GhConnectionsService } from '../features/projects/connections.service'
+import type { GhClientService, OctokitFactory as GhOctokitFactory } from '../features/projects/github-client'
+import type { GhProjectsReadService } from '../features/projects/read.service'
+import type { GhSyncService } from '../features/projects/sync.service'
 import type { RbacService } from '../features/rbac/rbac.service'
 import type { TodoService } from '../features/todo/service'
 import type { EventBus } from '../infrastructure/events'
@@ -31,10 +40,19 @@ import { createImageProcessingService } from '../features/files/image-processing
 import { createMediaLibraryService } from '../features/files/media-library.service'
 import { createLocalFileStoreProvider } from '../features/files/providers/local.provider'
 import { createKbCategoryService, createKbEntryService, createKbTagService } from '../features/kb/service'
+import { createOrchestratorAiClient } from '../features/orchestrator/ai-client'
+import { createAuditService } from '../features/orchestrator/audit'
+import { createConversationsService } from '../features/orchestrator/conversations.service'
+import { createMcpServer } from '../features/orchestrator/mcp-server'
+import { createMessagesService } from '../features/orchestrator/messages.service'
 import { createOrganisationInvitationsService } from '../features/organisation-invitations/organisation-invitations.service'
 import { createOrganisationMembersService } from '../features/organisation-members/organisation-members.service'
 import { createOrganisationsService } from '../features/organisations/organisations.service'
 import { createProfileService } from '../features/profile/profile.service'
+import { createGhConnectionsService } from '../features/projects/connections.service'
+import { createGhClientService } from '../features/projects/github-client'
+import { createGhProjectsReadService } from '../features/projects/read.service'
+import { createGhSyncService } from '../features/projects/sync.service'
 import { createRbacService } from '../features/rbac/rbac.service'
 import { createTodoService } from '../features/todo/service'
 import { getDatabase } from '../infrastructure/database/client'
@@ -322,6 +340,111 @@ const getAiProviderService = lazy(() =>
   }),
 )
 
+// Orchestrator Audit Service (T-3.7) — writes `orchestrator_actions` rows for
+// every executed write tool (REQ-ORCH-6). The chat handler (T-3.11) and
+// confirm/cancel endpoints (T-3.12) consume this; `auditedInvoke` lives next
+// to the service in `server/features/orchestrator/audit.ts`.
+const getAuditService = lazy(() =>
+  createAuditService({
+    db: getDatabase('app'),
+  }),
+)
+
+// Orchestrator Conversations Service (T-3.9) — workspace-scoped CRUD over
+// `orchestrator_conversations`. Mode toggle (REQ-ORCH-3) and modelId capability
+// validation (DESIGN-AI) live here; the streaming endpoint (T-3.11) and
+// confirm/cancel endpoints (T-3.12) consume the get/update surface.
+const getConversationsService = lazy(() =>
+  createConversationsService({
+    db: getDatabase('app'),
+  }),
+)
+
+// Orchestrator Messages Service (T-3.11) — append/load history for
+// `orchestrator_messages`. Used by the chat handler to persist user,
+// assistant, and tool_result rows.
+const getMessagesService = lazy(() =>
+  createMessagesService({ db: getDatabase('app') }),
+)
+
+// Orchestrator AI Client (T-3.10) — resolves a conversation's model + author
+// name and streams via `streamText` with the in-process MCP tool set wired up
+// per conversation mode.
+//
+// NOTE(T-3.11): the chat handler builds its own per-request registry + ai-client
+// inside `chat-handler.ts` because the tool set depends on conversation mode
+// (REQ-ORCH-3). The singleton below is kept for backwards compatibility with
+// callers that resolve it from the container, but its registry is empty;
+// production code should not invoke `streamChat` on it.
+const getOrchestratorMcpServer = lazy((): McpServer => createMcpServer())
+
+const getOrchestratorAiClient = lazy(() =>
+  createOrchestratorAiClient({
+    aiProviderService: getAiProviderService(),
+    conversationsService: getConversationsService(),
+    mcpServer: getOrchestratorMcpServer(),
+  }),
+)
+
+// GitHub Octokit factory hub (T-4.2 / T-4.3) — single seam for both the
+// connections service (validate-on-save against `GET /user`) and the client
+// wrapper (high-level helpers used by the sync service). The two services
+// declare their own minimal `OctokitLike` shapes (each describes only the
+// SDK methods it actually calls), so the typed factories aren't structurally
+// compatible — but the underlying production factory is the same
+// `@octokit/rest` default. The hub returns `undefined` for both, which makes
+// each service fall through to its internal default. Tests inject the
+// factory directly into the service under test.
+const getGhOctokitFactory = lazy((): GhOctokitFactory | undefined => undefined)
+
+// GitHub Connections Service (T-4.2) — owns the per-workspace PAT lifecycle
+// (encrypted at rest with `encryptForOrg`, validated against `GET /user` on
+// save). The T-4.3 GitHub client wrapper consumes the decrypted token via
+// `getConnectionContext`.
+const getGhConnectionsService = lazy(() =>
+  createGhConnectionsService({
+    db: getDatabase('app'),
+    // octokitFactory omitted — each service has its own default
+    // `@octokit/rest` factory; see hub note above.
+  }),
+)
+
+// GitHub API Client Service (T-4.3) — given an organisationId, resolves the
+// workspace PAT via `ghConnectionsService.getConnectionContext` and returns
+// a configured Octokit client. Also exposes high-level helpers
+// (listAccessibleRepos, getRepo, listIssues, listPulls, listCommits) that
+// hide pagination + return normalised snapshot shapes. T-4.4's sync service
+// is the primary consumer.
+const getGhClientService = lazy(() =>
+  createGhClientService({
+    db: getDatabase('app'),
+    ghConnectionsService: getGhConnectionsService(),
+    octokitFactory: getGhOctokitFactory(),
+  }),
+)
+
+// GitHub Sync Service (T-4.4) — orchestrates pulling repo metadata + open
+// issues + open PRs + last 50 commits via `ghClientService` and upserting
+// into the `gh_*` cache tables. Surface used by the manual "Sync now" UI
+// button (REQ-PROJ-3) and by the scheduled job (T-4.5).
+const getGhSyncService = lazy(() =>
+  createGhSyncService({
+    db: getDatabase('app'),
+    ghClientService: getGhClientService(),
+    ghConnectionsService: getGhConnectionsService(),
+  }),
+)
+
+// GitHub Projects Read Service (T-4.6) — read-only accessors over the cached
+// `gh_repos`, `gh_issues`, `gh_pulls`, `gh_commits` tables for the API
+// surface. Pure DB queries, no upstream GitHub calls; complements the sync
+// service.
+const getGhProjectsReadService = lazy(() =>
+  createGhProjectsReadService({
+    db: getDatabase('app'),
+  }),
+)
+
 // Public exports
 export const container = {
   get authService(): AuthService {
@@ -377,6 +500,30 @@ export const container = {
   },
   get aiProviderService(): AiProviderService {
     return getAiProviderService()
+  },
+  get auditService(): AuditService {
+    return getAuditService()
+  },
+  get conversationsService(): ConversationsService {
+    return getConversationsService()
+  },
+  get messagesService(): MessagesService {
+    return getMessagesService()
+  },
+  get orchestratorAiClient(): OrchestratorAiClient {
+    return getOrchestratorAiClient()
+  },
+  get ghConnectionsService(): GhConnectionsService {
+    return getGhConnectionsService()
+  },
+  get ghClientService(): GhClientService {
+    return getGhClientService()
+  },
+  get ghSyncService(): GhSyncService {
+    return getGhSyncService()
+  },
+  get ghProjectsReadService(): GhProjectsReadService {
+    return getGhProjectsReadService()
   },
   get eventBus(): EventBus {
     return getEventBus()

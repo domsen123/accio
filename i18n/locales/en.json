@@ -163,6 +163,566 @@
       }
     }
   },
+  "settings": {
+    "index": {
+      "title": "Settings",
+      "subtitle": "Configure this workspace.",
+      "cards": {
+        "ai": {
+          "title": "AI configuration",
+          "description": "Provider credentials, default model, and orchestrator display preferences."
+        },
+        "audit": {
+          "title": "Orchestrator audit log",
+          "description": "Review every write tool the orchestrator has executed in this workspace."
+        }
+      }
+    }
+  },
+  "audit": {
+    "title": "Orchestrator audit log",
+    "subtitle": "Every write tool the orchestrator runs is recorded here. Use the filters to narrow the view, or click a row to inspect the full payload.",
+    "permissions": {
+      "denied": {
+        "title": "You don't have access to the audit log",
+        "description": "Viewing the orchestrator audit log requires the orchestrator:audit:view permission. Ask a workspace owner to grant it."
+      }
+    },
+    "error": {
+      "load": "Could not load the audit log"
+    },
+    "filters": {
+      "title": "Filters",
+      "clear": "Clear",
+      "toolName": {
+        "label": "Tool name",
+        "placeholder": "e.g. kb_update_entry"
+      },
+      "status": {
+        "label": "Status",
+        "placeholder": "Any status"
+      },
+      "class": {
+        "label": "Class",
+        "placeholder": "Any class"
+      },
+      "since": {
+        "label": "From"
+      },
+      "until": {
+        "label": "Until"
+      }
+    },
+    "table": {
+      "title": "Actions",
+      "total": "{total} total",
+      "empty": "No actions match the current filters."
+    },
+    "columns": {
+      "createdAt": "Time",
+      "toolName": "Tool",
+      "class": "Class",
+      "status": "Status",
+      "affectedCount": "Affected",
+      "model": "Model",
+      "user": "User"
+    },
+    "class": {
+      "auto": "Auto",
+      "confirm": "Confirm"
+    },
+    "status": {
+      "pending_confirmation": "Pending",
+      "confirmed": "Confirmed",
+      "cancelled": "Cancelled",
+      "executed": "Executed",
+      "failed": "Failed"
+    },
+    "pagination": {
+      "indicator": "Page {page} of {totalPages}",
+      "prev": "Previous",
+      "next": "Next"
+    },
+    "detail": {
+      "title": "Action detail",
+      "conversation": "Conversation",
+      "createdAt": "Created",
+      "executedAt": "Executed",
+      "confirmedAt": "Confirmed",
+      "cancelledAt": "Cancelled",
+      "parameters": "Parameters",
+      "result": "Result",
+      "error": "Error"
+    }
+  },
+  "orchestrator": {
+    "permissions": {
+      "denied": {
+        "title": "You don't have access to the orchestrator",
+        "description": "Using the orchestrator requires the orchestrator:use permission. Ask a workspace owner to grant it."
+      },
+      "write": {
+        "tooltip": "Switching to read & write mode requires the orchestrator:write permission."
+      }
+    },
+    "errors": {
+      "load": {
+        "title": "Could not load the conversation"
+      },
+      "update": {
+        "title": "Could not save changes"
+      }
+    },
+    "modes": {
+      "read_only": "Read-only",
+      "read_write": "Read & write"
+    },
+    "list": {
+      "title": "Orchestrator",
+      "subtitle": "Past conversations with the assistant. Open one to resume, or start a new chat.",
+      "actions": {
+        "create": "New conversation"
+      },
+      "filters": {
+        "search": {
+          "label": "Search",
+          "placeholder": "Filter by title..."
+        },
+        "sort": {
+          "label": "Sort"
+        },
+        "includeDeleted": "Show deleted"
+      },
+      "sort": {
+        "updatedDesc": "Recently updated",
+        "updatedAsc": "Oldest update",
+        "createdDesc": "Newest first",
+        "createdAsc": "Oldest first"
+      },
+      "table": {
+        "title": "Conversations",
+        "total": "{total} total"
+      },
+      "empty": {
+        "title": "No conversations yet.",
+        "subtitle": "Start a new chat to ask questions about your workspace."
+      },
+      "row": {
+        "untitled": "Untitled conversation",
+        "deleted": "Deleted",
+        "lastMessage": "last message {when}",
+        "noMessages": "no messages yet",
+        "model": {
+          "default": "Workspace default",
+          "unknown": "Model not configured"
+        },
+        "actions": {
+          "open": "Open",
+          "delete": "Delete"
+        }
+      },
+      "pagination": {
+        "indicator": "Page {page} of {totalPages}",
+        "prev": "Previous",
+        "next": "Next"
+      },
+      "delete": {
+        "title": "Delete this conversation?",
+        "body": "\"{title}\" will be hidden from the list. The audit log keeps a reference for traceability.",
+        "confirm": "Delete"
+      },
+      "toast": {
+        "deleted": {
+          "title": "Conversation deleted"
+        },
+        "error": {
+          "title": "Action failed"
+        }
+      }
+    },
+    "chat": {
+      "title": "Conversation",
+      "back": "Back to conversations",
+      "titleField": {
+        "label": "Title",
+        "description": "Saved automatically when you leave the field.",
+        "placeholder": "Untitled conversation"
+      },
+      "mode": {
+        "enableWrite": "Enable read & write",
+        "disableWrite": "Switch to read-only",
+        "confirm": {
+          "title": "Allow the orchestrator to modify your data?",
+          "body": "In read & write mode the assistant can run write tools (creating or editing knowledge base entries, todos, etc.). High-risk actions still require explicit confirmation.",
+          "action": "Enable read & write"
+        }
+      },
+      "modelPicker": {
+        "label": "Model",
+        "description": "Only models with configured credentials, tool support, and streaming support are listed.",
+        "default": "Workspace default"
+      },
+      "noModels": {
+        "title": "No models available",
+        "description": "Configure provider credentials in workspace settings to use the orchestrator.",
+        "action": "Open AI settings"
+      },
+      "messages": {
+        "title": "Messages",
+        "count": "{n} total",
+        "empty": "No messages in this conversation yet.",
+        "emptyBlock": "(no rendered content)",
+        "toolCallPlaceholder": "[tool call: {tool}]",
+        "toolResultPlaceholder": "[tool result: {tool}]"
+      },
+      "role": {
+        "user": "You",
+        "assistant": "Assistant",
+        "tool_result": "Tool"
+      },
+      "composer": {
+        "label": "Message",
+        "description": "Press Enter to send. Shift+Enter for newline.",
+        "placeholder": "Type a message...",
+        "send": "Send",
+        "stop": "Stop",
+        "retry": "Retry",
+        "noModelsTooltip": "Configure provider credentials to send messages.",
+        "noPermissionTooltip": "Sending messages requires the orchestrator:use permission."
+      },
+      "stream": {
+        "live": {
+          "label": "Live",
+          "assistant": "Assistant"
+        },
+        "errors": {
+          "title": "Streaming error",
+          "connection_lost": "The connection dropped. Click retry to resend.",
+          "generic": "The conversation could not be streamed."
+        }
+      },
+      "toast": {
+        "modelSaved": "Model updated",
+        "writeEnabled": "Read & write enabled",
+        "writeDisabled": "Read-only enabled",
+        "aborted": "Streaming stopped"
+      }
+    },
+    "toolCall": {
+      "parameters": "Parameters",
+      "copyId": "Copy tool call ID",
+      "copied": "Tool call ID copied",
+      "copyFailed": "Could not copy"
+    },
+    "toolResult": {
+      "untitled": "Tool result",
+      "output": "Output",
+      "cancelledMessage": "User cancelled this action.",
+      "status": {
+        "executed": "Executed",
+        "cancelled": "Cancelled",
+        "failed": "Failed"
+      }
+    },
+    "confirmation": {
+      "title": "Confirmation required",
+      "parameters": "Parameters",
+      "vaultWarning": "The secret will be sent to the LLM provider. Confirm only if necessary.",
+      "reason": {
+        "class": "This tool is classified as confirm-only.",
+        "bulk": "This tool would affect {n} entities (bulk-change rule)."
+      },
+      "actions": {
+        "confirm": "Confirm",
+        "cancel": "Cancel"
+      },
+      "errors": {
+        "confirm": "Could not confirm the action",
+        "cancel": "Could not cancel the action"
+      }
+    }
+  },
+  "projects": {
+    "permissions": {
+      "denied": {
+        "title": "You don't have access to projects",
+        "description": "Viewing projects requires the project:read permission. Ask a workspace owner to grant it."
+      },
+      "manage": {
+        "tooltip": "Managing connections, tracking and sync requires the project:manage permission."
+      }
+    },
+    "errors": {
+      "load": {
+        "title": "Could not load projects"
+      },
+      "action": {
+        "title": "Action failed"
+      }
+    },
+    "list": {
+      "title": "Projects",
+      "subtitle": "Tracked GitHub repositories synced into this workspace. Open one to browse issues, PRs and commits.",
+      "actions": {
+        "addRepo": "Add repo",
+        "manageConnection": "Manage connection",
+        "connect": "Connect GitHub"
+      },
+      "filters": {
+        "search": {
+          "label": "Search",
+          "placeholder": "Filter by full name..."
+        },
+        "tracked": {
+          "label": "Tracking",
+          "all": "All",
+          "tracked": "Tracked",
+          "untracked": "Untracked"
+        }
+      },
+      "table": {
+        "title": "Repositories",
+        "total": "{total} total",
+        "columns": {
+          "repo": "Repository",
+          "tracked": "Tracked",
+          "lastSync": "Last sync",
+          "actions": "Actions"
+        }
+      },
+      "row": {
+        "private": "Private",
+        "public": "Public",
+        "tracked": "Tracked",
+        "untracked": "Untracked",
+        "neverSynced": "Never synced",
+        "lastSyncAgo": "Synced {when}",
+        "actions": {
+          "open": "Open",
+          "syncNow": "Sync now",
+          "track": "Track",
+          "untrack": "Untrack",
+          "openInGithubDev": "Open in github.dev",
+          "delete": "Remove"
+        }
+      },
+      "empty": {
+        "tracked": {
+          "title": "No tracked repositories yet.",
+          "subtitle": "Add a repo from your GitHub account to start syncing issues, pulls and commits."
+        },
+        "filtered": {
+          "title": "No repositories match.",
+          "subtitle": "Adjust the filters to see more results."
+        }
+      },
+      "pagination": {
+        "indicator": "Page {page} of {totalPages}",
+        "prev": "Previous",
+        "next": "Next"
+      },
+      "delete": {
+        "title": "Remove this repository?",
+        "body": "{full} will be removed from the workspace and its cached issues, pulls and commits will be dropped.",
+        "confirm": "Remove"
+      },
+      "toast": {
+        "synced": {
+          "title": "Sync complete",
+          "description": "{issues} issues · {pulls} pulls · {commits} commits"
+        },
+        "tracked": {
+          "title": "Repository tracked"
+        },
+        "untracked": {
+          "title": "Repository untracked"
+        },
+        "deleted": {
+          "title": "Repository removed"
+        },
+        "error": {
+          "title": "Action failed"
+        }
+      }
+    },
+    "connection": {
+      "title": "GitHub connection",
+      "subtitle": "Connect a personal access token so we can sync repositories you own or collaborate on.",
+      "back": "Back to projects",
+      "status": {
+        "title": "Status",
+        "connected": "Connected",
+        "notConnected": "Not connected",
+        "ghUserLogin": "GitHub user",
+        "scopes": "Scopes",
+        "scopesEmpty": "(fine-grained PAT — scope detection unavailable)",
+        "lastValidatedAt": "Last validated",
+        "never": "never",
+        "updatedAt": "Updated"
+      },
+      "form": {
+        "title": "Personal access token",
+        "subtitle": "Tokens are encrypted at rest and never displayed again after saving.",
+        "tokenLabel": "Token",
+        "tokenPlaceholder": "ghp_... or github_pat_...",
+        "tokenHelp": "Classic PATs need the repo scope. Fine-grained PATs need read access to repository contents, issues and pull requests.",
+        "save": "Save and validate",
+        "replace": "Replace token"
+      },
+      "validate": {
+        "label": "Validate now",
+        "successTitle": "Token is valid",
+        "failureTitle": "Token check failed",
+        "reasons": {
+          "no_connection": "No connection is configured.",
+          "invalid_token": "The token is invalid or has been revoked.",
+          "insufficient_scope": "The token is missing required scopes.",
+          "validation_failed": "The token could not be validated against GitHub."
+        }
+      },
+      "revoke": {
+        "title": "Revoke connection",
+        "subtitle": "Removing the connection stops syncs. Cached repos and issues are kept unless you tick the purge option.",
+        "purgeLabel": "Also purge cached repositories, issues, pulls and commits",
+        "action": "Revoke",
+        "confirmTitle": "Revoke this connection?",
+        "confirmBody": "Background syncs will stop. {purge}",
+        "confirmBodyKeep": "Cached data will be kept until you remove individual repositories.",
+        "confirmBodyPurge": "All cached repositories, issues, pulls and commits will also be deleted.",
+        "confirm": "Revoke connection"
+      },
+      "toast": {
+        "saved": {
+          "title": "Connection saved"
+        },
+        "validated": {
+          "title": "Token revalidated"
+        },
+        "revoked": {
+          "title": "Connection revoked"
+        },
+        "error": {
+          "title": "Action failed"
+        }
+      }
+    },
+    "picker": {
+      "title": "Add a repository",
+      "subtitle": "Repositories accessible from the connected GitHub account. Tracking a repo schedules background syncs.",
+      "back": "Back to projects",
+      "search": {
+        "placeholder": "Filter by name or description..."
+      },
+      "filters": {
+        "showTrackedOnly": "Tracked only",
+        "showCachedOnly": "Already added"
+      },
+      "row": {
+        "private": "Private",
+        "public": "Public",
+        "cached": "Cached",
+        "tracked": "Tracked",
+        "actions": {
+          "track": "Track",
+          "untrack": "Untrack",
+          "open": "Open"
+        }
+      },
+      "empty": {
+        "title": "No repositories returned.",
+        "subtitle": "Make sure your token has access to at least one repository."
+      },
+      "noConnection": {
+        "title": "Connect GitHub first",
+        "description": "You need to add a personal access token before browsing accessible repositories.",
+        "action": "Connect"
+      }
+    },
+    "detail": {
+      "back": "Back to projects",
+      "header": {
+        "tracked": "Tracked",
+        "untracked": "Untracked",
+        "private": "Private",
+        "public": "Public",
+        "lastSyncedAt": "Last sync",
+        "neverSynced": "never synced",
+        "defaultBranch": "Default branch"
+      },
+      "actions": {
+        "syncNow": "Sync now",
+        "openInGithubDev": "Open in github.dev",
+        "openOnGithub": "Open on github.com",
+        "track": "Track",
+        "untrack": "Untrack"
+      },
+      "tabs": {
+        "issues": "Issues",
+        "pulls": "Pull requests",
+        "commits": "Commits"
+      },
+      "filters": {
+        "state": {
+          "label": "State",
+          "open": "Open",
+          "closed": "Closed",
+          "merged": "Merged",
+          "all": "All"
+        },
+        "search": {
+          "placeholder": "Search title..."
+        },
+        "labels": {
+          "placeholder": "Filter by label"
+        },
+        "since": {
+          "label": "Since"
+        },
+        "author": {
+          "label": "Author",
+          "placeholder": "login or name"
+        }
+      },
+      "issues": {
+        "empty": {
+          "title": "No issues match.",
+          "subtitle": "Try a different state or clear filters."
+        },
+        "row": {
+          "openedBy": "by {login}",
+          "openedAt": "opened {when}",
+          "closedAt": "closed {when}",
+          "comments": "{n} comments",
+          "openOnGithub": "Open on GitHub"
+        }
+      },
+      "pulls": {
+        "empty": {
+          "title": "No pull requests match.",
+          "subtitle": "Try a different state or clear filters."
+        },
+        "row": {
+          "openedBy": "by {login}",
+          "draft": "Draft",
+          "merged": "Merged",
+          "closed": "Closed",
+          "open": "Open",
+          "branches": "{base} ← {head}",
+          "openOnGithub": "Open on GitHub"
+        }
+      },
+      "commits": {
+        "empty": {
+          "title": "No commits cached.",
+          "subtitle": "Run a sync to populate the latest 50 commits."
+        },
+        "row": {
+          "by": "by {who}",
+          "openOnGithub": "Open on GitHub"
+        }
+      }
+    }
+  },
   "kb": {
     "list": {
       "title": "Knowledge Base",

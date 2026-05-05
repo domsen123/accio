@@ -247,7 +247,7 @@ const handleOrchestratorLaunch = () => {
       </template>
 
       <template #body>
-        <div class="p-4 lg:p-6">
+        <div>
           <slot />
         </div>
       </template>

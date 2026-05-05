@@ -170,10 +170,42 @@ export const createKbTagService = (deps: CreateKbTagServiceDeps) => {
     return kbTagsItemService.update(id, { deletedAt: null })
   }
 
+  /**
+   * Tags with their KB-entry usage count. Added for the `kb_list_tags` MCP
+   * read tool (T-3.3): the tool ranks tags by `usage_count` desc so the AI
+   * sees the workspace's most-used tags first. LEFT JOIN so zero-usage tags
+   * still appear (count = 0). Soft-deleted tags are excluded.
+   */
+  const listWithUsage = async (input: {
+    organisationId: string
+  }): Promise<Array<{ id: string, name: string, usageCount: number }>> => {
+    const rows = await db
+      .select({
+        id: schema.kbTags.id,
+        name: schema.kbTags.name,
+        usageCount: sql<number>`count(${schema.kbEntryTags.entryId})::int`,
+      })
+      .from(schema.kbTags)
+      .leftJoin(
+        schema.kbEntryTags,
+        eq(schema.kbEntryTags.tagId, schema.kbTags.id),
+      )
+      .where(
+        and(
+          eq(schema.kbTags.organisationId, input.organisationId),
+          isNull(schema.kbTags.deletedAt),
+        ),
+      )
+      .groupBy(schema.kbTags.id, schema.kbTags.name)
+
+    return rows.map(r => ({ id: r.id, name: r.name, usageCount: Number(r.usageCount) }))
+  }
+
   return {
     list,
     findById,
     findOrCreate,
+    listWithUsage,
     softDelete,
     restore,
   }
@@ -937,6 +969,68 @@ export const createKbEntryService = (deps: CreateKbEntryServiceDeps) => {
       .orderBy(asc(schema.kbEntries.title))
   }
 
+  /**
+   * FTS search returning rows with their `ts_rank_cd` score attached.
+   *
+   * Added for the `kb_search` MCP read tool (T-3.3): the existing `list` path
+   * runs the same ranked query but discards the rank — the tool needs to
+   * surface the score back to the model. Implementation mirrors the FTS path
+   * in {@link list} (sanitised tsquery, weighted tsvector, rank-desc order)
+   * but selects the rank column too.
+   */
+  const search = async (input: {
+    organisationId: string
+    query: string
+    status?: KbEntryStatus[]
+    categoryId?: string
+    tagIds?: string[]
+    limit?: number
+  }): Promise<Array<typeof schema.kbEntries.$inferSelect & { rank: number }>> => {
+    const trimmed = input.query.trim()
+    if (trimmed.length === 0)
+      return []
+    const tsquery = buildTsQuery(trimmed)
+    if (tsquery === null)
+      return []
+
+    const conditions = [
+      eq(schema.kbEntries.organisationId, input.organisationId),
+      isNull(schema.kbEntries.deletedAt),
+    ]
+    if (input.status && input.status.length > 0)
+      conditions.push(inArray(schema.kbEntries.status, input.status))
+    if (input.categoryId)
+      conditions.push(eq(schema.kbEntries.categoryId, input.categoryId))
+    if (input.tagIds && input.tagIds.length > 0) {
+      // Entries must carry every requested tag (intersection semantics) — the
+      // tool exposes tags as a narrowing filter, not a union.
+      const tagged = db
+        .select({ id: schema.kbEntryTags.entryId })
+        .from(schema.kbEntryTags)
+        .where(inArray(schema.kbEntryTags.tagId, input.tagIds))
+        .groupBy(schema.kbEntryTags.entryId)
+        .having(sql`count(distinct ${schema.kbEntryTags.tagId}) = ${input.tagIds.length}`)
+      conditions.push(inArray(schema.kbEntries.id, tagged))
+    }
+
+    conditions.push(sql`${schema.kbEntries.bodySearch} @@ to_tsquery('simple', ${tsquery})`)
+    const rankExpr = sql<number>`ts_rank_cd(${schema.kbEntries.bodySearch}, to_tsquery('simple', ${tsquery}))`
+
+    let query = db
+      .select({
+        entry: schema.kbEntries,
+        rank: rankExpr,
+      })
+      .from(schema.kbEntries)
+      .where(and(...conditions))
+      .orderBy(desc(rankExpr), desc(schema.kbEntries.createdAt))
+      .$dynamic()
+    if (input.limit !== undefined)
+      query = query.limit(input.limit)
+    const rows = await query
+    return rows.map(r => ({ ...r.entry, rank: Number(r.rank) }))
+  }
+
   return {
     create,
     update,
@@ -945,6 +1039,7 @@ export const createKbEntryService = (deps: CreateKbEntryServiceDeps) => {
     list,
     listInbox,
     listTrash,
+    search,
     setStatus,
     softDelete,
     restore,
