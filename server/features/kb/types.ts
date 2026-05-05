@@ -89,6 +89,14 @@ export interface ListKbEntriesInput {
   organisationId: string
   status?: KbEntryStatus | KbEntryStatus[]
   categoryId?: string
+  /**
+   * When `true` and `categoryId` is set, the filter expands to include the
+   * selected category PLUS all descendants in the `kb_categories` tree
+   * (REQ-KB-3, T-1.11). Resolved via a recursive CTE in the service layer.
+   * Defaults to `false` so existing single-category callers keep their
+   * behaviour. Ignored when `categoryId` is absent.
+   */
+  includeDescendantCategories?: boolean
   tagId?: string
   authorType?: KbEntryAuthorType
   sourceType?: KbEntrySourceType

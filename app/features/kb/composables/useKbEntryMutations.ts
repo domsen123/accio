@@ -188,6 +188,18 @@ export interface CreateKbCategoryInput {
   parentId?: string | null
 }
 
+/**
+ * Categories show up on hydrated entry rows, so any category mutation also
+ * busts the entries family — otherwise the list view would render stale
+ * `entry.category.name` after a rename.
+ */
+const invalidateCategoriesAndEntries = (
+  queryCache: ReturnType<typeof useQueryCache>,
+) => {
+  queryCache.invalidateQueries({ key: kbKeys.categories() })
+  queryCache.invalidateQueries({ key: kbKeys.entries() })
+}
+
 export const useCreateKbCategory = () => {
   const queryCache = useQueryCache()
   const { $api } = useNuxtApp()
@@ -195,9 +207,43 @@ export const useCreateKbCategory = () => {
   return useMutation({
     mutation: (data: CreateKbCategoryInput): Promise<{ category: KbCategory }> =>
       $api('/api/kb/categories', { method: 'POST', body: data }),
-    onSuccess: () => {
-      queryCache.invalidateQueries({ key: kbKeys.categories() })
-    },
+    onSuccess: () => invalidateCategoriesAndEntries(queryCache),
+  })
+}
+
+/**
+ * Rename a category (T-1.11). Slug is intentionally stable — see the
+ * server-side comment in `PATCH /api/kb/categories/[id]`.
+ */
+export const useRenameKbCategory = () => {
+  const queryCache = useQueryCache()
+  const { $api } = useNuxtApp()
+
+  return useMutation({
+    mutation: ({ id, name }: { id: string, name: string }): Promise<{ category: KbCategory }> =>
+      $api(`/api/kb/categories/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        body: { name },
+      }),
+    onSuccess: () => invalidateCategoriesAndEntries(queryCache),
+  })
+}
+
+/**
+ * Soft-delete a category (T-1.11). The server keeps the row but flips
+ * `deleted_at`; the default `list({ includeDeleted: false })` filter then
+ * hides it from the tree. Entries previously bucketed under this category
+ * keep their `categoryId` (no cascade) — restoring the category brings the
+ * tree back unchanged.
+ */
+export const useDeleteKbCategory = () => {
+  const queryCache = useQueryCache()
+  const { $api } = useNuxtApp()
+
+  return useMutation({
+    mutation: (id: string): Promise<void> =>
+      $api(`/api/kb/categories/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+    onSuccess: () => invalidateCategoriesAndEntries(queryCache),
   })
 }
 

@@ -82,6 +82,11 @@ export interface KbEntriesListParams {
   search?: string
   status?: KbEntryStatus | KbEntryStatus[]
   categoryId?: string
+  /**
+   * When `true` and `categoryId` is set, the server expands the filter to the
+   * selected category plus all descendants (REQ-KB-3 / T-1.11). Default false.
+   */
+  includeDescendantCategories?: boolean
   tagId?: string
   authorType?: KbEntryAuthorType
   sourceType?: KbEntrySourceType

@@ -183,6 +183,52 @@
         "errorCategory": "Could not create category \"{name}\""
       }
     },
+    "categories": {
+      "title": "Categories",
+      "all": "All entries",
+      "empty": "No categories yet. Click + to add one.",
+      "expand": "Expand",
+      "collapse": "Collapse",
+      "fields": {
+        "name": "Name",
+        "namePlaceholder": "e.g. Recipes"
+      },
+      "errors": {
+        "nameRequired": "Name is required"
+      },
+      "menu": {
+        "label": "Category actions",
+        "addRoot": "Add top-level category",
+        "addChild": "Add child",
+        "rename": "Rename",
+        "delete": "Delete"
+      },
+      "create": {
+        "rootTitle": "New category",
+        "childTitle": "New child category"
+      },
+      "rename": {
+        "title": "Rename category"
+      },
+      "delete": {
+        "title": "Delete category?",
+        "body": "The category is removed from the tree. Entries in this category keep their data; the category is soft-deleted and can be restored from the database."
+      },
+      "actions": {
+        "create": "Create",
+        "save": "Save",
+        "cancel": "Cancel",
+        "delete": "Delete"
+      },
+      "toast": {
+        "created": "Category \"{name}\" created",
+        "createError": "Could not create the category",
+        "renamed": "Category renamed",
+        "renameError": "Could not rename the category",
+        "deleted": "Category deleted",
+        "deleteError": "Could not delete the category"
+      }
+    },
     "subnav": {
       "all": "All",
       "inbox": "Inbox",

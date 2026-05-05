@@ -34,6 +34,7 @@ export default defineEventHandler(async (event) => {
     search: q.search,
     status: q.status as ListKbEntriesInput['status'],
     categoryId: q.categoryId,
+    includeDescendantCategories: q.includeDescendantCategories,
     tagId: q.tagId,
     authorType: q.authorType as ListKbEntriesInput['authorType'],
     sourceType: q.sourceType as ListKbEntriesInput['sourceType'],

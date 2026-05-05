@@ -293,6 +293,99 @@ describe('kbEntryService', () => {
   })
 })
 
+describe('kbEntryService — list with includeDescendantCategories (T-1.11)', () => {
+  let orgId: string
+
+  beforeEach(async () => {
+    orgId = (await setupOrg()).id
+  })
+
+  it('opt-in only: a single-category filter still matches one category by default', async () => {
+    const food = await kbCategoryService.create({ organisationId: orgId, name: 'Food', slug: 'food' })
+    const italian = await kbCategoryService.create({
+      organisationId: orgId,
+      name: 'Italian',
+      slug: 'italian',
+      parentId: food.id,
+    })
+
+    await kbEntryService.create({ organisationId: orgId, title: 'In food', categoryId: food.id })
+    await kbEntryService.create({ organisationId: orgId, title: 'In italian', categoryId: italian.id })
+
+    // Without `includeDescendantCategories`, the filter is the literal categoryId.
+    const onlyFood = await kbEntryService.list({ organisationId: orgId, categoryId: food.id })
+    expect(onlyFood.map(e => e.title).sort()).toEqual(['In food'])
+  })
+
+  it('expands to immediate children when includeDescendantCategories is true', async () => {
+    const food = await kbCategoryService.create({ organisationId: orgId, name: 'Food', slug: 'food' })
+    const italian = await kbCategoryService.create({
+      organisationId: orgId,
+      name: 'Italian',
+      slug: 'italian',
+      parentId: food.id,
+    })
+    const french = await kbCategoryService.create({
+      organisationId: orgId,
+      name: 'French',
+      slug: 'french',
+      parentId: food.id,
+    })
+    const unrelated = await kbCategoryService.create({
+      organisationId: orgId,
+      name: 'Travel',
+      slug: 'travel',
+    })
+
+    await kbEntryService.create({ organisationId: orgId, title: 'Pasta', categoryId: italian.id })
+    await kbEntryService.create({ organisationId: orgId, title: 'Croissant', categoryId: french.id })
+    await kbEntryService.create({ organisationId: orgId, title: 'Trip', categoryId: unrelated.id })
+
+    const subtree = await kbEntryService.list({
+      organisationId: orgId,
+      categoryId: food.id,
+      includeDescendantCategories: true,
+    })
+    expect(subtree.map(e => e.title).sort()).toEqual(['Croissant', 'Pasta'])
+  })
+
+  it('walks multi-level descendants and includes the anchor category itself', async () => {
+    const food = await kbCategoryService.create({ organisationId: orgId, name: 'Food', slug: 'food' })
+    const italian = await kbCategoryService.create({
+      organisationId: orgId,
+      name: 'Italian',
+      slug: 'italian',
+      parentId: food.id,
+    })
+    const pasta = await kbCategoryService.create({
+      organisationId: orgId,
+      name: 'Pasta',
+      slug: 'pasta',
+      parentId: italian.id,
+    })
+
+    // Entries spread across all three depths.
+    await kbEntryService.create({ organisationId: orgId, title: 'Top of food', categoryId: food.id })
+    await kbEntryService.create({ organisationId: orgId, title: 'Italian classics', categoryId: italian.id })
+    await kbEntryService.create({ organisationId: orgId, title: 'Carbonara', categoryId: pasta.id })
+
+    const subtree = await kbEntryService.list({
+      organisationId: orgId,
+      categoryId: food.id,
+      includeDescendantCategories: true,
+    })
+    expect(subtree.map(e => e.title).sort()).toEqual(['Carbonara', 'Italian classics', 'Top of food'])
+
+    // Anchor at a mid-level category — must include just that subtree.
+    const onlyItalianSubtree = await kbEntryService.list({
+      organisationId: orgId,
+      categoryId: italian.id,
+      includeDescendantCategories: true,
+    })
+    expect(onlyItalianSubtree.map(e => e.title).sort()).toEqual(['Carbonara', 'Italian classics'])
+  })
+})
+
 describe('kbEntryService — wikilinks and backlinks', () => {
   let orgId: string
 

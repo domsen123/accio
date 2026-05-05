@@ -64,6 +64,12 @@ export const listKbEntriesQuerySchema = z.object({
   search: z.string().trim().max(SEARCH_MAX).optional(),
   status: z.union([kbEntryStatusSchema, z.array(kbEntryStatusSchema)]).optional(),
   categoryId: z.string().trim().min(1).optional(),
+  /**
+   * When truthy AND `categoryId` is set, expand the filter to the selected
+   * category and its descendants (REQ-KB-3 / T-1.11). Default false to
+   * preserve existing call-site semantics.
+   */
+  includeDescendantCategories: z.preprocess(v => typeof v === 'string' ? truthy.has(v.toLowerCase()) : v, z.boolean().optional()),
   tagId: z.string().trim().min(1).optional(),
   authorType: kbEntryAuthorTypeSchema.optional(),
   sourceType: kbEntrySourceTypeSchema.optional(),

@@ -15,6 +15,7 @@
  *     plus "is the current page full?" as a heuristic for "has next page".
  */
 import type { KbEntriesListParams, KbEntry, KbEntryAuthorType, KbEntrySourceType, KbEntryStatus } from '~/features/kb/types/kb.types'
+import KbCategoryTree from '~/features/kb/components/KbCategoryTree.vue'
 import KbSubNav from '~/features/kb/components/KbSubNav.vue'
 
 definePageMeta({
@@ -100,8 +101,13 @@ const queryParams = computed<KbEntriesListParams>(() => {
     params.search = s
   if (status.value.length > 0)
     params.status = status.value
-  if (categoryId.value)
+  if (categoryId.value) {
     params.categoryId = categoryId.value
+    // T-1.11: when filtering by category we always include descendants so the
+    // tree's parent-row click shows entries from the entire subtree
+    // (REQ-KB-3). The dropdown filter behaves the same way for consistency.
+    params.includeDescendantCategories = true
+  }
   if (tagId.value)
     params.tagId = tagId.value
   if (authorType.value)
@@ -208,213 +214,230 @@ const detailHref = (entry: KbEntry) => `/app/kb/${encodeURIComponent(entry.slug)
     <!-- Sub-navigation between All / Inbox / Trash (T-1.10) -->
     <KbSubNav />
 
-    <!-- Filter bar: search + chips/dropdowns -->
-    <div class="space-y-3">
-      <UInput
-        v-model="search"
-        icon="i-lucide-search"
-        size="lg"
-        :placeholder="t('kb.list.search.placeholder')"
-        :aria-label="t('kb.list.search.placeholder')"
-        class="w-full"
-      />
-
-      <div class="flex flex-wrap items-center gap-2">
-        <USelectMenu
-          v-model="status"
-          multiple
-          :items="statusOptions"
-          value-key="value"
-          label-key="label"
-          :placeholder="t('kb.filters.status.label')"
-          icon="i-lucide-circle-dot"
-          variant="outline"
-          class="min-w-40"
+    <!-- Two-column split on lg+: category tree (left) + content (right). -->
+    <!-- Below lg the tree is hidden; the existing category dropdown takes -->
+    <!-- over (T-1.11). -->
+    <div class="lg:grid lg:grid-cols-[240px_minmax(0,1fr)] lg:gap-6">
+      <aside class="hidden lg:block">
+        <KbCategoryTree
+          :categories="categories"
+          :selected-id="categoryId"
+          @select="(id) => (categoryId = id)"
         />
+      </aside>
 
-        <USelectMenu
-          v-model="categoryId"
-          :items="categoryOptions"
-          value-key="value"
-          label-key="label"
-          :placeholder="t('kb.filters.category.label')"
-          icon="i-lucide-folder"
-          variant="outline"
-          class="min-w-40"
-        />
+      <div class="space-y-6">
+        <!-- Filter bar: search + chips/dropdowns -->
+        <div class="space-y-3">
+          <UInput
+            v-model="search"
+            icon="i-lucide-search"
+            size="lg"
+            :placeholder="t('kb.list.search.placeholder')"
+            :aria-label="t('kb.list.search.placeholder')"
+            class="w-full"
+          />
 
-        <USelectMenu
-          v-model="tagId"
-          :items="tagOptions"
-          value-key="value"
-          label-key="label"
-          :placeholder="t('kb.filters.tag.label')"
-          icon="i-lucide-tag"
-          variant="outline"
-          class="min-w-40"
-        />
+          <div class="flex flex-wrap items-center gap-2">
+            <USelectMenu
+              v-model="status"
+              multiple
+              :items="statusOptions"
+              value-key="value"
+              label-key="label"
+              :placeholder="t('kb.filters.status.label')"
+              icon="i-lucide-circle-dot"
+              variant="outline"
+              class="min-w-40"
+            />
 
-        <USelectMenu
-          v-model="authorType"
-          :items="authorOptions"
-          value-key="value"
-          label-key="label"
-          :placeholder="t('kb.filters.author.label')"
-          icon="i-lucide-user"
-          variant="outline"
-          class="min-w-32"
-        />
+            <!-- Mobile/tablet category dropdown: hidden on lg+ where the -->
+            <!-- tree handles category selection. -->
+            <USelectMenu
+              v-model="categoryId"
+              :items="categoryOptions"
+              value-key="value"
+              label-key="label"
+              :placeholder="t('kb.filters.category.label')"
+              icon="i-lucide-folder"
+              variant="outline"
+              class="min-w-40 lg:hidden"
+            />
 
-        <USelectMenu
-          v-model="sourceType"
-          :items="sourceOptions"
-          value-key="value"
-          label-key="label"
-          :placeholder="t('kb.filters.source.label')"
-          icon="i-lucide-link"
-          variant="outline"
-          class="min-w-40"
-        />
+            <USelectMenu
+              v-model="tagId"
+              :items="tagOptions"
+              value-key="value"
+              label-key="label"
+              :placeholder="t('kb.filters.tag.label')"
+              icon="i-lucide-tag"
+              variant="outline"
+              class="min-w-40"
+            />
 
-        <UButton
-          v-if="hasAnyFilter"
-          variant="ghost"
-          color="neutral"
-          icon="i-lucide-x"
-          size="sm"
-          :label="t('kb.filters.reset')"
-          @click="resetFilters"
-        />
-      </div>
-    </div>
+            <USelectMenu
+              v-model="authorType"
+              :items="authorOptions"
+              value-key="value"
+              label-key="label"
+              :placeholder="t('kb.filters.author.label')"
+              icon="i-lucide-user"
+              variant="outline"
+              class="min-w-32"
+            />
 
-    <!-- Error -->
-    <UAlert
-      v-if="error"
-      color="error"
-      variant="soft"
-      :title="t('kb.list.error.title')"
-      :description="error.message"
-      icon="i-lucide-alert-circle"
-    />
+            <USelectMenu
+              v-model="sourceType"
+              :items="sourceOptions"
+              value-key="value"
+              label-key="label"
+              :placeholder="t('kb.filters.source.label')"
+              icon="i-lucide-link"
+              variant="outline"
+              class="min-w-40"
+            />
 
-    <!-- Loading skeleton -->
-    <div v-if="isLoading" class="space-y-3">
-      <USkeleton v-for="i in 3" :key="i" class="h-20 w-full" />
-    </div>
-
-    <!-- Empty state -->
-    <UCard
-      v-else-if="entries.length === 0"
-      :ui="{ body: 'flex flex-col items-center text-center py-12 gap-2' }"
-    >
-      <UIcon name="i-lucide-book-open" class="size-10 text-muted" />
-      <h3 class="text-lg font-semibold text-highlighted">
-        {{ t('kb.empty.title') }}
-      </h3>
-      <p class="text-sm text-muted max-w-md">
-        {{ t('kb.empty.subtitle') }}
-      </p>
-    </UCard>
-
-    <!-- Result list (cards). Cards read better at this density than a -->
-    <!-- multi-column table given variable-length tag/category metadata. -->
-    <div v-else class="space-y-2">
-      <NuxtLink
-        v-for="entry in entries"
-        :key="entry.id"
-        :to="detailHref(entry)"
-        class="block"
-      >
-        <UCard
-          :ui="{
-            root: 'transition-colors hover:bg-elevated/60',
-            body: 'p-4',
-          }"
-        >
-          <div class="flex items-start justify-between gap-4 flex-wrap">
-            <div class="min-w-0 flex-1 space-y-1">
-              <div class="flex items-center gap-2 flex-wrap">
-                <h3 class="text-base font-semibold text-highlighted truncate">
-                  {{ entry.title }}
-                </h3>
-                <UBadge
-                  :color="statusBadgeColor(entry.status)"
-                  variant="subtle"
-                  size="xs"
-                >
-                  {{ t(`kb.status.${entry.status}`) }}
-                </UBadge>
-                <UIcon
-                  v-if="entry.authorType === 'ai'"
-                  name="i-lucide-sparkles"
-                  class="size-3.5 text-primary"
-                  :aria-label="t('kb.author.ai')"
-                />
-              </div>
-              <p class="text-xs text-muted truncate">
-                {{ entry.slug }}
-              </p>
-              <div
-                v-if="entry.category || (entry.tags && entry.tags.length)"
-                class="flex flex-wrap items-center gap-1 pt-1"
-              >
-                <UBadge
-                  v-if="entry.category"
-                  variant="outline"
-                  size="xs"
-                  icon="i-lucide-folder"
-                >
-                  {{ entry.category.name }}
-                </UBadge>
-                <UBadge
-                  v-for="tag in entry.tags"
-                  :key="tag.id"
-                  variant="subtle"
-                  color="neutral"
-                  size="xs"
-                >
-                  {{ tag.name }}
-                </UBadge>
-              </div>
-            </div>
-            <div class="text-right shrink-0">
-              <p class="text-xs text-muted">
-                {{ formatRelative(entry.updatedAt) }}
-              </p>
-              <p v-if="entry.authorName" class="text-xs text-muted truncate max-w-32">
-                {{ entry.authorName }}
-              </p>
-            </div>
+            <UButton
+              v-if="hasAnyFilter"
+              variant="ghost"
+              color="neutral"
+              icon="i-lucide-x"
+              size="sm"
+              :label="t('kb.filters.reset')"
+              @click="resetFilters"
+            />
           </div>
-        </UCard>
-      </NuxtLink>
-    </div>
+        </div>
 
-    <!-- Pagination (no total count from API; prev/next only) -->
-    <div
-      v-if="entries.length > 0 && (hasPrevPage || hasNextPage)"
-      class="flex items-center justify-end gap-2"
-    >
-      <UButton
-        variant="outline"
-        color="neutral"
-        icon="i-lucide-chevron-left"
-        :label="t('kb.list.pagination.prev')"
-        :disabled="!hasPrevPage"
-        @click="page = Math.max(1, page - 1)"
-      />
-      <span class="text-sm text-muted">
-        {{ t('kb.list.pagination.page', { page }) }}
-      </span>
-      <UButton
-        variant="outline"
-        color="neutral"
-        trailing-icon="i-lucide-chevron-right"
-        :label="t('kb.list.pagination.next')"
-        :disabled="!hasNextPage"
-        @click="page = page + 1"
-      />
+        <!-- Error -->
+        <UAlert
+          v-if="error"
+          color="error"
+          variant="soft"
+          :title="t('kb.list.error.title')"
+          :description="error.message"
+          icon="i-lucide-alert-circle"
+        />
+
+        <!-- Loading skeleton -->
+        <div v-if="isLoading" class="space-y-3">
+          <USkeleton v-for="i in 3" :key="i" class="h-20 w-full" />
+        </div>
+
+        <!-- Empty state -->
+        <UCard
+          v-else-if="entries.length === 0"
+          :ui="{ body: 'flex flex-col items-center text-center py-12 gap-2' }"
+        >
+          <UIcon name="i-lucide-book-open" class="size-10 text-muted" />
+          <h3 class="text-lg font-semibold text-highlighted">
+            {{ t('kb.empty.title') }}
+          </h3>
+          <p class="text-sm text-muted max-w-md">
+            {{ t('kb.empty.subtitle') }}
+          </p>
+        </UCard>
+
+        <!-- Result list (cards). Cards read better at this density than a -->
+        <!-- multi-column table given variable-length tag/category metadata. -->
+        <div v-else class="space-y-2">
+          <NuxtLink
+            v-for="entry in entries"
+            :key="entry.id"
+            :to="detailHref(entry)"
+            class="block"
+          >
+            <UCard
+              :ui="{
+                root: 'transition-colors hover:bg-elevated/60',
+                body: 'p-4',
+              }"
+            >
+              <div class="flex items-start justify-between gap-4 flex-wrap">
+                <div class="min-w-0 flex-1 space-y-1">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <h3 class="text-base font-semibold text-highlighted truncate">
+                      {{ entry.title }}
+                    </h3>
+                    <UBadge
+                      :color="statusBadgeColor(entry.status)"
+                      variant="subtle"
+                      size="xs"
+                    >
+                      {{ t(`kb.status.${entry.status}`) }}
+                    </UBadge>
+                    <UIcon
+                      v-if="entry.authorType === 'ai'"
+                      name="i-lucide-sparkles"
+                      class="size-3.5 text-primary"
+                      :aria-label="t('kb.author.ai')"
+                    />
+                  </div>
+                  <p class="text-xs text-muted truncate">
+                    {{ entry.slug }}
+                  </p>
+                  <div
+                    v-if="entry.category || (entry.tags && entry.tags.length)"
+                    class="flex flex-wrap items-center gap-1 pt-1"
+                  >
+                    <UBadge
+                      v-if="entry.category"
+                      variant="outline"
+                      size="xs"
+                      icon="i-lucide-folder"
+                    >
+                      {{ entry.category.name }}
+                    </UBadge>
+                    <UBadge
+                      v-for="tag in entry.tags"
+                      :key="tag.id"
+                      variant="subtle"
+                      color="neutral"
+                      size="xs"
+                    >
+                      {{ tag.name }}
+                    </UBadge>
+                  </div>
+                </div>
+                <div class="text-right shrink-0">
+                  <p class="text-xs text-muted">
+                    {{ formatRelative(entry.updatedAt) }}
+                  </p>
+                  <p v-if="entry.authorName" class="text-xs text-muted truncate max-w-32">
+                    {{ entry.authorName }}
+                  </p>
+                </div>
+              </div>
+            </UCard>
+          </NuxtLink>
+        </div>
+
+        <!-- Pagination (no total count from API; prev/next only) -->
+        <div
+          v-if="entries.length > 0 && (hasPrevPage || hasNextPage)"
+          class="flex items-center justify-end gap-2"
+        >
+          <UButton
+            variant="outline"
+            color="neutral"
+            icon="i-lucide-chevron-left"
+            :label="t('kb.list.pagination.prev')"
+            :disabled="!hasPrevPage"
+            @click="page = Math.max(1, page - 1)"
+          />
+          <span class="text-sm text-muted">
+            {{ t('kb.list.pagination.page', { page }) }}
+          </span>
+          <UButton
+            variant="outline"
+            color="neutral"
+            trailing-icon="i-lucide-chevron-right"
+            :label="t('kb.list.pagination.next')"
+            :disabled="!hasNextPage"
+            @click="page = page + 1"
+          />
+        </div>
+      </div>
     </div>
   </div>
 </template>

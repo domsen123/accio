@@ -586,8 +586,33 @@ export const createKbEntryService = (deps: CreateKbEntryServiceDeps) => {
       conditions.push(ne(schema.kbEntries.status, 'archived'))
     }
 
-    if (input.categoryId)
-      conditions.push(eq(schema.kbEntries.categoryId, input.categoryId))
+    if (input.categoryId) {
+      if (input.includeDescendantCategories) {
+        // REQ-KB-3 / T-1.11: filter by the selected category PLUS all
+        // descendants. Recursive CTE walks `kb_categories.parent_id` from the
+        // anchor row downwards. We restrict to the same workspace and ignore
+        // soft-deleted categories so trashed sub-trees don't leak entries
+        // back into the filter.
+        const descendants = sql<string>`(
+          WITH RECURSIVE descendants(id) AS (
+            SELECT id FROM ${schema.kbCategories}
+              WHERE id = ${input.categoryId}
+                AND organisation_id = ${input.organisationId}
+                AND deleted_at IS NULL
+            UNION ALL
+            SELECT c.id FROM ${schema.kbCategories} c
+              INNER JOIN descendants d ON c.parent_id = d.id
+              WHERE c.organisation_id = ${input.organisationId}
+                AND c.deleted_at IS NULL
+          )
+          SELECT id FROM descendants
+        )`
+        conditions.push(sql`${schema.kbEntries.categoryId} IN ${descendants}`)
+      }
+      else {
+        conditions.push(eq(schema.kbEntries.categoryId, input.categoryId))
+      }
+    }
 
     if (input.authorType)
       conditions.push(eq(schema.kbEntries.authorType, input.authorType))

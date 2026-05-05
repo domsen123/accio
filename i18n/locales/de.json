@@ -183,6 +183,52 @@
         "errorCategory": "Kategorie \"{name}\" konnte nicht erstellt werden"
       }
     },
+    "categories": {
+      "title": "Kategorien",
+      "all": "Alle Einträge",
+      "empty": "Noch keine Kategorien. Klicke auf +, um eine anzulegen.",
+      "expand": "Aufklappen",
+      "collapse": "Zuklappen",
+      "fields": {
+        "name": "Name",
+        "namePlaceholder": "z. B. Rezepte"
+      },
+      "errors": {
+        "nameRequired": "Name ist erforderlich"
+      },
+      "menu": {
+        "label": "Kategorie-Aktionen",
+        "addRoot": "Oberste Kategorie hinzufügen",
+        "addChild": "Unterkategorie anlegen",
+        "rename": "Umbenennen",
+        "delete": "Löschen"
+      },
+      "create": {
+        "rootTitle": "Neue Kategorie",
+        "childTitle": "Neue Unterkategorie"
+      },
+      "rename": {
+        "title": "Kategorie umbenennen"
+      },
+      "delete": {
+        "title": "Kategorie löschen?",
+        "body": "Die Kategorie wird aus dem Baum entfernt. Einträge in dieser Kategorie bleiben erhalten; die Kategorie wird soft-gelöscht und kann über die Datenbank wiederhergestellt werden."
+      },
+      "actions": {
+        "create": "Erstellen",
+        "save": "Speichern",
+        "cancel": "Abbrechen",
+        "delete": "Löschen"
+      },
+      "toast": {
+        "created": "Kategorie \"{name}\" erstellt",
+        "createError": "Kategorie konnte nicht erstellt werden",
+        "renamed": "Kategorie umbenannt",
+        "renameError": "Kategorie konnte nicht umbenannt werden",
+        "deleted": "Kategorie gelöscht",
+        "deleteError": "Kategorie konnte nicht gelöscht werden"
+      }
+    },
     "subnav": {
       "all": "Alle",
       "inbox": "Posteingang",

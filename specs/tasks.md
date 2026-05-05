@@ -175,10 +175,20 @@ Mark tasks done by changing `[ ]` to `[x]`. Add a brief note when deviating from
     - Pagination matches the list page (prev/next + "is page full?" heuristic) since the API still returns no total.
     - No new tests added — pages exercise existing service + API paths; suite stays at 164/164.
 
-- [ ] **T-1.11 — Categories tree UI**
+- [x] **T-1.11 — Categories tree UI**
   - Sidebar with a collapsible tree; selecting a category filters the entry list.
   - Refs: REQ-KB-3.
   - Done when: Nested categories render correctly; clicking shows entries from selected and descendants.
+  - **Deviations / notes:**
+    - Descendant filter implemented **server-side** via a recursive CTE on `kb_categories.parent_id` in `kbEntryService.list` (REQ-KB-3 "list entries by category, including descendants"). Gated behind a new opt-in flag `includeDescendantCategories` so existing single-category callers keep their literal-match behaviour. The CTE restricts to the same workspace + `deleted_at IS NULL` so trashed sub-trees don't leak. New Zod field on the list-entries query schema (also opt-in). The `/app/kb` UI passes the flag whenever a category is selected — the dropdown and the tree therefore behave identically.
+    - Tree component: `app/features/kb/components/KbCategoryTree.vue`. Builds a nested tree client-side via reduce, sorts siblings alphabetically with a locale-aware `Intl.Collator`, walks to a flat `{ category, depth, hasChildren, expanded }` array so the template stays linear (no recursive component). Lucide chevron-right/down toggles. "All entries" pseudo-row clears `categoryId` (sets the URL query to empty).
+    - Expand-state persistence: `useLocalStorage<string[]>('kb:cat-tree:expanded', [])` from `@vueuse/core` (auto-imported via `@vueuse/nuxt`), wrapped through a `Set<categoryId>` computed for O(1) lookups. Survives reloads.
+    - Inline CRUD scope: shipped — "+" header for top-level create, per-row `UDropdownMenu` (visible on hover/focus) with **Add child / Rename / Delete**. Modals reuse the existing inbox/trash UModal+UCard pattern. Delete is soft (matches the existing `DELETE /api/kb/categories/[id]` semantics, ADR-009). No bulk operations (per task hard limits).
+    - Mutation composables added to the existing `useKbEntryMutations.ts` (rather than a separate file) because `useCreateKbCategory` already lived there and a separate file caused an auto-import collision: `useRenameKbCategory`, `useDeleteKbCategory`. All three category mutations now invalidate both `kbKeys.categories()` and `kbKeys.entries()` so a rename refreshes the list view's hydrated category badge without manual plumbing.
+    - Responsive layout: at `lg` and above, `/app/kb` uses a `lg:grid lg:grid-cols-[240px_minmax(0,1fr)] lg:gap-6` split — tree on the left rail, search/filters/results on the right. Below `lg` the tree is hidden (`hidden lg:block`) and the existing single-select category dropdown is shown (`min-w-40 lg:hidden`). One affordance per breakpoint, no duplication.
+    - Entry counts per category: not implemented — would have required either an N+1 client fan-out or a dedicated server aggregation endpoint, both bigger than this slot. Flagged as a follow-up.
+    - New service tests (`tests/kb-service.test.ts`): three covering (a) opt-in only — single-category filter still matches one category by default, (b) immediate children expansion, (c) multi-level descendants including the anchor category. Suite count moves from 164 → 167.
+    - Quality gates: `pnpm lint`, `pnpm typecheck`, `pnpm test:run` 167/167 green. Smoke: `curl /app/kb` returns 302 → `/auth/sign-in` (expected, no 500).
 
 ### Phase 1 acceptance
 - [ ] **T-1.X — Phase 1 complete**
