@@ -1,0 +1,43 @@
+- generic [ref=e3]:
+  - link [ref=e4] [cursor=pointer]:
+    - /url: /
+  - generic [ref=e8]:
+    - generic [ref=e9]:
+      - generic [ref=e10]: Konto erstellen
+      - generic [ref=e11]:
+        - text: Bereits ein Konto?
+        - link "Anmelden" [ref=e12] [cursor=pointer]:
+          - /url: /auth/sign-in
+        - text: .
+    - generic [ref=e13]:
+      - generic [ref=e14]:
+        - button "Google" [ref=e15]:
+          - generic [ref=e17]: Google
+        - button "GitHub" [ref=e18]:
+          - generic [ref=e20]: GitHub
+      - separator [ref=e21]:
+        - generic [ref=e24]: or
+      - generic [ref=e26]:
+        - generic [ref=e27]:
+          - generic [ref=e30]: Name
+          - textbox "Name" [ref=e33]:
+            - /placeholder: Gib deinen Namen ein
+        - generic [ref=e34]:
+          - generic [ref=e37]: E-Mail
+          - textbox "E-Mail" [ref=e40]:
+            - /placeholder: Gib deine E-Mail-Adresse ein
+            - text: admin@example.com
+        - generic [ref=e41]:
+          - generic [ref=e44]: Passwort
+          - generic [ref=e46]:
+            - textbox "Passwort" [ref=e47]:
+              - /placeholder: Gib dein Passwort ein
+              - text: passw0rd
+            - button "Show password" [ref=e49]
+        - button "Konto erstellen" [ref=e51]:
+          - generic [ref=e52]: Konto erstellen
+    - generic [ref=e53]:
+      - text: Mit der Registrierung stimmst du unseren
+      - link "Nutzungsbedingungen" [ref=e54] [cursor=pointer]:
+        - /url: /terms-of-service
+      - text: zu.

@@ -1,0 +1,44 @@
+- generic [ref=e3]:
+  - link [ref=e4] [cursor=pointer]:
+    - /url: /
+  - generic [ref=e8]:
+    - generic [ref=e9]:
+      - generic [ref=e12]: Welcome back
+      - generic [ref=e13]:
+        - text: Don't have an account?
+        - link "Sign up" [ref=e14] [cursor=pointer]:
+          - /url: /auth/sign-up
+        - text: .
+    - generic [ref=e15]:
+      - generic [ref=e16]:
+        - button "Google" [ref=e17]:
+          - generic [ref=e19]: Google
+        - button "GitHub" [ref=e20]:
+          - generic [ref=e22]: GitHub
+      - separator [ref=e23]:
+        - generic [ref=e26]: or
+      - generic [ref=e28]:
+        - generic [ref=e29]:
+          - generic [ref=e32]: Email*
+          - textbox "Email*" [ref=e35]:
+            - /placeholder: Enter your email
+        - generic [ref=e36]:
+          - generic [ref=e38]:
+            - generic [ref=e39]: Password
+            - link "Forgot password?" [ref=e41] [cursor=pointer]:
+              - /url: /auth/forgot-password
+          - generic [ref=e43]:
+            - textbox "Password" [ref=e44]:
+              - /placeholder: Enter your password
+            - button "Show password" [ref=e46]
+        - generic [ref=e50]:
+          - checkbox "Remember me" [ref=e52]:
+            - checkbox [ref=e53]
+          - generic [ref=e55]: Remember me
+        - button "Sign in" [ref=e56]:
+          - generic [ref=e57]: Sign in
+    - generic [ref=e58]:
+      - text: By signing in, you agree to our
+      - link "Terms of Service" [ref=e59] [cursor=pointer]:
+        - /url: /terms-of-service
+      - text: .

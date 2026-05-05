@@ -734,7 +734,9 @@
         "prev": "Zurück",
         "next": "Weiter",
         "page": "Seite {page}"
-      }
+      },
+      "updatedRelative": "{time} aktualisiert",
+      "openEntry": "Eintrag öffnen"
     },
     "filters": {
       "reset": "Filter zurücksetzen",

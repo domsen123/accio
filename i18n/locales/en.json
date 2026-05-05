@@ -734,7 +734,9 @@
         "prev": "Previous",
         "next": "Next",
         "page": "Page {page}"
-      }
+      },
+      "updatedRelative": "Updated {time}",
+      "openEntry": "Open entry"
     },
     "filters": {
       "reset": "Clear filters",

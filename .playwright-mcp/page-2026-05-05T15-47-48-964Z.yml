@@ -1,0 +1,102 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - link "Anwendungslogo" [ref=e4] [cursor=pointer]:
+      - /url: /app
+      - generic [ref=e5]:
+        - img [ref=e8]
+        - generic [ref=e10]: Anwendungslogo
+    - navigation [ref=e12]:
+      - list [ref=e13]:
+        - listitem [ref=e14]:
+          - link "Übersicht" [ref=e15] [cursor=pointer]:
+            - /url: /app
+            - generic [ref=e17]: Übersicht
+        - listitem [ref=e18]:
+          - link "Wissensdatenbank" [ref=e19] [cursor=pointer]:
+            - /url: /app/kb
+            - generic [ref=e21]: Wissensdatenbank
+        - listitem [ref=e22]:
+          - link "Aufgaben" [ref=e23] [cursor=pointer]:
+            - /url: /app/todos
+            - generic [ref=e25]: Aufgaben
+        - listitem [ref=e26]:
+          - link "Projekte" [ref=e27] [cursor=pointer]:
+            - /url: /app/projects
+            - generic [ref=e29]: Projekte
+        - listitem [ref=e30]:
+          - link "Orchestrator" [ref=e31] [cursor=pointer]:
+            - /url: /app/orchestrator
+            - generic [ref=e33]: Orchestrator
+        - listitem [ref=e34]:
+          - link "Einstellungen" [ref=e35] [cursor=pointer]:
+            - /url: /app/settings
+            - generic [ref=e37]: Einstellungen
+    - button "A Admin" [ref=e39]:
+      - generic [ref=e41]: A
+      - generic [ref=e42]: Admin
+  - separator
+  - generic [ref=e44]:
+    - generic [ref=e45]:
+      - generic [ref=e46]:
+        - button "Collapse sidebar" [ref=e47]
+        - heading "Arbeitsbereich" [level=1] [ref=e49]:
+          - button "Arbeitsbereich" [ref=e50]:
+            - generic [ref=e52]: Mein Arbeitsbereich
+      - generic [ref=e54]:
+        - textbox "Globale Suche..." [disabled] [ref=e56]
+        - button "Orchestrator" [ref=e59]:
+          - generic [ref=e61]: Orchestrator
+        - button "Sprache ändern" [ref=e62]:
+          - generic [ref=e64]: Deutsch
+        - button "Switch to dark mode" [ref=e65]
+    - generic [ref=e70]:
+      - generic [ref=e71]:
+        - navigation "breadcrumb" [ref=e73]:
+          - list [ref=e74]:
+            - listitem [ref=e75]:
+              - generic [ref=e77]: Wissensdatenbank
+        - generic [ref=e78]:
+          - generic [ref=e79]:
+            - heading "Wissensdatenbank" [level=1] [ref=e80]
+            - link "Eintrag erstellen" [ref=e82] [cursor=pointer]:
+              - /url: /app/kb/new
+              - generic [ref=e84]: Eintrag erstellen
+          - generic [ref=e85]: Durchsuche, filtere und erkunde dein Wissen.
+          - navigation "KB sub-navigation" [ref=e88]:
+            - link "Alle" [ref=e89] [cursor=pointer]:
+              - /url: /app/kb
+            - link "Posteingang" [ref=e90] [cursor=pointer]:
+              - /url: /app/kb/inbox
+            - link "Papierkorb" [ref=e91] [cursor=pointer]:
+              - /url: /app/kb/trash
+      - generic [ref=e92]:
+        - complementary "Kategorien" [ref=e94]:
+          - generic [ref=e95]:
+            - heading "Kategorien" [level=2] [ref=e96]
+            - button "Oberste Kategorie hinzufügen" [ref=e97]
+          - button "Alle Einträge" [ref=e99]:
+            - generic [ref=e101]: Alle Einträge
+          - paragraph [ref=e105]: Noch keine Kategorien. Klicke auf +, um eine anzulegen.
+        - generic [ref=e107]:
+          - generic [ref=e108]:
+            - textbox "Titel und Inhalt durchsuchen..." [ref=e110]
+            - generic [ref=e113]:
+              - button "Show popup" [ref=e114]:
+                - generic [ref=e117]: Status
+              - button "Show popup" [ref=e120]:
+                - generic: Alle Tags
+              - button "Show popup" [ref=e125]:
+                - generic: Alle Autoren
+              - button "Show popup" [ref=e130]:
+                - generic: Alle Quellen
+          - link "Test KB Verifiziert test-kb vor 35 Minuten Admin" [ref=e136] [cursor=pointer]:
+            - /url: /app/kb/test-kb
+            - generic [ref=e139]:
+              - generic [ref=e140]:
+                - generic [ref=e141]:
+                  - heading "Test KB" [level=3] [ref=e142]
+                  - generic [ref=e143]: Verifiziert
+                - paragraph [ref=e144]: test-kb
+              - generic [ref=e145]:
+                - paragraph [ref=e146]: vor 35 Minuten
+                - paragraph [ref=e147]: Admin

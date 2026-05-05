@@ -337,7 +337,7 @@ Every `/app` page is composed as a nested `UPage` with a `UPageHeader` at the to
 
 ### Content density
 
-- **List/table views** (KB list, todos, vault entries): row-based, 12px vertical padding per row, `border-b border-muted` between rows. No card-per-row. Hairlines do the separation.
+- **List/table views** (todos, vault entries, simple uniform rows): row-based, 12px vertical padding per row, `border-b border-muted` between rows. Hairlines do the separation. **Exception:** lists with variable-length metadata (KB entries — multiple badges, category, tags, author meta) use the card-per-row pattern documented in §Components §Lists.
 - **Detail views** (single KB entry, single todo): max content width `max-w-3xl` for readability, generous internal padding (`p-6` to `p-8`).
 - **Dashboard / overview**: card grid, `gap-6`, cards use `bg-elevated rounded-lg border border-default p-6`.
 
@@ -404,6 +404,37 @@ Most app data is presented as lists, not cards. The pattern:
 Or use `<UTable>` for tabular data with column headers.
 
 Row content uses a `flex items-center gap-3` layout: icon/avatar (left), main text (flex-1), meta (right). Meta typically renders in `text-muted text-xs`.
+
+#### Card-per-row exception (variable-metadata lists)
+
+When list items carry **variable-length metadata** — multiple status badges, category chips, tag chips, multi-line author/source meta — flat hairline rows read as cluttered. In these cases, render each item as a card-per-row inside `<ul><li>`:
+
+```
+<ul class="space-y-3">
+  <li v-for="entry in entries" :key="entry.id">
+    <NuxtLink :to="..." class="block group">
+      <UCard
+        :ui="{
+          root: 'bg-elevated transition-colors hover:bg-accented',
+          body: 'p-4',
+        }"
+      >
+        {row content}
+      </UCard>
+    </NuxtLink>
+  </li>
+</ul>
+```
+
+Rules:
+- Surface is `bg-elevated` (the standard card surface) with `hover:bg-accented`.
+- Padding `p-4` (denser than the default card `p-6` because rows still want list rhythm).
+- Border-radius and border come from `<UCard>` defaults (`rounded-lg border border-default`). No `shadow-*`.
+- Status semantics live on `<UBadge>` inside the card — **do not** tint the card surface with status colors (`bg-info/5`, `bg-warning/5`).
+- Wrap in `<ul><li>` for list semantics; whole-card link via `<NuxtLink class="block">` — no nested `<button>`/`<UButton>` clickables inside the link (button-in-link is invalid HTML).
+- Trailing chevron affordance is a non-interactive `<UIcon name="i-lucide-arrow-right" class="size-5 text-muted group-hover:text-default" />`, not a `<UButton>`.
+
+Use this exception sparingly — KB entries (tags + category + author + status) is the canonical case. If row content is uniform (single title + single timestamp), stay with hairline rows.
 
 ### Modals
 

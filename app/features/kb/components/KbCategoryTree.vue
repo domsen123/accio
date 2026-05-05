@@ -307,7 +307,7 @@ const itemsFor = (cat: KbCategory) => [
 </script>
 
 <template>
-  <aside class="space-y-2" :aria-label="t('kb.categories.title')">
+  <aside class="space-y-3" :aria-label="t('kb.categories.title')">
     <!-- Header: title + create top-level -->
     <div class="flex items-center justify-between px-2 pt-1">
       <h2 class="text-xs font-semibold uppercase tracking-wide text-muted">
@@ -400,9 +400,14 @@ const itemsFor = (cat: KbCategory) => [
         </div>
       </li>
     </ul>
-    <p v-else class="px-2 py-2 text-xs text-muted">
-      {{ t('kb.categories.empty') }}
-    </p>
+    <div v-else class="flex flex-col items-center justify-center gap-3 px-2 py-8 text-center">
+      <div class="flex items-center justify-center size-14 rounded-full bg-accented">
+        <UIcon name="i-lucide-folder-tree" class="size-7 text-muted" />
+      </div>
+      <p class="text-sm text-muted">
+        {{ t('kb.categories.empty') }}
+      </p>
+    </div>
 
     <!-- Create modal -->
     <UModal v-model:open="isCreateOpen">
