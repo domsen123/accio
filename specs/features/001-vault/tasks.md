@@ -91,10 +91,11 @@ Tasks are prefixed `T-V-` (V for Vault).
   - Refs: REQ-VAULT-1.
   - **Notes:** Adds `acknowledgeIrrecoverable: literal(true)` to enforce REQ-VAULT-1 acknowledgement (server-side). Best-effort login-password equality check via `bcrypt.compare`, returns 400 `vault.setup.equals_login_password`. Idempotent via 409 on existing row.
 
-- [ ] **T-V-8 — Workspace init endpoint**
+- [x] **T-V-8 — Workspace init endpoint**
   - `POST /api/vault/workspace/init`: requires the user to have `user_vault_credentials`. Verifies master password, generates a fresh DEK, generates `workspace_salt`, wraps DEK, persists to `workspace_vault_keys`.
   - Idempotent: if the workspace already has a row, return 409.
   - Refs: REQ-VAULT-2.
+  - **Notes:** Returns 412 `vault.workspace_init.master_password_not_set` when T-V-7 hasn't run, 401 on invalid password, 409 on already-initialised. Permission gated on `vault:write`. `dek` and `masterKey` buffers zeroed in a single `finally` block so they're wiped even if the DB write throws.
 
 - [ ] **T-V-9 — Unlock endpoint**
   - `POST /api/vault/unlock`: verifies master password against the user's verifier; if correct, derives the master key, creates a vault session for the current `(user_id, session_id)`.
