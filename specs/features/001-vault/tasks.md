@@ -270,10 +270,15 @@ Tasks are prefixed `T-V-` (V for Vault).
     - **423 → unlock dialog auto-trigger**: deferred to T-V-26 (Entry detail UI) where the actual 423 paths land. The dialog is already wired to be opened from anywhere via `useVaultUnlockDialog().open()`, so the future glue is one call.
     - i18n: `vault.lockIndicator.*`, `vault.unlock.*` keys added to `de.json` and `en.json` along with the rest of the `vault.*` namespace (other UI tasks reuse this branch — pre-loading the vault batch in T-V-23 keeps the i18n diffs small in subsequent UI commits and is the spirit of T-V-31).
 
-- [ ] **T-V-24 — Vault landing page**
+- [x] **T-V-24 — Vault landing page**
   - `/app/vault` — entry list at root folder, folder tree sidebar, search bar, filter chips for tags.
   - Empty state: links to "create entry" and to "set up master password" if not yet set.
   - Refs: REQ-VAULT-7, REQ-VAULT-9, REQ-VAULT-10, REQ-VAULT-11.
+  - **Notes:**
+    - `app/pages/app/vault/index.vue`. Three states: not-set-up (CTA → vault settings), locked (CTA → unlock dialog), unlocked (folder tree + entry list).
+    - Layout: `UDashboardToolbar` with title + search + new-entry; left column folder tree + tag chips + Trash link; right column entry list (plain `<ul>` rendering — `UTable`'s row-select event types don't accept the row-original shape used here).
+    - `useVaultEntriesList` composable wraps `vaultKeys.entries(params)`; `selectedFolderId === null` maps to `rootOnly: true` so root-folder entries render via the same parameter shape the API expects.
+    - Folder tree component (T-V-25 staged here so the page consumes the real tree, not a placeholder).
 
 - [ ] **T-V-25 — Folder tree component**
   - Nested rendering up to depth 5; new folder, rename, delete-with-strategy, drag to reparent.
