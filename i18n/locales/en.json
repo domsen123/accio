@@ -497,6 +497,15 @@
       "kbLinks": {
         "title": "Linked KB entries"
       }
+    },
+    "subtask": {
+      "add": "Subtask",
+      "empty": "No subtasks yet.",
+      "error": "Could not load subtasks",
+      "progress": {
+        "label": "{completed}/{total} done",
+        "aria": "{completed} of {total} subtasks completed"
+      }
     }
   },
   "shell": {

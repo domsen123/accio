@@ -11,11 +11,12 @@
  * Limitations carried into T-2.6 / T-2.7 / T-2.8:
  *   - "New todo" links to `/app/todos/new` (T-2.6).
  *   - Per-row "Edit" links to `/app/todos/[id]/edit` (T-2.6).
- *   - Subtask rendering and `n/m` progress is T-2.7.
- *   - KB-link count uses `linkedKbCount` from the server when available,
- *     but the list endpoints currently return bare rows without
- *     subtask/link counts. Until T-2.6 hydrates the list, the indicators
- *     just stay hidden — no broken UI.
+ *   - Subtask rendering lives on the detail page (T-2.7); the flat list
+ *     intentionally stays flat. Per-row `n/m` progress badge surfaces here
+ *     via `<TodoSubtaskProgress>`, which fans out one small per-row query
+ *     into Pinia-Colada.
+ *   - KB-link count is still hidden — the list endpoint returns bare rows
+ *     and a per-row fetch for that one indicator is not justified here.
  *   - The list endpoint returns no total count; pagination uses page size
  *     plus "is the current page full?" as a heuristic for "has next page"
  *     (same pattern as the KB list).
@@ -33,6 +34,7 @@ import type {
 } from '~/features/todo/types/todo.types'
 import { useKbTags } from '~/features/kb/composables/useKbTags'
 import TodoSubNav from '~/features/todo/components/TodoSubNav.vue'
+import TodoSubtaskProgress from '~/features/todo/components/TodoSubtaskProgress.vue'
 import { useTodoCounts } from '~/features/todo/composables/useTodoCounts'
 import {
   useCompleteTodo,
@@ -399,6 +401,16 @@ const rowMenuItems = (todo: Todo) => [
               >
                 {{ t(`todo.priority.${todo.priority}`) }}
               </UBadge>
+              <!--
+                Per-row n/m badge (T-2.7). The component fans out one tiny
+                `useTodos({ parentTodoId })` query per visible row; queries
+                with no children render nothing and Pinia-Colada caches the
+                result, so the cost is bounded and amortised across views.
+                Acceptable at our single-user-hub scale; a server-side
+                aggregation in the list endpoint would be the cleaner
+                follow-up if the page size grows.
+              -->
+              <TodoSubtaskProgress :parent-todo-id="todo.id" />
             </div>
 
             <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">

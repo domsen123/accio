@@ -36,6 +36,7 @@ import type {
 } from '../types/todo.types'
 import * as z from 'zod'
 import KbTagPicker from '~/features/kb/components/KbTagPicker.vue'
+import { useTodoById } from '../composables/useTodoById'
 import { useCreateTodo, useUpdateTodo } from '../composables/useTodoMutations'
 import { TODO_PRIORITIES } from '../types/todo.types'
 import TodoKbEntryPicker from './TodoKbEntryPicker.vue'
@@ -43,6 +44,12 @@ import TodoParentPicker from './TodoParentPicker.vue'
 
 const props = defineProps<{
   todo?: Todo | TodoWithRelations | null
+  /**
+   * Optional pre-filled parent for create mode (T-2.7 "+ Subtask" entry
+   * point — `/app/todos/new?parentId=<id>`). Ignored in edit mode where
+   * `props.todo.parentTodoId` already supplies the initial value.
+   */
+  initialParentTodoId?: string | null
 }>()
 
 const emit = defineEmits<{
@@ -102,7 +109,9 @@ const state = reactive<TodoFormState>({
   description: initialTodo?.descriptionMd ?? '',
   priority: initialTodo?.priority ?? 'medium',
   dueAt: toDatetimeLocalString(initialTodo?.dueAt ?? null),
-  parentTodoId: initialTodo?.parentTodoId ?? null,
+  // Edit mode wins; create mode falls back to the optional `initialParentTodoId`
+  // prop (used by the "+ Subtask" navigate-with-prefill flow from T-2.7).
+  parentTodoId: initialTodo?.parentTodoId ?? props.initialParentTodoId ?? null,
   tagNames: initialTodo?.tags?.map(tag => tag.name) ?? [],
   kbEntryIds: initialTodo?.kbEntries?.map(entry => entry.id) ?? [],
 })
@@ -110,6 +119,32 @@ const state = reactive<TodoFormState>({
 const initialKbOptions = computed(() =>
   initialTodo?.kbEntries?.map(entry => ({ id: entry.id, title: entry.title })) ?? [],
 )
+
+/**
+ * Resolve the initial parent option for the picker.
+ *
+ *   - Edit mode: derive directly from `props.todo` (the parent id is known
+ *     but not its title, so we fetch lazily; `useTodoById` is enabled only
+ *     when an id is present).
+ *   - Create mode + `initialParentTodoId`: same lazy fetch via the by-id
+ *     query so the picker chip shows the parent's title before the user
+ *     types anything into the dropdown search.
+ */
+const parentLookupId = computed(() => {
+  if (initialTodo?.parentTodoId)
+    return initialTodo.parentTodoId
+  if (!isEditMode.value && props.initialParentTodoId)
+    return props.initialParentTodoId
+  return ''
+})
+
+const { todo: parentTodoLookup } = useTodoById(parentLookupId)
+
+const initialParentOption = computed<{ id: string, title: string } | null>(() => {
+  if (parentTodoLookup.value)
+    return { id: parentTodoLookup.value.id, title: parentTodoLookup.value.title }
+  return null
+})
 
 const schema = z.object({
   title: z.string().trim().min(1, t('todo.form.errors.titleRequired')).max(TITLE_MAX),
@@ -326,6 +361,7 @@ const onSubmit = async (event: FormSubmitEvent<Schema>) => {
             <TodoParentPicker
               v-model="state.parentTodoId"
               :exclude-id="props.todo?.id ?? null"
+              :initial-option="initialParentOption"
             />
           </UFormField>
         </UPageCard>

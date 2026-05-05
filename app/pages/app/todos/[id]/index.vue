@@ -13,6 +13,8 @@
  * class citizens in the wikilink graph for cross-domain references.
  */
 import { renderKbMarkdown } from '~/features/kb/utils/renderMarkdown'
+import TodoSubtaskList from '~/features/todo/components/TodoSubtaskList.vue'
+import TodoSubtaskProgress from '~/features/todo/components/TodoSubtaskProgress.vue'
 import { useTodoById } from '~/features/todo/composables/useTodoById'
 import {
   useCompleteTodo,
@@ -176,15 +178,24 @@ const onToggleComplete = async () => {
           />
         </UCard>
 
-        <UCard v-if="todo.subtaskCount > 0">
+        <UCard>
           <template #header>
-            <h2 class="text-sm font-semibold">
-              {{ t('todo.detail.subtasks.title') }}
-            </h2>
+            <div class="flex items-center justify-between gap-2 flex-wrap">
+              <div class="flex items-center gap-2">
+                <h2 class="text-sm font-semibold">
+                  {{ t('todo.detail.subtasks.title') }}
+                </h2>
+                <TodoSubtaskProgress :parent-todo-id="todo.id" size="sm" />
+              </div>
+              <UButton
+                size="xs"
+                icon="i-lucide-plus"
+                :label="t('todo.subtask.add')"
+                :to="`/app/todos/new?parentId=${encodeURIComponent(todo.id)}`"
+              />
+            </div>
           </template>
-          <p class="text-sm text-muted">
-            {{ t('todo.detail.subtasks.count', { count: todo.subtaskCount }) }}
-          </p>
+          <TodoSubtaskList :parent-todo-id="todo.id" :depth="1" />
         </UCard>
       </div>
 

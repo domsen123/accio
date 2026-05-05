@@ -497,6 +497,15 @@
       "kbLinks": {
         "title": "Verknüpfte KB-Einträge"
       }
+    },
+    "subtask": {
+      "add": "Teilaufgabe",
+      "empty": "Noch keine Teilaufgaben.",
+      "error": "Teilaufgaben konnten nicht geladen werden",
+      "progress": {
+        "label": "{completed}/{total} erledigt",
+        "aria": "{completed} von {total} Teilaufgaben erledigt"
+      }
     }
   },
   "shell": {
