@@ -215,6 +215,27 @@ const getTodoTagsItemService = lazy(() =>
 const getTodoKbLinksItemService = lazy(() =>
   createItemService({ db: getDatabase('app'), table: schema.todoKbLinks, tableName: 'todoKbLinks', eventBus: getEventBus() }),
 )
+const getUserVaultCredentialsItemService = lazy(() =>
+  createItemService({ db: getDatabase('app'), table: schema.userVaultCredentials, tableName: 'userVaultCredentials', eventBus: getEventBus() }),
+)
+const getWorkspaceVaultKeysItemService = lazy(() =>
+  createItemService({ db: getDatabase('app'), table: schema.workspaceVaultKeys, tableName: 'workspaceVaultKeys', eventBus: getEventBus() }),
+)
+const getVaultFoldersItemService = lazy(() =>
+  createItemService({ db: getDatabase('app'), table: schema.vaultFolders, tableName: 'vaultFolders', eventBus: getEventBus() }),
+)
+const getVaultEntriesItemService = lazy(() =>
+  createItemService({ db: getDatabase('app'), table: schema.vaultEntries, tableName: 'vaultEntries', eventBus: getEventBus() }),
+)
+const getVaultTagsItemService = lazy(() =>
+  createItemService({ db: getDatabase('app'), table: schema.vaultTags, tableName: 'vaultTags', eventBus: getEventBus() }),
+)
+const getVaultEntryTagsItemService = lazy(() =>
+  createItemService({ db: getDatabase('app'), table: schema.vaultEntryTags, tableName: 'vaultEntryTags', eventBus: getEventBus() }),
+)
+const getVaultAccessLogItemService = lazy(() =>
+  createItemService({ db: getDatabase('app'), table: schema.vaultAccessLog, tableName: 'vaultAccessLog', eventBus: getEventBus() }),
+)
 
 // RBAC Service (depends on ItemServices above)
 const getRbacService = lazy(() =>
@@ -567,5 +588,12 @@ export const container = {
     get todos() { return getTodosItemService() },
     get todoTags() { return getTodoTagsItemService() },
     get todoKbLinks() { return getTodoKbLinksItemService() },
+    get userVaultCredentials() { return getUserVaultCredentialsItemService() },
+    get workspaceVaultKeys() { return getWorkspaceVaultKeysItemService() },
+    get vaultFolders() { return getVaultFoldersItemService() },
+    get vaultEntries() { return getVaultEntriesItemService() },
+    get vaultTags() { return getVaultTagsItemService() },
+    get vaultEntryTags() { return getVaultEntryTagsItemService() },
+    get vaultAccessLog() { return getVaultAccessLogItemService() },
   },
 }

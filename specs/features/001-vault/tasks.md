@@ -85,10 +85,11 @@ Tasks are prefixed `T-V-` (V for Vault).
 
 ## Server: master password and session
 
-- [ ] **T-V-7 — Setup endpoint**
+- [x] **T-V-7 — Setup endpoint**
   - `POST /api/vault/setup`: idempotent for the user. If `user_vault_credentials` row exists, return 409. Else: generate `master_salt` and `master_kdf_salt`, compute verifier, persist.
   - Validation: min 12 chars, two-input confirmation handled client-side; server only sees the final value.
   - Refs: REQ-VAULT-1.
+  - **Notes:** Adds `acknowledgeIrrecoverable: literal(true)` to enforce REQ-VAULT-1 acknowledgement (server-side). Best-effort login-password equality check via `bcrypt.compare`, returns 400 `vault.setup.equals_login_password`. Idempotent via 409 on existing row.
 
 - [ ] **T-V-8 — Workspace init endpoint**
   - `POST /api/vault/workspace/init`: requires the user to have `user_vault_credentials`. Verifies master password, generates a fresh DEK, generates `workspace_salt`, wraps DEK, persists to `workspace_vault_keys`.
