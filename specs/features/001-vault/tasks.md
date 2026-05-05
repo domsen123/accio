@@ -21,10 +21,11 @@ Tasks are prefixed `T-V-` (V for Vault).
   - Done when: `pnpm install` succeeds locally and in a Docker build.
   - **Note:** Installed argon2@0.44.0 via pnpm catalog; added to `onlyBuiltDependencies` so native bindings build (same pattern as `bcrypt`). Local install + rebuild succeed; runtime hash works. Coolify-side build verification deferred until first deploy attempt — if Nixpacks lacks `python3`/`g++` for source compile fallback, may need a defensive `nixpacks.toml`.
 
-- [ ] **T-V-3 — Add `meta` column to `orchestrator_actions` if not present**
+- [x] **T-V-3 — Add `meta` column to `orchestrator_actions` if not present**
   - Conditional migration: add `meta jsonb` only if the column doesn't already exist.
   - Refs: DESIGN-VAULT-DATA, DESIGN-VAULT-MIGRATION.
   - Done when: Migration applies cleanly; existing audit log entries still readable.
+  - **Note:** Generated `0008_furry_chameleon.sql` and hand-edited the single `ADD COLUMN` to `ADD COLUMN IF NOT EXISTS`; commented in the SQL file so future regenerations don't silently revert the edit. Verified idempotency against dev DB; existing rows still readable.
 
 ---
 

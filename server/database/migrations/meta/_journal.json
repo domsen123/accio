@@ -57,6 +57,13 @@
       "when": 1777979810259,
       "tag": "0007_sharp_gargoyle",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1778014156982,
+      "tag": "0008_furry_chameleon",
+      "breakpoints": true
     }
   ]
 }

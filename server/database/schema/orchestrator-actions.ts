@@ -40,6 +40,10 @@ export const orchestratorActionStatus = pgEnum('orchestrator_action_status', [
 //
 // `affected_count` records the bulk-rule input (ADR-010, DESIGN-CONF) so
 // we can audit why a normally-`auto` action was promoted to `confirm`.
+//
+// `meta` is a free-form jsonb bag for per-action metadata. Vault tools set
+// `{"vault_access": true}` so audit views can highlight secret-touching
+// actions (DESIGN-VAULT-DATA).
 export const orchestratorActions = pgTable('orchestrator_actions', {
   id: text('id').primaryKey(), // ULID
   organisationId: text('organisation_id').notNull().references(() => organisations.id, { onDelete: 'cascade' }),
@@ -54,6 +58,7 @@ export const orchestratorActions = pgTable('orchestrator_actions', {
   status: orchestratorActionStatus('status').notNull().default('pending_confirmation'),
   affectedCount: integer('affected_count'),
   error: text('error'),
+  meta: jsonb('meta'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   confirmedAt: timestamp('confirmed_at', { withTimezone: true }),
   cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
