@@ -116,9 +116,10 @@ Tasks are prefixed `T-V-` (V for Vault).
     - Status uses `getSession({ touch: false })` so polling does not extend the auto-lock timer; REQ-VAULT-4's "vault API call" is interpreted as "calls that operate on secrets". Reviewer agreed this is the only sane reading.
     - **Cross-task tweak:** spec text uses snake_case (`is_setup`, `is_unlocked`, `locks_at`); the rest of the codebase's API surface is camelCase. Switched both `status.get.ts` and the previously-shipped `unlock.post.ts` to camelCase (`isSetup`, `isUnlocked`, `locksAt`) before any frontend code consumed the snake_case form. Spec text treated as descriptive of the *fields*, not prescriptive of casing.
 
-- [ ] **T-V-11 — Lock on logout**
+- [x] **T-V-11 — Lock on logout**
   - Hook into the existing logout flow to call `evictByUser(userId)`.
   - Refs: REQ-VAULT-4.
+  - **Notes:** Added `vaultSessionStore.evictByUser(userId)` call in `server/api/auth/logout.post.ts`, gated on `event.context.user?.id` being present (the auth middleware populates it from the session cookie). Pre-existing `mcp-read-tools.test.ts` "due today" timezone-sensitive failure not related.
 
 - [ ] **T-V-12 — Change master endpoint**
   - `POST /api/vault/change-master`: verifies current, derives new master key, re-wraps every workspace's DEK using the new master key + existing workspace salt, updates verifier, evicts all the user's vault sessions.
