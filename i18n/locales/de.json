@@ -410,6 +410,93 @@
         "title": "Noch nichts erledigt",
         "subtitle": "Abgeschlossene Aufgaben erscheinen hier, neueste zuerst."
       }
+    },
+    "form": {
+      "create": {
+        "title": "Neue Aufgabe",
+        "subtitle": "Erfasse eine Aufgabe mit Priorität, Fälligkeit, Tags und verknüpften KB-Einträgen."
+      },
+      "edit": {
+        "title": "Bearbeiten — {title}",
+        "fallback": "Aufgabe bearbeiten",
+        "heading": "Aufgabe bearbeiten",
+        "backToTodo": "Zurück zur Aufgabe"
+      },
+      "backToList": "Zurück zu den Aufgaben",
+      "title": {
+        "label": "Titel",
+        "placeholder": "Was ist zu tun?"
+      },
+      "description": {
+        "label": "Beschreibung",
+        "placeholder": "Optionale Markdown-Notizen — Kontext, Links, [[Wikilinks]] zu KB-Einträgen.",
+        "hint": "Markdown wird unterstützt."
+      },
+      "priority": {
+        "label": "Priorität"
+      },
+      "dueAt": {
+        "label": "Fälligkeit",
+        "hint": "Optional — lokale Zeit.",
+        "clear": "Fälligkeit entfernen"
+      },
+      "parent": {
+        "label": "Übergeordnete Aufgabe",
+        "placeholder": "Übergeordnete Aufgabe suchen…",
+        "hint": "Optional — diese Aufgabe als Teilaufgabe einordnen. Maximal drei Ebenen.",
+        "clear": "Übergeordnete Aufgabe entfernen",
+        "empty": "Keine passenden Aufgaben."
+      },
+      "tags": {
+        "label": "Tags"
+      },
+      "kbLinks": {
+        "label": "Verknüpfte KB-Einträge",
+        "placeholder": "KB-Einträge suchen…",
+        "hint": "Verbinde diese Aufgabe mit einem oder mehreren Knowledge-Base-Einträgen.",
+        "empty": "Keine passenden Einträge."
+      },
+      "publish": {
+        "title": "Speichern"
+      },
+      "actions": {
+        "create": "Aufgabe anlegen",
+        "update": "Änderungen speichern",
+        "cancel": "Abbrechen"
+      },
+      "errors": {
+        "titleRequired": "Titel ist erforderlich",
+        "parentDepth": "Diese übergeordnete Aufgabe würde das Limit von drei Ebenen überschreiten.",
+        "parentMissing": "Die gewählte übergeordnete Aufgabe wurde nicht gefunden.",
+        "generic": "Etwas ist schiefgelaufen. Bitte erneut versuchen."
+      },
+      "toast": {
+        "created": "Aufgabe angelegt",
+        "updated": "Aufgabe aktualisiert",
+        "error": "Aufgabe konnte nicht gespeichert werden"
+      }
+    },
+    "detail": {
+      "title": "{title}",
+      "fallback": "Aufgabe",
+      "backToList": "Zurück zu den Aufgaben",
+      "dueAt": "Fällig {date}",
+      "completedAt": "Erledigt {date}",
+      "description": "Beschreibung",
+      "descriptionEmpty": "Noch keine Beschreibung.",
+      "error": {
+        "title": "Aufgabe konnte nicht geladen werden"
+      },
+      "actions": {
+        "title": "Aktionen"
+      },
+      "subtasks": {
+        "title": "Teilaufgaben",
+        "count": "{count} Teilaufgabe | {count} Teilaufgaben"
+      },
+      "kbLinks": {
+        "title": "Verknüpfte KB-Einträge"
+      }
     }
   },
   "shell": {

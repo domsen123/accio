@@ -90,8 +90,42 @@ export interface TodoResponse {
   todo: Todo | TodoWithRelations
 }
 
+export interface TodoDetailResponse {
+  todo: TodoWithRelations
+}
+
 export interface TodoMutationResponse {
   todo: Todo
+}
+
+/**
+ * Body shape accepted by `POST /api/todos` (T-2.6). Mirrors the server's
+ * `createTodoSchema`. `description` is the Markdown body; the server stores
+ * it as `description_md`.
+ */
+export interface CreateTodoInput {
+  title: string
+  description?: string | null
+  priority?: TodoPriority
+  dueAt?: string | null
+  parentTodoId?: string | null
+  tagNames?: string[]
+  kbEntryIds?: string[]
+}
+
+/**
+ * Body shape accepted by `PATCH /api/todos/[id]` (T-2.6). Every field is
+ * optional; supplying `tagNames` / `kbEntryIds` replaces the corresponding
+ * relation set, supplying `null` for `dueAt` / `parentTodoId` clears.
+ */
+export interface UpdateTodoInput {
+  title?: string
+  description?: string | null
+  priority?: TodoPriority
+  dueAt?: string | null
+  parentTodoId?: string | null
+  tagNames?: string[]
+  kbEntryIds?: string[]
 }
 
 export interface TodoCounts {

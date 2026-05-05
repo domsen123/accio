@@ -280,10 +280,19 @@ Mark tasks done by changing `[ ]` to `[x]`. Add a brief note when deviating from
     - **No tests added** — UI shell over four already-tested view endpoints. Suite remains at 211/211.
   - **Smoke test:** `curl /app/todos` unauthenticated → 302 to `/auth/sign-in?redirect=/app/todos` (no 500). Authenticated curl → 200 with `<title>Aufgaben - …</title>` (German locale via admin's saved preference) and i18n-bound tab labels in the SSR HTML.
 
-- [ ] **T-2.6 — Todo detail / edit**
+- [x] **T-2.6 — Todo detail / edit**
   - Side-panel or page for editing a todo: title, Markdown description, priority, due date, parent, tags, KB links picker.
   - Refs: REQ-TODO-1..3.
   - Done when: All fields editable; KB picker autocompletes against KB entries in the workspace.
+  - **Implementation:** shared `TodoForm.vue` reused by `app/pages/app/todos/new.vue` and `app/pages/app/todos/[id]/edit.vue` (mirrors the KB pattern from T-1.9). A small read-only detail page at `app/pages/app/todos/[id]/index.vue` is the landing point for the create/edit redirect — it renders the description (via the same `renderKbMarkdown` helper as KB so wikilinks behave consistently), tags, linked KB entries (clickable chips into `/app/kb/<slug>`), an immediate subtask count placeholder (full subtask UI is T-2.7), and Edit / Complete buttons. Mutations: `useCreateTodo` + `useUpdateTodo` added to `useTodoMutations.ts`, both funnel through the existing `invalidateTodo` helper so all four canonical view caches, the counts badge, and the by-id cache stay coherent. `useTodoById` composable hydrates the form against `GET /api/todos/[id]`.
+  - **Pickers:**
+    - Parent — `TodoParentPicker.vue` is a `UInputMenu` typeahead bound to `GET /api/todos?search=...&limit=10` via `v-model:search-term`. Self-selection filtered client-side; descendant rejection lives server-side and surfaces as a toast (the heuristic in the form maps `depth` errors to a friendly i18n string).
+    - Tags — reuses `KbTagPicker.vue` directly (ADR-008: tags shared per `kb_tags`). Names are submitted as `tagNames`; the server `findOrCreate`s.
+    - KB links — new `TodoKbEntryPicker.vue` is a multi-select `USelectMenu` with `v-model:search-term` against `GET /api/kb/entries?search=...&limit=10`. Stores ids as `kbEntryIds`. Already-selected ids are kept rendered across queries via a local `id -> title` cache so chips don't flicker when the search narrows.
+  - **Deviations:**
+    - **Description editor: textarea only, no live preview.** KB editor uses split-pane editor + preview because wikilinks make the preview load-bearing; on a todo description the body is short and the preview buys nothing, so we render only a monospace textarea on the form and a fully-rendered preview on the detail page. Trade documented as a small UX deviation from "match KB editor" — the brief explicitly allows omitting live preview.
+    - **Native `<input type="datetime-local">` instead of a Nuxt UI date picker.** Nuxt UI's `UInput type="datetime-local"` was the lowest-friction choice; introducing a calendar widget here is a yak-shave. The form normalises the picker's local-time string to UTC ISO via `new Date(...).toISOString()` before sending to the API.
+    - **Detail page included** rather than skipped — the create flow lands on `/app/todos/[id]` (which renders fields + Edit/Complete + KB-link chips + subtask count) so the redirect is natural and T-2.7 has a hook for the subtask UI. Re-using `renderKbMarkdown` keeps wikilink behaviour identical across KB and Todo bodies.
 
 - [ ] **T-2.7 — Subtask UI**
   - Nested rendering up to depth 3, with `n/m` progress on parents.

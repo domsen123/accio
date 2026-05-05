@@ -10,14 +10,17 @@
  * mutations. Create / update / hydrated detail are introduced in T-2.6.
  */
 import type {
+  CreateTodoInput,
   Todo,
   TodoCountsResponse,
+  TodoDetailResponse,
   TodoMutationResponse,
   TodosListParams,
   TodosListResponse,
   TodoViewListParams,
   UpcomingTodosListParams,
   UpcomingTodosListResponse,
+  UpdateTodoInput,
 } from '../types/todo.types'
 
 export const useTodoApi = () => {
@@ -41,6 +44,21 @@ export const useTodoApi = () => {
 
     getCounts: (): Promise<TodoCountsResponse> =>
       $api('/api/todos/counts'),
+
+    /**
+     * Fetch a single hydrated todo (tags, KB links, immediate subtask count).
+     * Used by the detail and edit pages (T-2.6). The typed `$fetch` overload
+     * also narrows `/api/todos/${string}` against the literal sibling routes,
+     * so the URL is funneled through `String()` (same trick as `softDelete`).
+     */
+    getById: (id: string): Promise<TodoDetailResponse> =>
+      $api(String(`/api/todos/${id}`)),
+
+    create: (data: CreateTodoInput): Promise<TodoMutationResponse> =>
+      $api('/api/todos', { method: 'POST', body: data }),
+
+    update: (id: string, data: UpdateTodoInput): Promise<TodoMutationResponse> =>
+      $api(String(`/api/todos/${id}`), { method: 'PATCH', body: data }),
 
     complete: (id: string): Promise<TodoMutationResponse> =>
       $api(`/api/todos/${id}/complete`, { method: 'POST' }),

@@ -410,6 +410,93 @@
         "title": "No completed todos yet",
         "subtitle": "Finished items show up here, newest first."
       }
+    },
+    "form": {
+      "create": {
+        "title": "New todo",
+        "subtitle": "Capture a task with priority, due date, tags, and linked KB entries."
+      },
+      "edit": {
+        "title": "Edit — {title}",
+        "fallback": "Edit todo",
+        "heading": "Edit todo",
+        "backToTodo": "Back to todo"
+      },
+      "backToList": "Back to todos",
+      "title": {
+        "label": "Title",
+        "placeholder": "What needs doing?"
+      },
+      "description": {
+        "label": "Description",
+        "placeholder": "Optional Markdown notes — context, links, [[wikilinks]] to KB entries.",
+        "hint": "Markdown supported."
+      },
+      "priority": {
+        "label": "Priority"
+      },
+      "dueAt": {
+        "label": "Due date",
+        "hint": "Optional — local time.",
+        "clear": "Clear due date"
+      },
+      "parent": {
+        "label": "Parent todo",
+        "placeholder": "Search for a parent…",
+        "hint": "Optional — make this a subtask. Maximum depth is three.",
+        "clear": "Clear parent",
+        "empty": "No matching todos."
+      },
+      "tags": {
+        "label": "Tags"
+      },
+      "kbLinks": {
+        "label": "Linked KB entries",
+        "placeholder": "Search KB entries…",
+        "hint": "Connect this todo to one or more knowledge-base entries.",
+        "empty": "No matching entries."
+      },
+      "publish": {
+        "title": "Save"
+      },
+      "actions": {
+        "create": "Create todo",
+        "update": "Save changes",
+        "cancel": "Cancel"
+      },
+      "errors": {
+        "titleRequired": "Title is required",
+        "parentDepth": "That parent would exceed the three-level subtask limit.",
+        "parentMissing": "The selected parent could not be found.",
+        "generic": "Something went wrong. Please try again."
+      },
+      "toast": {
+        "created": "Todo created",
+        "updated": "Todo updated",
+        "error": "Could not save the todo"
+      }
+    },
+    "detail": {
+      "title": "{title}",
+      "fallback": "Todo",
+      "backToList": "Back to todos",
+      "dueAt": "Due {date}",
+      "completedAt": "Completed {date}",
+      "description": "Description",
+      "descriptionEmpty": "No description yet.",
+      "error": {
+        "title": "Failed to load todo"
+      },
+      "actions": {
+        "title": "Actions"
+      },
+      "subtasks": {
+        "title": "Subtasks",
+        "count": "{count} subtask | {count} subtasks"
+      },
+      "kbLinks": {
+        "title": "Linked KB entries"
+      }
     }
   },
   "shell": {
