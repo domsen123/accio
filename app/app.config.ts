@@ -1,46 +1,74 @@
 export default defineAppConfig({
   ui: {
     colors: {
-      // Brand: maps to the custom accio-yellow palette defined in main.css
-      primary: 'accio-yellow',
-
-      // Reserved — currently unused. Available if a future feature
-      // genuinely needs a non-brand emphasis color.
-      // Update DESIGN.md before using.
-      secondary: 'sky',
-
-      // Semantic state colors
-      success: 'emerald', // verified entries, completed todos, vault unlocked
-      info: 'sky', // informational badges, neutral notifications
-      warning: 'amber', // drafts, almost-due todos, expiring sessions
-      error: 'rose', // validation errors, destructive actions, locked states
-
-      // Neutrals for text, surfaces, borders
-      neutral: 'zinc',
+      primary: 'bnb', // Binance yellow — #F0B90B
+      secondary: 'bnbgreen', // Buy green — #0ECB81
+      success: 'bnbgreen',
+      info: 'sky',
+      warning: 'bnb', // yellow doubles as warning
+      error: 'bnbred', // Sell red — #F6465D
+      neutral: 'bnbgray',
     },
+
+    button: {
+      defaultVariants: {
+        color: 'primary',
+        variant: 'solid',
+        size: 'sm',
+      },
+      slots: {
+        base: 'font-semibold uppercase tracking-wide',
+      },
+    },
+
+    badge: {
+      defaultVariants: {
+        variant: 'soft',
+        size: 'sm',
+      },
+      slots: {
+        base: 'font-mono',
+      },
+    },
+
+    card: {
+      defaultVariants: {
+        variant: 'subtle',
+      },
+    },
+
     input: {
+      defaultVariants: {
+        variant: 'outline',
+        size: 'sm',
+      },
       slots: {
         root: 'w-full',
       },
     },
+
     textarea: {
       slots: {
         root: 'w-full',
       },
     },
+
     select: {
       slots: {
         base: 'w-full',
       },
     },
+
     selectMenu: {
       slots: {
         base: 'w-full',
       },
     },
-    badge: {
+
+    table: {
       slots: {
-        base: 'font-mono',
+        th: 'px-4 py-3.5 text-xs text-muted font-semibold uppercase tracking-wide text-left rtl:text-right',
+        td: 'p-4 text-sm text-muted whitespace-nowrap',
       },
     },
   },

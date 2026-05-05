@@ -139,7 +139,7 @@ const statusBadgeColor = (value: KbEntryStatus) => {
 }
 
 const statusBadgeVariant = (value: KbEntryStatus) =>
-  value === 'archived' ? ('outline' as const) : ('subtle' as const)
+  value === 'archived' ? ('outline' as const) : ('soft' as const)
 
 // Lightweight relative-time formatter via Intl.RelativeTimeFormat — avoids
 // pulling in date-fns just for one cell. Acceptable interim until a shared
@@ -215,22 +215,23 @@ const breadcrumbItems = computed<BreadcrumbItem[]>(() => [
 
     <UPage>
       <template #left>
-        <div class="rounded-lg border border-default bg-elevated p-4">
+        <UCard>
           <KbCategoryTree
             :categories="categories"
             :selected-id="categoryId"
             @select="(id) => (categoryId = id)"
           />
-        </div>
+        </UCard>
       </template>
 
       <div class="space-y-6">
         <!-- Filter bar: search + chips/dropdowns -->
-        <div class="space-y-3 rounded-lg border border-default bg-elevated p-4">
+        <UCard :ui="{ body: 'space-y-3' }">
           <UInput
             v-model="search"
             icon="i-lucide-search"
             variant="outline"
+            size="sm"
             :placeholder="t('kb.list.search.placeholder')"
             :aria-label="t('kb.list.search.placeholder')"
             class="w-full"
@@ -246,6 +247,7 @@ const breadcrumbItems = computed<BreadcrumbItem[]>(() => [
               :placeholder="t('kb.filters.status.label')"
               icon="i-lucide-circle-dot"
               variant="ghost"
+              size="sm"
               class="min-w-40 flex-1"
             />
 
@@ -259,6 +261,7 @@ const breadcrumbItems = computed<BreadcrumbItem[]>(() => [
               :placeholder="t('kb.filters.category.label')"
               icon="i-lucide-folder"
               variant="ghost"
+              size="sm"
               class="min-w-40 lg:hidden"
             />
 
@@ -270,6 +273,7 @@ const breadcrumbItems = computed<BreadcrumbItem[]>(() => [
               :placeholder="t('kb.filters.tag.label')"
               icon="i-lucide-tag"
               variant="ghost"
+              size="sm"
               class="min-w-40 flex-1"
             />
 
@@ -281,6 +285,7 @@ const breadcrumbItems = computed<BreadcrumbItem[]>(() => [
               :placeholder="t('kb.filters.author.label')"
               icon="i-lucide-user"
               variant="ghost"
+              size="sm"
               class="min-w-32 flex-1"
             />
 
@@ -292,6 +297,7 @@ const breadcrumbItems = computed<BreadcrumbItem[]>(() => [
               :placeholder="t('kb.filters.source.label')"
               icon="i-lucide-link"
               variant="ghost"
+              size="sm"
               class="min-w-40 flex-1"
             />
 
@@ -306,7 +312,7 @@ const breadcrumbItems = computed<BreadcrumbItem[]>(() => [
               @click="resetFilters"
             />
           </div>
-        </div>
+        </UCard>
 
         <!-- Error -->
         <UAlert
@@ -344,15 +350,14 @@ const breadcrumbItems = computed<BreadcrumbItem[]>(() => [
             <NuxtLink :to="detailHref(entry)" class="block group">
               <UCard
                 :ui="{
-                  root: 'bg-elevated transition-colors hover:bg-accented',
-                  body: 'p-4',
+                  root: 'transition-colors hover:bg-accented',
                 }"
               >
                 <div class="flex items-stretch gap-4">
                   <div class="min-w-0 flex-1 space-y-2">
                     <!-- Title row -->
                     <div class="flex items-center gap-3 flex-wrap">
-                      <h3 class="text-xl font-semibold text-highlighted truncate">
+                      <h3 class="text-base font-semibold text-highlighted truncate">
                         {{ entry.title }}
                       </h3>
                       <UBadge
@@ -391,7 +396,7 @@ const breadcrumbItems = computed<BreadcrumbItem[]>(() => [
                       <UBadge
                         v-for="tag in entry.tags"
                         :key="tag.id"
-                        variant="subtle"
+                        variant="soft"
                         color="neutral"
                         size="xs"
                       >
@@ -407,7 +412,7 @@ const breadcrumbItems = computed<BreadcrumbItem[]>(() => [
                       </div>
                       <div class="flex items-center gap-1.5">
                         <UIcon name="i-lucide-clock" class="size-4" />
-                        <span class="font-mono">{{ t('kb.list.updatedRelative', { time: formatRelative(entry.updatedAt) }) }}</span>
+                        <span class="font-mono font-semibold tabular-nums">{{ t('kb.list.updatedRelative', { time: formatRelative(entry.updatedAt) }) }}</span>
                       </div>
                     </div>
                   </div>
@@ -438,7 +443,7 @@ const breadcrumbItems = computed<BreadcrumbItem[]>(() => [
             :disabled="!hasPrevPage"
             @click="page = Math.max(1, page - 1)"
           />
-          <span class="text-sm text-muted font-mono">
+          <span class="text-sm text-muted font-mono font-semibold tabular-nums">
             {{ t('kb.list.pagination.page', { page }) }}
           </span>
           <UButton

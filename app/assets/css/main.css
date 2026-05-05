@@ -7,23 +7,66 @@
    THEME — raw token values
    ============================================================ */
 @theme {
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
-/* Custom brand palette: accio-yellow */
+/* ============================================================
+   Custom palettes — Binance design system
+   ============================================================ */
 @theme static {
-  --color-accio-yellow-50:  #fffbe6;
-  --color-accio-yellow-100: #fff4b8;
-  --color-accio-yellow-200: #ffe98a;
-  --color-accio-yellow-300: #ffde5c;
-  --color-accio-yellow-400: #fcd535;  /* brand base — dark mode primary */
-  --color-accio-yellow-500: #f0b90b;  /* light mode primary */
-  --color-accio-yellow-600: #d4a009;
-  --color-accio-yellow-700: #a07807;
-  --color-accio-yellow-800: #6e5305;
-  --color-accio-yellow-900: #3a3a1f;  /* disabled on dark */
-  --color-accio-yellow-950: #1f1f0d;
+  /* Binance Yellow (primary) */
+  --color-bnb-50:  #fffde7;
+  --color-bnb-100: #fff9c4;
+  --color-bnb-200: #fff59d;
+  --color-bnb-300: #fff176;
+  --color-bnb-400: #ffee58;
+  --color-bnb-500: #F0B90B;
+  --color-bnb-600: #d4a009;
+  --color-bnb-700: #b88708;
+  --color-bnb-800: #9c6e06;
+  --color-bnb-900: #7a5404;
+  --color-bnb-950: #4a3102;
+
+  /* Binance Dark (neutral) — near-black blue-gray */
+  --color-bnbgray-50:  #f5f6f7;
+  --color-bnbgray-100: #e8eaed;
+  --color-bnbgray-200: #c8cdd6;
+  --color-bnbgray-300: #a8afbd;
+  --color-bnbgray-400: #848E9C;
+  --color-bnbgray-500: #5e6673;
+  --color-bnbgray-600: #474d57;
+  --color-bnbgray-700: #2B2F36;
+  --color-bnbgray-800: #1E2026;
+  --color-bnbgray-875: #0F1216;
+  --color-bnbgray-900: #0B0E11;
+  --color-bnbgray-950: #060809;
+
+  /* Buy green */
+  --color-bnbgreen-50:  #e6faf3;
+  --color-bnbgreen-100: #b3f0d9;
+  --color-bnbgreen-200: #80e6bf;
+  --color-bnbgreen-300: #4ddca5;
+  --color-bnbgreen-400: #26d48f;
+  --color-bnbgreen-500: #0ECB81;
+  --color-bnbgreen-600: #0cb472;
+  --color-bnbgreen-700: #099c62;
+  --color-bnbgreen-800: #077a4d;
+  --color-bnbgreen-900: #045738;
+  --color-bnbgreen-950: #02331f;
+
+  /* Sell red */
+  --color-bnbred-50:  #fef0f2;
+  --color-bnbred-100: #fdd0d5;
+  --color-bnbred-200: #fba8b1;
+  --color-bnbred-300: #f97f8d;
+  --color-bnbred-400: #f76c7a;
+  --color-bnbred-500: #F6465D;
+  --color-bnbred-600: #dd3f54;
+  --color-bnbred-700: #c23849;
+  --color-bnbred-800: #a6303f;
+  --color-bnbred-900: #7d2330;
+  --color-bnbred-950: #4a1520;
 }
 
 /* ============================================================
@@ -36,72 +79,70 @@
    - Destructive confirmation modals
    ============================================================ */
 :root {
-  /* Primary uses 500 in light mode (slightly darker yellow against white) */
+  /* Sharp, trading-terminal radius */
+  --ui-radius: 0.125rem;
+  --ui-container: var(--container-7xl);
+  --ui-header-height: 4rem;
+
+  /* Primary uses 500 in light mode */
   --ui-primary: var(--ui-color-primary-500);
 
   /* Backgrounds */
-  --ui-bg: #ffffff;                    /* canvas-light */
-  --ui-bg-muted: #fafafa;              /* surface-soft-light */
-  --ui-bg-elevated: #f5f5f5;           /* surface-strong-light */
+  --ui-bg: #ffffff;
+  --ui-bg-muted: #fafafa;
+  --ui-bg-elevated: #f5f5f5;
   --ui-bg-accented: var(--ui-color-neutral-200);
-  --ui-bg-inverted: #0b0e11;
+  --ui-bg-inverted: #0B0E11;
 
-  /* Borders / hairlines */
-  --ui-border: #eaecef;                /* hairline-on-light */
+  /* Borders */
+  --ui-border: #eaecef;
   --ui-border-muted: #eaecef;
   --ui-border-accented: var(--ui-color-neutral-300);
-  --ui-border-inverted: #0b0e11;
+  --ui-border-inverted: #0B0E11;
 
   /* Text */
-  --ui-text: #181a20;                  /* ink */
-  --ui-text-muted: #707a8a;
-  --ui-text-dimmed: #929aa5;
+  --ui-text: #181a20;
+  --ui-text-muted: var(--ui-color-neutral-400);
+  --ui-text-dimmed: var(--ui-color-neutral-500);
   --ui-text-toned: var(--ui-color-neutral-600);
   --ui-text-highlighted: #181a20;
   --ui-text-inverted: #ffffff;
-
-  /* Global modifiers */
-  --ui-radius: 0.375rem;               /* 6px base */
-  --ui-container: var(--container-7xl);/* ~1280px */
-  --ui-header-height: 4rem;            /* 64px */
 }
 
 /* ============================================================
    NUXT UI — CSS variable overrides (dark mode)
-   Dark mode is the default for the app shell:
-   - KB, Todos, Projects, Orchestrator pages
-   - Vault list and detail (when unlocked)
+   True Binance black canvas.
    ============================================================ */
 .dark {
-  /* Primary uses 400 in dark mode (brighter base against deep canvas) */
-  --ui-primary: var(--ui-color-primary-400);
+  /* Primary uses 500 in dark mode (Binance yellow) */
+  --ui-primary: var(--ui-color-primary-500);
 
   /* Backgrounds */
-  --ui-bg: #0b0e11;                    /* canvas-dark */
-  --ui-bg-muted: #1e2329;              /* surface-card-dark */
-  --ui-bg-elevated: #1e2329;           /* same — depth via canvas contrast */
-  --ui-bg-accented: #2b3139;           /* surface-elevated-dark */
-  --ui-bg-inverted: #ffffff;
+  --ui-bg:           var(--color-bnbgray-875);      /* #0F1216 — page canvas (between 800 and 900) */
+  --ui-bg-muted:     var(--ui-color-neutral-800);   /* #1E2026 — sidebar / panel */
+  --ui-bg-elevated:  var(--ui-color-neutral-700);   /* #2B2F36 — cards */
+  --ui-bg-accented:  var(--ui-color-neutral-600);   /* #474d57 — hover */
+  --ui-bg-inverted:  #ffffff;
 
-  /* Borders / hairlines */
-  --ui-border: #2b3139;                /* hairline-on-dark */
-  --ui-border-muted: #1e2329;
-  --ui-border-accented: #2b3139;
+  /* Borders */
+  --ui-border:          var(--ui-color-neutral-700);
+  --ui-border-muted:    var(--ui-color-neutral-700);
+  --ui-border-accented: var(--ui-color-neutral-600);
   --ui-border-inverted: #ffffff;
 
   /* Text */
-  --ui-text: #eaecef;                  /* body */
-  --ui-text-muted: #707a8a;
-  --ui-text-dimmed: #929aa5;
-  --ui-text-toned: var(--ui-color-neutral-300);
+  --ui-text:             var(--ui-color-neutral-200);
+  --ui-text-muted:       var(--ui-color-neutral-400); /* #848E9C */
+  --ui-text-dimmed:      var(--ui-color-neutral-500);
+  --ui-text-toned:       var(--ui-color-neutral-300);
   --ui-text-highlighted: #ffffff;
-  --ui-text-inverted: #181a20;
+  --ui-text-inverted:    #181a20;
 }
 
 /* ============================================================
    Light-mode "pockets" inside dark shell
-   Forces light mode locally — used by wrapping content in
-   <div class="light"> for transactional dialogs.
+   Used by wrapping content in <div class="light"> for
+   transactional dialogs.
    ============================================================ */
 .light {
   --ui-primary: var(--ui-color-primary-500);
@@ -113,8 +154,8 @@
   --ui-border-muted: #eaecef;
   --ui-border-accented: var(--ui-color-neutral-300);
   --ui-text: #181a20;
-  --ui-text-muted: #707a8a;
-  --ui-text-dimmed: #929aa5;
+  --ui-text-muted: var(--ui-color-neutral-400);
+  --ui-text-dimmed: var(--ui-color-neutral-500);
   --ui-text-highlighted: #181a20;
   --ui-text-inverted: #ffffff;
   color-scheme: light;
