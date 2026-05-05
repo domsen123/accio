@@ -242,10 +242,16 @@ Mark tasks done by changing `[ ]` to `[x]`. Add a brief note when deviating from
     - `linkKb` / `unlinkKb` / `linkTag` / `unlinkTag` standalone helpers are idempotent (insert-if-absent, delete-if-present). Tag-set / link-set replacement is via `update({ tagNames })` / `update({ kbEntryIds })` — same as KB.
     - New tests: 32 in `tests/todo-service.test.ts` (CRUD, depth 1–3 + depth-4 rejection, re-parenting depth check, cross-workspace parent rejection, tag-set replace + cross-ws isolation, KB-link replace + cross-ws rejection, idempotent link helpers, complete/uncomplete idempotency, list filters incl. completed/priority/dueBefore/parent/search/tag/kb, purge with cascade). Suite: 167 → 199 green.
 
-- [ ] **T-2.3 — Todo views (today/upcoming/open/completed)**
+- [x] **T-2.3 — Todo views (today/upcoming/open/completed)**
   - Service methods returning the four canonical views, plus filters by tag and priority.
   - Refs: REQ-TODO-4.
   - Done when: Tests verify view logic with fixture data covering edge cases (overdue, due today, due tomorrow).
+  - **Implementation:** `listToday` / `listUpcoming` / `listOpen` / `listCompleted` on `todoService`, plus `getViewCounts` for tab badges. All views hard-code their date / completion predicate and reuse a shared `buildBaseConditions` helper for tag / priority / kbEntryId / search / parent filters (so view + filter compose identically to `list`). Date math runs server-side against `current_date` (UTC) via `due_at::date <= current_date` style predicates — no JS-side bounded dates passed in, so request-vs-query drift is impossible.
+  - **Deviations:**
+    - **Timezone:** all four views use UTC for "today" / "+N days". REQ-TODO-4 is silent on timezone handling and the rest of the system stores UTC throughout — per-user-timezone is deferred to a later task.
+    - **`listCompleted` returns the full set,** not "last 30 days" as REQ-TODO-4 suggests. The 30-day window is a UI concern (T-2.5); keeping the service-side surface unfiltered means the UI can show a longer history if it wants to without a service change. The sort is `completed_at DESC` so naturally newer rows surface first.
+    - **`getViewCounts` is implemented** as 4 parallel queries (Promise.all) rather than a single CTE — the queries are cheap thanks to existing indexes and the simpler shape is easier to keep consistent with each `list*` view's predicate.
+  - **Tests:** added `describe('todoService — canonical views (REQ-TODO-4)')` block in `tests/todo-service.test.ts` with 12 cases covering: today contents, today sort (due ASC + priority tiebreak), upcoming default 7d, upcoming `withinDays: 14`, open contents, open sort (priority DESC + due NULLS LAST), completed contents/sort, priority filter compose × 4 views, tagId filter compose × 4 views, workspace isolation × 4 views, soft-deleted excluded × 4 views, getViewCounts parity. Suite: 199 → 211 green.
 
 ### API
 - [ ] **T-2.4 — Todo API routes**

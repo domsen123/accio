@@ -548,6 +548,316 @@ describe('todoService — list filters', () => {
   })
 })
 
+describe('todoService — canonical views (REQ-TODO-4)', () => {
+  let orgId: string
+
+  /**
+   * Build a date `daysFromNow` days from current UTC midnight at 12:00 UTC —
+   * far enough from day boundaries that local-vs-UTC differences in the test
+   * runner can't kick a fixture into the next/previous day. Database date
+   * comparisons use `due_at::date` which truncates to UTC date.
+   */
+  const dueAtDays = (daysFromNow: number) => {
+    const d = new Date()
+    d.setUTCHours(12, 0, 0, 0)
+    d.setUTCDate(d.getUTCDate() + daysFromNow)
+    return d
+  }
+
+  // Identifiers populated by `seedFixture` so view assertions can refer to
+  // them by role. We map an alias → todo id so the test reads naturally.
+  type FixtureKey
+    = | 'overdue'
+      | 'today'
+      | 'tomorrow'
+      | 'plus5'
+      | 'plus10'
+      | 'noDue'
+      | 'completed'
+
+  const seedFixture = async (organisationId: string) => {
+    const ids = {} as Record<FixtureKey, string>
+
+    ids.overdue = (await todoService.create({
+      organisationId,
+      title: 'Overdue task',
+      dueAt: dueAtDays(-3),
+      priority: 'high',
+    })).id
+
+    ids.today = (await todoService.create({
+      organisationId,
+      title: 'Due today',
+      dueAt: dueAtDays(0),
+      priority: 'urgent',
+    })).id
+
+    ids.tomorrow = (await todoService.create({
+      organisationId,
+      title: 'Due tomorrow',
+      dueAt: dueAtDays(1),
+      priority: 'medium',
+    })).id
+
+    ids.plus5 = (await todoService.create({
+      organisationId,
+      title: 'Due in 5 days',
+      dueAt: dueAtDays(5),
+      priority: 'low',
+    })).id
+
+    ids.plus10 = (await todoService.create({
+      organisationId,
+      title: 'Due in 10 days',
+      dueAt: dueAtDays(10),
+      priority: 'medium',
+    })).id
+
+    ids.noDue = (await todoService.create({
+      organisationId,
+      title: 'No due date',
+      priority: 'high',
+    })).id
+
+    const completed = await todoService.create({
+      organisationId,
+      title: 'Already done',
+      dueAt: dueAtDays(-1),
+      priority: 'low',
+    })
+    await todoService.complete(completed.id)
+    ids.completed = completed.id
+
+    return ids
+  }
+
+  beforeEach(async () => {
+    orgId = (await setupOrg()).id
+  })
+
+  it('listToday includes overdue + due-today, excludes everything else', async () => {
+    const ids = await seedFixture(orgId)
+    const view = await todoService.listToday({ organisationId: orgId })
+    const viewIds = view.map(t => t.id)
+
+    expect(viewIds).toContain(ids.overdue)
+    expect(viewIds).toContain(ids.today)
+    expect(viewIds).not.toContain(ids.tomorrow)
+    expect(viewIds).not.toContain(ids.plus5)
+    expect(viewIds).not.toContain(ids.plus10)
+    expect(viewIds).not.toContain(ids.noDue)
+    expect(viewIds).not.toContain(ids.completed)
+    expect(view).toHaveLength(2)
+  })
+
+  it('listToday sorts by due_at ASC then priority urgent → low', async () => {
+    const ids = await seedFixture(orgId)
+    // Add a second overdue at the same date as the existing overdue but with
+    // a lower priority so the priority tiebreak is observable.
+    const overdueLow = (await todoService.create({
+      organisationId: orgId,
+      title: 'Overdue low',
+      dueAt: dueAtDays(-3),
+      priority: 'low',
+    })).id
+
+    const view = await todoService.listToday({ organisationId: orgId })
+    const viewIds = view.map(t => t.id)
+
+    // Overdue (3 days ago) sorts before today.
+    expect(viewIds[viewIds.length - 1]).toBe(ids.today)
+    // Among the two overdue rows, 'high' beats 'low'.
+    const overdueHighIdx = viewIds.indexOf(ids.overdue)
+    const overdueLowIdx = viewIds.indexOf(overdueLow)
+    expect(overdueHighIdx).toBeLessThan(overdueLowIdx)
+  })
+
+  it('listUpcoming default 7d includes tomorrow + +5; excludes today/overdue/+10/no-due/completed', async () => {
+    const ids = await seedFixture(orgId)
+    const view = await todoService.listUpcoming({ organisationId: orgId })
+    const viewIds = view.map(t => t.id)
+
+    expect(viewIds).toContain(ids.tomorrow)
+    expect(viewIds).toContain(ids.plus5)
+    expect(viewIds).not.toContain(ids.today)
+    expect(viewIds).not.toContain(ids.overdue)
+    expect(viewIds).not.toContain(ids.plus10)
+    expect(viewIds).not.toContain(ids.noDue)
+    expect(viewIds).not.toContain(ids.completed)
+    expect(view).toHaveLength(2)
+  })
+
+  it('listUpcoming withinDays: 14 also includes +10', async () => {
+    const ids = await seedFixture(orgId)
+    const view = await todoService.listUpcoming({ organisationId: orgId, withinDays: 14 })
+    const viewIds = view.map(t => t.id)
+
+    expect(viewIds).toContain(ids.tomorrow)
+    expect(viewIds).toContain(ids.plus5)
+    expect(viewIds).toContain(ids.plus10)
+    expect(view).toHaveLength(3)
+    // Sort: due_at ASC.
+    expect(viewIds).toEqual([ids.tomorrow, ids.plus5, ids.plus10])
+  })
+
+  it('listOpen returns every active todo (incl. no-due) but excludes completed', async () => {
+    const ids = await seedFixture(orgId)
+    const view = await todoService.listOpen({ organisationId: orgId })
+    const viewIds = view.map(t => t.id)
+
+    expect(viewIds).toContain(ids.overdue)
+    expect(viewIds).toContain(ids.today)
+    expect(viewIds).toContain(ids.tomorrow)
+    expect(viewIds).toContain(ids.plus5)
+    expect(viewIds).toContain(ids.plus10)
+    expect(viewIds).toContain(ids.noDue)
+    expect(viewIds).not.toContain(ids.completed)
+    expect(view).toHaveLength(6)
+  })
+
+  it('listOpen sorts priority DESC, due_at ASC NULLS LAST', async () => {
+    const ids = await seedFixture(orgId)
+    const view = await todoService.listOpen({ organisationId: orgId })
+    const viewIds = view.map(t => t.id)
+
+    // Highest priority (urgent = 'today') comes first.
+    expect(viewIds[0]).toBe(ids.today)
+    // The 'no-due' row has priority 'high' so it sits in the high block, but
+    // should land *after* the dated 'high' row (overdue) thanks to NULLS LAST.
+    const overdueIdx = viewIds.indexOf(ids.overdue)
+    const noDueIdx = viewIds.indexOf(ids.noDue)
+    expect(overdueIdx).toBeLessThan(noDueIdx)
+  })
+
+  it('listCompleted returns only the completed row, sorted by completedAt DESC', async () => {
+    const ids = await seedFixture(orgId)
+    // Add a second completion that happened later so we can assert ordering.
+    const second = await todoService.create({
+      organisationId: orgId,
+      title: 'Done later',
+    })
+    await todoService.complete(second.id)
+
+    const view = await todoService.listCompleted({ organisationId: orgId })
+    const viewIds = view.map(t => t.id)
+
+    expect(viewIds).toContain(ids.completed)
+    expect(viewIds).toContain(second.id)
+    expect(view).toHaveLength(2)
+    // Most recent completion first.
+    expect(viewIds[0]).toBe(second.id)
+    // None of the active fixtures appear.
+    expect(viewIds).not.toContain(ids.overdue)
+    expect(viewIds).not.toContain(ids.today)
+    expect(viewIds).not.toContain(ids.tomorrow)
+    expect(viewIds).not.toContain(ids.plus5)
+    expect(viewIds).not.toContain(ids.plus10)
+    expect(viewIds).not.toContain(ids.noDue)
+  })
+
+  it('priority filter composes with each view', async () => {
+    const ids = await seedFixture(orgId)
+
+    // Today view, only urgent → just `ids.today`.
+    const today = await todoService.listToday({ organisationId: orgId, priority: 'urgent' })
+    expect(today.map(t => t.id)).toEqual([ids.today])
+
+    // Upcoming view, only medium → just `ids.tomorrow` (low is +5).
+    const upcoming = await todoService.listUpcoming({ organisationId: orgId, priority: 'medium' })
+    expect(upcoming.map(t => t.id)).toEqual([ids.tomorrow])
+
+    // Open view, only high → overdue + noDue.
+    const open = await todoService.listOpen({ organisationId: orgId, priority: 'high' })
+    expect(open.map(t => t.id).sort()).toEqual([ids.overdue, ids.noDue].sort())
+
+    // Completed view, only low → just the seeded completed row.
+    const completed = await todoService.listCompleted({ organisationId: orgId, priority: 'low' })
+    expect(completed.map(t => t.id)).toEqual([ids.completed])
+  })
+
+  it('tagId filter composes with each view', async () => {
+    const ids = await seedFixture(orgId)
+    // Tag a subset that hits all four views.
+    await todoService.update(ids.overdue, { tagNames: ['focus'] })
+    await todoService.update(ids.tomorrow, { tagNames: ['focus'] })
+    await todoService.update(ids.noDue, { tagNames: ['focus'] })
+    await todoService.update(ids.completed, { tagNames: ['focus'] })
+
+    const tag = (await kbTagService.list({ organisationId: orgId }))
+      .find(t => t.name === 'focus')!
+
+    const today = await todoService.listToday({ organisationId: orgId, tagId: tag.id })
+    expect(today.map(t => t.id)).toEqual([ids.overdue])
+
+    const upcoming = await todoService.listUpcoming({ organisationId: orgId, tagId: tag.id })
+    expect(upcoming.map(t => t.id)).toEqual([ids.tomorrow])
+
+    const open = await todoService.listOpen({ organisationId: orgId, tagId: tag.id })
+    expect(open.map(t => t.id).sort()).toEqual([ids.overdue, ids.tomorrow, ids.noDue].sort())
+
+    const completed = await todoService.listCompleted({ organisationId: orgId, tagId: tag.id })
+    expect(completed.map(t => t.id)).toEqual([ids.completed])
+  })
+
+  it('all four views are workspace-scoped', async () => {
+    const otherOrg = (await setupOrg()).id
+    await seedFixture(otherOrg) // noise — should never appear in `orgId` queries
+    const ids = await seedFixture(orgId)
+
+    const today = await todoService.listToday({ organisationId: orgId })
+    expect(today.every(t => t.organisationId === orgId)).toBe(true)
+    expect(today.map(t => t.id).sort()).toEqual([ids.overdue, ids.today].sort())
+
+    const upcoming = await todoService.listUpcoming({ organisationId: orgId })
+    expect(upcoming.every(t => t.organisationId === orgId)).toBe(true)
+    expect(upcoming.map(t => t.id).sort()).toEqual([ids.tomorrow, ids.plus5].sort())
+
+    const open = await todoService.listOpen({ organisationId: orgId })
+    expect(open.every(t => t.organisationId === orgId)).toBe(true)
+    expect(open).toHaveLength(6)
+
+    const completed = await todoService.listCompleted({ organisationId: orgId })
+    expect(completed.every(t => t.organisationId === orgId)).toBe(true)
+    expect(completed.map(t => t.id)).toEqual([ids.completed])
+  })
+
+  it('soft-deleted todos are excluded from every view', async () => {
+    const ids = await seedFixture(orgId)
+    await todoService.softDelete(ids.today)
+    await todoService.softDelete(ids.tomorrow)
+    await todoService.softDelete(ids.noDue)
+    await todoService.softDelete(ids.completed)
+
+    const today = await todoService.listToday({ organisationId: orgId })
+    expect(today.map(t => t.id)).not.toContain(ids.today)
+
+    const upcoming = await todoService.listUpcoming({ organisationId: orgId })
+    expect(upcoming.map(t => t.id)).not.toContain(ids.tomorrow)
+
+    const open = await todoService.listOpen({ organisationId: orgId })
+    expect(open.map(t => t.id)).not.toContain(ids.noDue)
+
+    const completed = await todoService.listCompleted({ organisationId: orgId })
+    expect(completed.map(t => t.id)).not.toContain(ids.completed)
+  })
+
+  it('getViewCounts matches the lengths of the corresponding lists', async () => {
+    await seedFixture(orgId)
+    const counts = await todoService.getViewCounts({ organisationId: orgId })
+
+    const today = await todoService.listToday({ organisationId: orgId })
+    const upcoming = await todoService.listUpcoming({ organisationId: orgId })
+    const open = await todoService.listOpen({ organisationId: orgId })
+    const completed = await todoService.listCompleted({ organisationId: orgId })
+
+    expect(counts.today).toBe(today.length)
+    expect(counts.upcoming).toBe(upcoming.length)
+    expect(counts.open).toBe(open.length)
+    expect(counts.completed).toBe(completed.length)
+    expect(counts).toEqual({ today: 2, upcoming: 2, open: 6, completed: 1 })
+  })
+})
+
 describe('todoService — purge', () => {
   let orgId: string
 

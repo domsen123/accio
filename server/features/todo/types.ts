@@ -157,3 +157,42 @@ export interface TodoWithRelations extends Todo {
   kbEntries: Pick<KbEntry, 'id' | 'slug' | 'title'>[]
   subtaskCount: number
 }
+
+/**
+ * Shared input shape for the canonical views (today / open / completed).
+ * Each view hard-codes its own date / completion predicate, so callers
+ * cannot pass `completed`, `dueBefore`, `dueAfter`, `includeDeleted`, or
+ * `sort` here — everything else (tag / priority / kb-link / search /
+ * pagination) composes with the view.
+ */
+export interface ListTodoViewInput {
+  organisationId: string
+  priority?: TodoPriority
+  tagId?: string
+  kbEntryId?: string
+  parentTodoId?: string | null
+  search?: string
+  limit?: number
+  offset?: number
+}
+
+/**
+ * Upcoming view input — same as {@link ListTodoViewInput} plus an opt-in
+ * lookahead window (defaults to 7 days, REQ-TODO-4).
+ */
+export interface ListUpcomingTodosInput extends ListTodoViewInput {
+  /**
+   * Inclusive upper bound on `due_at::date` relative to today. Defaults to 7.
+   * `withinDays: 14` therefore returns todos due in the next 14 days
+   * (excluding today/overdue).
+   */
+  withinDays?: number
+}
+
+/** Aggregate counts for the four canonical views — useful for tab badges. */
+export interface TodoViewCounts {
+  today: number
+  upcoming: number
+  open: number
+  completed: number
+}

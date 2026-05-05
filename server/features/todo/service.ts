@@ -5,8 +5,11 @@ import type { KbTagService } from '../kb/service'
 import type {
   CreateTodoInput,
   ListTodosInput,
+  ListTodoViewInput,
+  ListUpcomingTodosInput,
   TodoPriority,
   TodoSortField,
+  TodoViewCounts,
   TodoWithRelations,
   UpdateTodoInput,
 } from './types'
@@ -360,16 +363,26 @@ export const createTodoService = (deps: CreateTodoServiceDeps) => {
   }
 
   /**
-   * List todos in a workspace with filters, search, and sort.
-   *
-   * Search: case-insensitive ILIKE on title and description (REQ-TODO has no
-   * FTS requirement, and DESIGN-DATA does not allocate a tsvector for todos).
-   *
-   * `parentTodoId === null` returns top-level only (`parent_todo_id IS NULL`);
-   * a string id returns that parent's direct children (NOT recursive). Pass
-   * `undefined` to disable the parent filter.
+   * Reusable priority-rank SQL expression — maps the `priority` enum to an
+   * integer so `urgent > high > medium > low` rather than alphabetical order.
+   * Used by `list` (for the `priority` sort field) and by the canonical views.
    */
-  const list = async (input: ListTodosInput) => {
+  const priorityRankExpr = sql`
+    CASE ${schema.todos.priority}
+      WHEN 'urgent' THEN ${PRIORITY_RANK.urgent}
+      WHEN 'high'   THEN ${PRIORITY_RANK.high}
+      WHEN 'medium' THEN ${PRIORITY_RANK.medium}
+      WHEN 'low'    THEN ${PRIORITY_RANK.low}
+      ELSE 0
+    END
+  `
+
+  /**
+   * Build the WHERE-condition array shared between {@link list} and the
+   * canonical view methods. The views layer their own date / completion
+   * predicates on top by appending to the array returned here.
+   */
+  const buildBaseConditions = (input: ListTodosInput) => {
     const conditions = [eq(schema.todos.organisationId, input.organisationId)]
 
     if (!input.includeDeleted)
@@ -419,6 +432,39 @@ export const createTodoService = (deps: CreateTodoServiceDeps) => {
       conditions.push(inArray(schema.todos.id, linked))
     }
 
+    return conditions
+  }
+
+  /** Run a SELECT against `todos` with the supplied conditions, sort, and pagination. */
+  const runListQuery = async (
+    conditions: ReturnType<typeof buildBaseConditions>,
+    orderColumns: ReturnType<typeof asc>[],
+    limit?: number,
+    offset?: number,
+  ) => {
+    let query = db.select().from(schema.todos).where(and(...conditions)).$dynamic()
+    if (orderColumns.length > 0)
+      query = query.orderBy(...orderColumns)
+    if (limit !== undefined)
+      query = query.limit(limit)
+    if (offset !== undefined)
+      query = query.offset(offset)
+    return query
+  }
+
+  /**
+   * List todos in a workspace with filters, search, and sort.
+   *
+   * Search: case-insensitive ILIKE on title and description (REQ-TODO has no
+   * FTS requirement, and DESIGN-DATA does not allocate a tsvector for todos).
+   *
+   * `parentTodoId === null` returns top-level only (`parent_todo_id IS NULL`);
+   * a string id returns that parent's direct children (NOT recursive). Pass
+   * `undefined` to disable the parent filter.
+   */
+  const list = async (input: ListTodosInput) => {
+    const conditions = buildBaseConditions(input)
+
     // Default sort: created_at DESC (most recent first).
     const sortFields: TodoSortField[] = input.sort && input.sort.length > 0
       ? input.sort
@@ -427,35 +473,158 @@ export const createTodoService = (deps: CreateTodoServiceDeps) => {
     const orderColumns = sortFields.flatMap((field) => {
       const isDesc = field.startsWith('-')
       const name = isDesc ? field.slice(1) : field
-      if (name === 'priority') {
-        // Map enum to integer rank so 'urgent' > 'high' > ... rather than
-        // alphabetical order. CASE expression keeps the comparison in SQL.
-        const rankExpr = sql`
-          CASE ${schema.todos.priority}
-            WHEN 'urgent' THEN ${PRIORITY_RANK.urgent}
-            WHEN 'high'   THEN ${PRIORITY_RANK.high}
-            WHEN 'medium' THEN ${PRIORITY_RANK.medium}
-            WHEN 'low'    THEN ${PRIORITY_RANK.low}
-            ELSE 0
-          END
-        `
-        return [isDesc ? desc(rankExpr) : asc(rankExpr)]
-      }
+      if (name === 'priority')
+        return [isDesc ? desc(priorityRankExpr) : asc(priorityRankExpr)]
       const column = (schema.todos as unknown as Record<string, unknown>)[name]
       if (!column)
         return []
       return [isDesc ? desc(column as Parameters<typeof desc>[0]) : asc(column as Parameters<typeof asc>[0])]
     })
 
-    let query = db.select().from(schema.todos).where(and(...conditions)).$dynamic()
-    if (orderColumns.length > 0)
-      query = query.orderBy(...orderColumns)
-    if (input.limit !== undefined)
-      query = query.limit(input.limit)
-    if (input.offset !== undefined)
-      query = query.offset(input.offset)
+    return runListQuery(conditions, orderColumns, input.limit, input.offset)
+  }
 
-    return query
+  // ---------------------------------------------------------------------------
+  // Canonical views (REQ-TODO-4)
+  //
+  // Date math runs server-side against `current_date` (UTC) so we don't drift
+  // between request time and query time, and so the same predicate is used for
+  // every comparison (overdue vs today, today vs tomorrow). All four views
+  // share `buildBaseConditions` for tag/priority/kb/parent/search filters; the
+  // only thing that differs per view is the date / completion predicate plus
+  // the sort.
+  //
+  // Timezone: today is UTC. Per-user "today in their timezone" is a deviation
+  // tracked for a follow-up — REQ-TODO-4 is silent on TZ handling and the rest
+  // of the system stores UTC throughout.
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Today view: active todos due today or overdue. Includes any due_at on or
+   * before the current UTC date — overdue rows surface here so they don't get
+   * lost.
+   *
+   * Sort: due_at ASC, priority (urgent → low), created_at ASC.
+   */
+  const listToday = async (input: ListTodoViewInput) => {
+    const conditions = buildBaseConditions({
+      ...input,
+      // Force the active-todo predicate; callers cannot opt out of it.
+      completed: false,
+      includeDeleted: false,
+    })
+    conditions.push(sql`${schema.todos.dueAt} IS NOT NULL`)
+    conditions.push(sql`${schema.todos.dueAt}::date <= current_date`)
+
+    return runListQuery(
+      conditions,
+      [
+        asc(schema.todos.dueAt),
+        desc(priorityRankExpr),
+        asc(schema.todos.createdAt),
+      ],
+      input.limit,
+      input.offset,
+    )
+  }
+
+  /**
+   * Upcoming view: active todos due in the next `withinDays` days (default 7),
+   * exclusive of today/overdue. Boundary is inclusive on the upper end so
+   * `withinDays: 7` includes a todo due at end-of-day on day 7.
+   *
+   * Sort: due_at ASC, priority (urgent → low), created_at ASC.
+   */
+  const listUpcoming = async (input: ListUpcomingTodosInput) => {
+    const withinDays = input.withinDays ?? 7
+    const conditions = buildBaseConditions({
+      ...input,
+      completed: false,
+      includeDeleted: false,
+    })
+    conditions.push(sql`${schema.todos.dueAt} IS NOT NULL`)
+    conditions.push(sql`${schema.todos.dueAt}::date > current_date`)
+    conditions.push(sql`${schema.todos.dueAt}::date <= current_date + ${withinDays}::int`)
+
+    return runListQuery(
+      conditions,
+      [
+        asc(schema.todos.dueAt),
+        desc(priorityRankExpr),
+        asc(schema.todos.createdAt),
+      ],
+      input.limit,
+      input.offset,
+    )
+  }
+
+  /**
+   * Open view: every active todo regardless of due_at (including those with
+   * no due date).
+   *
+   * Sort: priority DESC (urgent first), due_at ASC NULLS LAST, created_at DESC.
+   */
+  const listOpen = async (input: ListTodoViewInput) => {
+    const conditions = buildBaseConditions({
+      ...input,
+      completed: false,
+      includeDeleted: false,
+    })
+
+    return runListQuery(
+      conditions,
+      [
+        desc(priorityRankExpr),
+        sql`${schema.todos.dueAt} ASC NULLS LAST`,
+        desc(schema.todos.createdAt),
+      ],
+      input.limit,
+      input.offset,
+    )
+  }
+
+  /**
+   * Completed view: every completed, non-deleted todo (no time-window
+   * restriction in the service — REQ-TODO-4 mentions "last 30 days" for the
+   * UI; the service returns the full set so callers can choose to narrow).
+   *
+   * Sort: completed_at DESC.
+   */
+  const listCompleted = async (input: ListTodoViewInput) => {
+    const conditions = buildBaseConditions({
+      ...input,
+      completed: true,
+      includeDeleted: false,
+    })
+
+    return runListQuery(
+      conditions,
+      [desc(schema.todos.completedAt)],
+      input.limit,
+      input.offset,
+    )
+  }
+
+  /**
+   * Lightweight tab-badge counts. One round-trip per view (4 separate queries)
+   * — simpler than a single CTE and the underlying counts are cheap thanks to
+   * the `(organisation_id, completed_at)` and `(organisation_id, due_at)`
+   * indexes. Counts respect `includeDeleted: false` and the today/upcoming
+   * date predicates exactly the way the corresponding `list*` views do.
+   */
+  const getViewCounts = async (input: { organisationId: string }): Promise<TodoViewCounts> => {
+    const [today, upcoming, open, completed] = await Promise.all([
+      listToday({ organisationId: input.organisationId }),
+      listUpcoming({ organisationId: input.organisationId }),
+      listOpen({ organisationId: input.organisationId }),
+      listCompleted({ organisationId: input.organisationId }),
+    ])
+    return {
+      today: today.length,
+      upcoming: upcoming.length,
+      open: open.length,
+      completed: completed.length,
+    }
   }
 
   /**
@@ -593,6 +762,11 @@ export const createTodoService = (deps: CreateTodoServiceDeps) => {
     update,
     findById,
     list,
+    listToday,
+    listUpcoming,
+    listOpen,
+    listCompleted,
+    getViewCounts,
     complete,
     uncomplete,
     softDelete,
