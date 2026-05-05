@@ -121,9 +121,16 @@ Tasks are prefixed `T-V-` (V for Vault).
   - Refs: REQ-VAULT-4.
   - **Notes:** Added `vaultSessionStore.evictByUser(userId)` call in `server/api/auth/logout.post.ts`, gated on `event.context.user?.id` being present (the auth middleware populates it from the session cookie). Pre-existing `mcp-read-tools.test.ts` "due today" timezone-sensitive failure not related.
 
-- [ ] **T-V-12 — Change master endpoint**
+- [x] **T-V-12 — Change master endpoint**
   - `POST /api/vault/change-master`: verifies current, derives new master key, re-wraps every workspace's DEK using the new master key + existing workspace salt, updates verifier, evicts all the user's vault sessions.
   - Refs: REQ-VAULT-5.
+  - **Notes:**
+    - Iterates `workspaceVaultKeys` for every org the user is a member of, attempting to unwrap each DEK with the old master key. Rows that fail to unwrap (caught as `VaultCryptoError`) are skipped — they were wrapped by a different user's master key and aren't this user's to rotate. This is the right semantics for the multi-user-org corner case (see DESIGN-VAULT-CRYPTO §Per-workspace DEK).
+    - Both `master_salt` and `master_kdf_salt` rotated alongside the verifier so a compromised old verifier can't be replayed against the new password.
+    - `oldMasterKey`, `newMasterKey`, and the unwrapped DEK are zeroed in `finally` blocks even if a DB write throws.
+    - `userVaultCredentials.update` goes via raw Drizzle: the generic `ItemService.update` keys on `id`, but this table's PK is `user_id`. Documented inline.
+    - `evictByUser(user.id)` runs at the end so even the current request's vault session is locked — by design, since the in-memory master key was derived from the *old* password.
+    - Returns 412 when master password not set, 401 on invalid current, 400 on `currentPassword === newPassword`.
 
 - [ ] **T-V-13 — Reset endpoint**
   - `POST /api/vault/reset`: requires `confirm: true`. Deletes `user_vault_credentials`, all `workspace_vault_keys` for the user (across all their workspaces), all `vault_*` data in those workspaces, all related access log entries.
