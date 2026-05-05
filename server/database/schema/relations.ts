@@ -38,9 +38,16 @@ import { todoKbLinks } from './todo-kb-links'
 import { todoTags } from './todo-tags'
 import { todos } from './todos'
 import { userRoles } from './user-roles'
+import { userVaultCredentials } from './user-vault-credentials'
 import { users } from './users'
+import { vaultAccessLog } from './vault-access-log'
+import { vaultEntries } from './vault-entries'
+import { vaultEntryTags } from './vault-entry-tags'
+import { vaultFolders } from './vault-folders'
+import { vaultTags } from './vault-tags'
+import { workspaceVaultKeys } from './workspace-vault-keys'
 
-export const usersRelations = relations(users, ({ many }) => ({
+export const usersRelations = relations(users, ({ one, many }) => ({
   sessions: many(sessions),
   passwordResetTokens: many(passwordResetTokens),
   pendingEmailChanges: many(pendingEmailChanges),
@@ -52,6 +59,8 @@ export const usersRelations = relations(users, ({ many }) => ({
   aiProviderCredentials: many(aiProviderCredentials),
   orchestratorConversations: many(orchestratorConversations),
   orchestratorActions: many(orchestratorActions),
+  vaultCredentials: one(userVaultCredentials),
+  vaultAccessLog: many(vaultAccessLog),
 }))
 
 export const sessionsRelations = relations(sessions, ({ one }) => ({
@@ -86,6 +95,11 @@ export const organisationsRelations = relations(organisations, ({ one, many }) =
   ghIssues: many(ghIssues),
   ghPulls: many(ghPulls),
   ghCommits: many(ghCommits),
+  vaultKey: one(workspaceVaultKeys),
+  vaultFolders: many(vaultFolders),
+  vaultEntries: many(vaultEntries),
+  vaultTags: many(vaultTags),
+  vaultAccessLog: many(vaultAccessLog),
 }))
 
 export const organisationInvitationsRelations = relations(organisationInvitations, ({ one }) => ({
@@ -497,5 +511,89 @@ export const ghCommitsRelations = relations(ghCommits, ({ one }) => ({
   repo: one(ghRepos, {
     fields: [ghCommits.repoId],
     references: [ghRepos.id],
+  }),
+}))
+
+// Vault Relations (DESIGN-VAULT-DATA)
+export const userVaultCredentialsRelations = relations(userVaultCredentials, ({ one }) => ({
+  user: one(users, {
+    fields: [userVaultCredentials.userId],
+    references: [users.id],
+  }),
+}))
+
+export const workspaceVaultKeysRelations = relations(workspaceVaultKeys, ({ one }) => ({
+  organisation: one(organisations, {
+    fields: [workspaceVaultKeys.organisationId],
+    references: [organisations.id],
+  }),
+}))
+
+export const vaultFoldersRelations = relations(vaultFolders, ({ one, many }) => ({
+  organisation: one(organisations, {
+    fields: [vaultFolders.organisationId],
+    references: [organisations.id],
+  }),
+  parent: one(vaultFolders, {
+    fields: [vaultFolders.parentId],
+    references: [vaultFolders.id],
+    relationName: 'vaultFolderTree',
+  }),
+  children: many(vaultFolders, { relationName: 'vaultFolderTree' }),
+  entries: many(vaultEntries),
+}))
+
+export const vaultEntriesRelations = relations(vaultEntries, ({ one, many }) => ({
+  organisation: one(organisations, {
+    fields: [vaultEntries.organisationId],
+    references: [organisations.id],
+  }),
+  folder: one(vaultFolders, {
+    fields: [vaultEntries.folderId],
+    references: [vaultFolders.id],
+  }),
+  createdByUser: one(users, {
+    fields: [vaultEntries.createdBy],
+    references: [users.id],
+  }),
+  entryTags: many(vaultEntryTags),
+  accessLog: many(vaultAccessLog),
+}))
+
+export const vaultTagsRelations = relations(vaultTags, ({ one, many }) => ({
+  organisation: one(organisations, {
+    fields: [vaultTags.organisationId],
+    references: [organisations.id],
+  }),
+  entryTags: many(vaultEntryTags),
+}))
+
+export const vaultEntryTagsRelations = relations(vaultEntryTags, ({ one }) => ({
+  entry: one(vaultEntries, {
+    fields: [vaultEntryTags.entryId],
+    references: [vaultEntries.id],
+  }),
+  tag: one(vaultTags, {
+    fields: [vaultEntryTags.tagId],
+    references: [vaultTags.id],
+  }),
+}))
+
+export const vaultAccessLogRelations = relations(vaultAccessLog, ({ one }) => ({
+  organisation: one(organisations, {
+    fields: [vaultAccessLog.organisationId],
+    references: [organisations.id],
+  }),
+  user: one(users, {
+    fields: [vaultAccessLog.userId],
+    references: [users.id],
+  }),
+  entry: one(vaultEntries, {
+    fields: [vaultAccessLog.entryId],
+    references: [vaultEntries.id],
+  }),
+  conversation: one(orchestratorConversations, {
+    fields: [vaultAccessLog.conversationId],
+    references: [orchestratorConversations.id],
   }),
 }))

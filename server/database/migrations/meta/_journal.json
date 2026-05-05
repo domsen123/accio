@@ -64,6 +64,13 @@
       "when": 1778014156982,
       "tag": "0008_furry_chameleon",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1778015007311,
+      "tag": "0009_normal_silk_fever",
+      "breakpoints": true
     }
   ]
 }

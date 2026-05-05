@@ -31,11 +31,17 @@ Tasks are prefixed `T-V-` (V for Vault).
 
 ## Schema
 
-- [ ] **T-V-4 — Drizzle schema for vault tables**
+- [x] **T-V-4 — Drizzle schema for vault tables**
   - Tables: `user_vault_credentials`, `workspace_vault_keys`, `vault_folders`, `vault_entries`, `vault_tags`, `vault_entry_tags`, `vault_access_log`.
   - Indexes per DESIGN-VAULT-DATA.
   - Refs: DESIGN-VAULT-DATA.
   - Done when: `pnpm db:push` (or equivalent) applies cleanly; tables visible.
+  - **Notes:**
+    - Hoisted `bytea` custom column type to `schema/column-types.ts` so vault tables share one definition.
+    - Added two extra indexes on `vault_access_log` (`org+created_at`, `org+event_type`) to support REQ-VAULT-18 audit-view queries; spec is silent, agreed by reviewer.
+    - `vault_folders.parent_id` and `vault_entries.folder_id` use `ON DELETE SET NULL` (re-parent to root) — service layer (T-V-15) owns the explicit `delete_recursive` strategy; DB FK is just a safety net.
+    - Postgres truncates one auto-generated FK name on `vault_access_log.conversation_id` to 63 chars; documented inline. Drizzle snapshot keeps the untruncated name so future diffs are stable.
+    - Migration `0009_normal_silk_fever.sql` applies cleanly; `pnpm db:generate` after the bytea refactor reports no new diff.
 
 ---
 
