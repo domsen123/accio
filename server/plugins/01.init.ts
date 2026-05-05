@@ -102,6 +102,22 @@ const seedAdmin = async () => {
     scopeId: null,
   })
 
+  // Ensure the admin has at least one organisation membership so workspace-scoped
+  // features (KB, Todos, …) work out of the box. Idempotent: only creates the
+  // default workspace if the admin has no existing memberships.
+  const existingMemberships = await container.items.organisationMembers.findMany({
+    filter: { userId: { _eq: userId } },
+    limit: 1,
+  })
+  if (existingMemberships.length === 0) {
+    await container.organisationsService.create({
+      name: 'Default Workspace',
+      slug: 'default',
+      creatorUserId: userId,
+    })
+    console.log('[Init] Created default workspace for admin')
+  }
+
   console.log('[Init] Admin seed completed')
 }
 

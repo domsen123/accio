@@ -191,9 +191,30 @@ Mark tasks done by changing `[ ]` to `[x]`. Add a brief note when deviating from
     - Quality gates: `pnpm lint`, `pnpm typecheck`, `pnpm test:run` 167/167 green. Smoke: `curl /app/kb` returns 302 → `/auth/sign-in` (expected, no 500).
 
 ### Phase 1 acceptance
-- [ ] **T-1.X — Phase 1 complete**
+- [x] **T-1.X — Phase 1 complete**
   - End-to-end: create category → create entry with tags and a wikilink → search finds it → backlinks appear on the linked entry → status flow works → soft delete and restore work.
   - Done when: A manual run-through of the above succeeds in two different workspaces with no data leak.
+  - **Deviation / fix:** the seed admin user (`admin@example.com`) was given the `Super Admin` global role but never an organisation membership, so every workspace-scoped API (`/api/kb/*`) returned `workspace.no_membership` from the earliest-membership fallback. Resolved by extending `seedAdmin` in `server/plugins/01.init.ts` to idempotently create a `Default Workspace` (slug `default`) and add the admin as Owner whenever the admin has no memberships yet (~15 lines, reuses `container.organisationsService.create`). T-1.7's earliest-membership fallback now resolves on the very first run.
+  - **Manual run transcript (workspace 1, ID `01KQTT63C9Q01RT9G2SJHBEX4C`):**
+    - `POST /api/auth/login` → 200 (admin signed in).
+    - `GET /api/kb/categories` → 200 (was 403 `workspace.no_membership` before the seed fix).
+    - `POST /api/kb/categories {name:'Bücher'}` → 201 (slug `buecher`).
+    - `POST /api/kb/entries` (title `Vue Notizen`, body with `[[react-notizen]]` + `[[Cooking|cooking]]`, tags `vue`/`frontend`, category Bücher) → 201, status `draft`.
+    - `POST /api/kb/entries` (title `React Notizen`) → 201, slug auto-`react-notizen`.
+    - `GET /api/kb/entries?search=Notizen` → 200, both entries returned (title-rank A on each).
+    - `GET /api/kb/entries/<react-id>/backlinks` → 200, returns `[{slug:'vue-notizen', title:'Vue Notizen'}]`.
+    - `POST /api/kb/entries/<vue-id>/status {verified}` → 200; `{archived}` → 200; `{draft}` → 200.
+    - `DELETE /api/kb/entries/<vue-id>` → 200 (soft-delete, `deletedAt` set).
+    - `GET /api/kb/trash` → 200, includes Vue Notizen with full tag + category metadata.
+    - `GET /api/kb/entries` → 200, only React Notizen returned (Vue Notizen correctly hidden).
+    - `POST /api/kb/entries/<vue-id>/restore` → 200, `deletedAt` cleared.
+    - `GET /api/kb/entries/vue-notizen` → 200, slug-fallback resolves the restored entry with tags + category.
+  - **Workspace 2 (`01KQTTENNCPZTCFHN00B9BD2M7`, slug `second`):**
+    - `POST /api/organisations {name:'Second Workspace',slug:'second'}` → 200.
+    - `POST /api/kb/categories` with `X-Organisation-Id: <ws2>` → 201.
+    - `POST /api/kb/entries` (title `Vue Notizen` again) with `X-Organisation-Id: <ws2>` → 201, slug `vue-notizen` (no collision — `(organisation_id, slug)` unique).
+    - `GET /api/kb/entries` with `X-Organisation-Id: <ws2>` → 200, returns only the WS2 entry; WS1 data not visible. Cross-workspace isolation holds.
+  - **Gates:** `pnpm lint` clean, `pnpm typecheck` clean, `pnpm test:run` 167/167.
 
 ---
 
