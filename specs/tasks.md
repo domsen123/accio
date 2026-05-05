@@ -221,10 +221,11 @@ Mark tasks done by changing `[ ]` to `[x]`. Add a brief note when deviating from
 ## Phase 2 — Todos
 
 ### Schema
-- [ ] **T-2.1 — Drizzle schema for todos**
+- [x] **T-2.1 — Drizzle schema for todos**
   - Tables: `todos`, `todo_tags`, `todo_kb_links`. Reuse `kb_tags`.
   - Refs: DESIGN-DATA §Todo.
   - Done when: `pnpm db:push` applies cleanly.
+  - Done: migration `0004_condemned_puck.sql` creates `todo_priority` enum + 3 tables; FKs cascade on parent/org/todo/tag/entry deletion; `created_by` set null on user delete; indexes `(org, completed_at)`, `(org, due_at)`, `(parent_todo_id)` per spec; junctions use composite PKs. No deviations from DESIGN-DATA §Todo. Subtask depth-3 invariant (REQ-TODO-2) is enforced in service (T-2.2), not the DB — documented in `todos.ts`.
 
 ### Server feature: todos
 - [ ] **T-2.2 — Todos service**

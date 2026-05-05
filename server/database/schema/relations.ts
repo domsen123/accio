@@ -22,6 +22,9 @@ import { roles } from './roles'
 import { sessions } from './sessions'
 import { teamMembers } from './team-members'
 import { teams } from './teams'
+import { todoKbLinks } from './todo-kb-links'
+import { todoTags } from './todo-tags'
+import { todos } from './todos'
 import { userRoles } from './user-roles'
 import { users } from './users'
 
@@ -58,6 +61,7 @@ export const organisationsRelations = relations(organisations, ({ many }) => ({
   kbEntries: many(kbEntries),
   kbCategories: many(kbCategories),
   kbTags: many(kbTags),
+  todos: many(todos),
 }))
 
 export const organisationInvitationsRelations = relations(organisationInvitations, ({ one }) => ({
@@ -229,6 +233,7 @@ export const kbEntriesRelations = relations(kbEntries, ({ one, many }) => ({
   entryTags: many(kbEntryTags),
   outgoingLinks: many(kbEntryLinks, { relationName: 'fromEntry' }),
   incomingLinks: many(kbEntryLinks, { relationName: 'toEntry' }),
+  todoLinks: many(todoKbLinks),
 }))
 
 export const kbCategoriesRelations = relations(kbCategories, ({ one, many }) => ({
@@ -251,6 +256,7 @@ export const kbTagsRelations = relations(kbTags, ({ one, many }) => ({
     references: [organisations.id],
   }),
   entryTags: many(kbEntryTags),
+  todoTags: many(todoTags),
 }))
 
 export const kbEntryTagsRelations = relations(kbEntryTags, ({ one }) => ({
@@ -278,5 +284,47 @@ export const kbEntryLinksRelations = relations(kbEntryLinks, ({ one }) => ({
     fields: [kbEntryLinks.toEntryId],
     references: [kbEntries.id],
     relationName: 'toEntry',
+  }),
+}))
+
+// Todo Relations (DESIGN-DATA §Todo)
+export const todosRelations = relations(todos, ({ one, many }) => ({
+  organisation: one(organisations, {
+    fields: [todos.organisationId],
+    references: [organisations.id],
+  }),
+  parent: one(todos, {
+    fields: [todos.parentTodoId],
+    references: [todos.id],
+    relationName: 'todoSubtasks',
+  }),
+  subtasks: many(todos, { relationName: 'todoSubtasks' }),
+  createdByUser: one(users, {
+    fields: [todos.createdBy],
+    references: [users.id],
+  }),
+  todoTags: many(todoTags),
+  kbLinks: many(todoKbLinks),
+}))
+
+export const todoTagsRelations = relations(todoTags, ({ one }) => ({
+  todo: one(todos, {
+    fields: [todoTags.todoId],
+    references: [todos.id],
+  }),
+  tag: one(kbTags, {
+    fields: [todoTags.tagId],
+    references: [kbTags.id],
+  }),
+}))
+
+export const todoKbLinksRelations = relations(todoKbLinks, ({ one }) => ({
+  todo: one(todos, {
+    fields: [todoKbLinks.todoId],
+    references: [todos.id],
+  }),
+  entry: one(kbEntries, {
+    fields: [todoKbLinks.entryId],
+    references: [kbEntries.id],
   }),
 }))

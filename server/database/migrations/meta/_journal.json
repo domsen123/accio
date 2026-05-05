@@ -29,6 +29,13 @@
       "when": 1777935284098,
       "tag": "0003_chunky_satana",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1777943262723,
+      "tag": "0004_condemned_puck",
+      "breakpoints": true
     }
   ]
 }
