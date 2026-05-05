@@ -257,7 +257,7 @@ const createTodoFromEntryHref = computed(() => {
             <UIcon name="i-lucide-link" class="size-3.5" />
             {{ t(`kb.source.${entry.sourceType}`) }}
           </span>
-          <span class="inline-flex items-center gap-1">
+          <span class="inline-flex items-center gap-1 font-mono">
             <UIcon name="i-lucide-clock" class="size-3.5" />
             {{ t('kb.detail.updatedAt', { date: formatDate(entry.updatedAt) }) }}
           </span>
@@ -382,7 +382,7 @@ const createTodoFromEntryHref = computed(() => {
                   </div>
                   <div
                     v-if="todo.dueAt"
-                    class="text-xs"
+                    class="text-xs font-mono"
                     :class="isOverdue(todo) ? 'text-error font-medium' : 'text-muted'"
                   >
                     <UIcon name="i-lucide-calendar" class="size-3.5 align-text-bottom mr-1" />

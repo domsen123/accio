@@ -367,7 +367,7 @@ const rowMenuItems = (todo: Todo) => [
         v-for="todo in todos"
         :key="todo.id"
         :ui="{
-          root: 'transition-colors hover:bg-elevated/60',
+          root: 'transition-colors hover:bg-accented',
           body: 'p-4',
         }"
       >
@@ -416,12 +416,13 @@ const rowMenuItems = (todo: Todo) => [
             <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
               <span
                 v-if="todo.dueAt"
+                class="font-mono"
                 :class="isOverdue(todo) ? 'text-error font-medium' : ''"
               >
                 <UIcon name="i-lucide-calendar" class="size-3.5 align-text-bottom mr-1" />
                 {{ formatRelative(todo.dueAt) }}
               </span>
-              <span v-if="isCompleted(todo) && todo.completedAt">
+              <span v-if="isCompleted(todo) && todo.completedAt" class="font-mono">
                 <UIcon name="i-lucide-check" class="size-3.5 align-text-bottom mr-1" />
                 {{ formatRelative(todo.completedAt) }}
               </span>

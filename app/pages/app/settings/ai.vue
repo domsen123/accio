@@ -374,7 +374,11 @@ const isAnyLoading = computed(() => providersLoading.value || settingsLoading.va
     <!-- Set-credential modal. We deliberately use a password-style input and
          never preview existing values; the server doesn't even have the key
          in plaintext after the initial save. -->
-    <UModal v-model:open="credModalOpen" :title="t('ai.settings.credentials.modal.title', { provider: credProviderLabel })">
+    <UModal
+      v-model:open="credModalOpen"
+      :title="t('ai.settings.credentials.modal.title', { provider: credProviderLabel })"
+      :ui="{ content: 'light bg-default text-default' }"
+    >
       <template #body>
         <div class="space-y-3">
           <p class="text-sm text-muted">

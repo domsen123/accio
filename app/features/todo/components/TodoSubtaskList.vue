@@ -185,7 +185,7 @@ const subtaskHrefFor = (childId: string) =>
         class="space-y-1.5"
       >
         <div
-          class="flex items-start gap-2 py-1.5 px-2 rounded-md transition-colors hover:bg-elevated/60 border-l-2 border-default"
+          class="flex items-start gap-2 py-1.5 px-2 rounded-md transition-colors hover:bg-accented border-l-2 border-default"
         >
           <UCheckbox
             :model-value="isCompleted(child)"

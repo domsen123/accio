@@ -135,6 +135,21 @@ const onSelect = (id: string) => {
   emit('select', id)
 }
 
+// Static map so Tailwind keeps these classes; depth ≥ 6 caps to last bucket.
+// Indent step ≈ 0.75rem per level; only Tailwind-native spacing tokens used.
+const DEPTH_PADDING = [
+  'pl-1',
+  'pl-4',
+  'pl-6',
+  'pl-10',
+  'pl-12',
+  'pl-16',
+  'pl-20',
+] as const
+
+const depthPaddingClass = (depth: number) =>
+  DEPTH_PADDING[Math.min(depth, DEPTH_PADDING.length - 1)]
+
 const onSelectAll = () => {
   emit('select', '')
 }
@@ -309,19 +324,16 @@ const itemsFor = (cat: KbCategory) => [
     </div>
 
     <!-- "All" pseudo-row clears the filter -->
-    <button
-      type="button"
-      class="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-colors"
-      :class="
-        selectedId === ''
-          ? 'bg-primary/10 text-primary font-medium'
-          : 'text-default hover:bg-elevated/60'
-      "
+    <UButton
+      :color="selectedId === '' ? 'primary' : 'neutral'"
+      :variant="selectedId === '' ? 'subtle' : 'ghost'"
+      size="sm"
+      icon="i-lucide-inbox"
+      :label="t('kb.categories.all')"
+      block
+      :ui="{ base: 'justify-start', label: 'truncate' }"
       @click="onSelectAll"
-    >
-      <UIcon name="i-lucide-inbox" class="size-4 shrink-0" />
-      <span class="truncate">{{ t('kb.categories.all') }}</span>
-    </button>
+    />
 
     <!-- Tree -->
     <ul v-if="flat.length > 0" class="space-y-0.5" role="tree">
@@ -335,42 +347,43 @@ const itemsFor = (cat: KbCategory) => [
       >
         <div
           class="flex items-center gap-1 pr-1 rounded-md transition-colors"
-          :class="
+          :class="[
             selectedId === node.category.id
               ? 'bg-primary/10 text-primary'
-              : 'text-default hover:bg-elevated/60'
-          "
-          :style="{ paddingLeft: `${node.depth * 12 + 4}px` }"
+              : 'text-default hover:bg-accented',
+            depthPaddingClass(node.depth),
+          ]"
         >
           <!-- Chevron / spacer -->
-          <button
+          <UButton
             v-if="node.hasChildren"
-            type="button"
-            class="shrink-0 size-5 inline-flex items-center justify-center rounded hover:bg-elevated"
+            color="neutral"
+            variant="ghost"
+            size="xs"
+            square
+            :icon="node.expanded ? 'i-lucide-chevron-down' : 'i-lucide-chevron-right'"
             :aria-label="
               node.expanded
                 ? t('kb.categories.collapse')
                 : t('kb.categories.expand')
             "
             @click.stop="toggleExpanded(node.category.id)"
-          >
-            <UIcon
-              :name="node.expanded ? 'i-lucide-chevron-down' : 'i-lucide-chevron-right'"
-              class="size-3.5"
-            />
-          </button>
+          />
           <span v-else class="size-5 shrink-0" aria-hidden="true" />
 
           <!-- Label (selectable) -->
-          <button
-            type="button"
-            class="flex-1 min-w-0 flex items-center gap-2 py-1 text-left text-sm"
-            :class="selectedId === node.category.id ? 'font-medium' : ''"
+          <UButton
+            color="neutral"
+            variant="ghost"
+            size="xs"
+            :label="node.category.name"
+            icon="i-lucide-folder"
+            :ui="{
+              base: 'flex-1 min-w-0 justify-start',
+              label: ['truncate', selectedId === node.category.id ? 'font-medium' : ''],
+            }"
             @click="onSelect(node.category.id)"
-          >
-            <UIcon name="i-lucide-folder" class="size-4 shrink-0" />
-            <span class="truncate">{{ node.category.name }}</span>
-          </button>
+          />
 
           <!-- Actions menu (visible on hover/focus-within) -->
           <UDropdownMenu :items="itemsFor(node.category)" :content="{ align: 'end' }">

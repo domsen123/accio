@@ -190,7 +190,7 @@ const onSubmit = async (event: FormSubmitEvent<Schema>) => {
                 {{ t('kb.editor.preview.label') }}
               </label>
               <div
-                class="rounded-md ring ring-default p-3 overflow-auto bg-elevated/30 min-h-[24rem] max-h-[40rem]"
+                class="rounded-md ring ring-default p-3 overflow-auto bg-elevated min-h-[24rem] max-h-[40rem]"
               >
                 <KbMarkdownPreview :body="debouncedBody" />
               </div>

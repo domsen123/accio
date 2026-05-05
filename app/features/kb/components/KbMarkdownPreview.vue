@@ -80,13 +80,13 @@ const onClickPreview = (event: MouseEvent) => {
   display: inline-flex;
   align-items: center;
   gap: 0.125rem;
-  color: var(--ui-primary, #6366f1);
+  color: var(--ui-primary);
   text-decoration: none;
   border-bottom: 1px dashed transparent;
 }
 
 .kb-markdown-preview .kb-wikilink--resolved {
-  color: var(--ui-primary, #6366f1);
+  color: var(--ui-primary);
   border-bottom-color: currentColor;
 }
 
@@ -95,7 +95,7 @@ const onClickPreview = (event: MouseEvent) => {
 }
 
 .kb-markdown-preview .kb-wikilink--unresolved {
-  color: var(--ui-text-muted, #6b7280);
+  color: var(--ui-text-muted);
   border-bottom-style: dotted;
   border-bottom-color: currentColor;
   font-style: italic;

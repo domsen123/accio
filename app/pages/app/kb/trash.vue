@@ -221,7 +221,7 @@ const detailHref = (entry: KbEntry) => `/app/kb/${encodeURIComponent(entry.slug)
             <p class="text-xs text-muted truncate">
               {{ entry.slug }}
             </p>
-            <p class="text-xs text-muted">
+            <p class="text-xs text-muted font-mono">
               {{ t('kb.trash.deletedAt', { when: formatRelative(entry.deletedAt) }) }}
             </p>
           </div>

@@ -349,7 +349,7 @@ const detailHref = (entry: KbEntry) => `/app/kb/${encodeURIComponent(entry.slug)
           >
             <UCard
               :ui="{
-                root: 'transition-colors hover:bg-elevated/60',
+                root: 'transition-colors hover:bg-accented',
                 body: 'p-4',
               }"
             >
@@ -400,7 +400,7 @@ const detailHref = (entry: KbEntry) => `/app/kb/${encodeURIComponent(entry.slug)
                   </div>
                 </div>
                 <div class="text-right shrink-0">
-                  <p class="text-xs text-muted">
+                  <p class="text-xs text-muted font-mono">
                     {{ formatRelative(entry.updatedAt) }}
                   </p>
                   <p v-if="entry.authorName" class="text-xs text-muted truncate max-w-32">

@@ -28,43 +28,26 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 
-const tabs = computed(() => TODO_VIEWS.map(view => ({
-  key: view,
-  label: t(`todo.subnav.${view}`),
-  count: props.counts[view],
-})))
-
 const onSelect = (view: TodoView) => {
   if (view !== props.modelValue)
     emit('update:modelValue', view)
 }
+
+const items = computed(() => TODO_VIEWS.map(view => ({
+  label: t(`todo.subnav.${view}`),
+  active: view === props.modelValue,
+  badge: props.counts[view] > 0
+    ? { label: String(props.counts[view]), variant: 'subtle' as const, color: 'neutral' as const }
+    : undefined,
+  onSelect: () => onSelect(view),
+})))
 </script>
 
 <template>
-  <div class="border-b border-default">
-    <nav class="flex items-center gap-1 -mb-px" aria-label="Todo sub-navigation">
-      <button
-        v-for="tab in tabs"
-        :key="tab.key"
-        type="button"
-        class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium border-b-2 transition-colors"
-        :class="
-          tab.key === modelValue
-            ? 'border-primary text-primary'
-            : 'border-transparent text-muted hover:text-default hover:border-muted'
-        "
-        @click="onSelect(tab.key)"
-      >
-        <span>{{ tab.label }}</span>
-        <UBadge
-          v-if="tab.count > 0"
-          :color="tab.key === modelValue ? 'primary' : 'neutral'"
-          variant="subtle"
-          size="xs"
-        >
-          {{ tab.count }}
-        </UBadge>
-      </button>
-    </nav>
-  </div>
+  <UNavigationMenu
+    :items="items"
+    orientation="horizontal"
+    highlight
+    aria-label="Todo sub-navigation"
+  />
 </template>
