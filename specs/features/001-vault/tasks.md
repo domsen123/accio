@@ -246,9 +246,12 @@ Tasks are prefixed `T-V-` (V for Vault).
     - Field resolution: `username`, `password`, `notes` map to the standard payload keys; `custom:<name>` resolves against the custom-fields array.
     - 3 new tests cover successful reveal (standard + custom field, with audit log assertions), locked-vault path, and entry-not-found.
 
-- [ ] **T-V-22 — Confirmation card variant in chat UI**
+- [x] **T-V-22 — Confirmation card variant in chat UI**
   - Render `vault_get_secret` confirmation card with the warning styling per DESIGN-VAULT-FRONTEND.
   - Refs: REQ-VAULT-15.
+  - **Notes:**
+    - `app/features/orchestrator/components/ConfirmationCard.vue` already branches on `toolName === 'vault_get_secret'`: error-coloured border (`bg-elevated border border-error`), shield-alert icon, `UAlert` warning with `i-lucide-alert-triangle` and the `orchestrator.confirmation.vaultWarning` translation key, and a red "Confirm" button. The i18n keys exist in `en.json` and `de.json` ("The secret will be sent to the LLM provider. Confirm only if necessary." / "Das Secret wird an den LLM-Anbieter gesendet. Nur bestätigen, wenn nötig.").
+    - No code changes needed — the card was already shipped as part of an earlier orchestrator iteration; T-V-22 is the explicit checkpoint that REQ-VAULT-15's UI requirement is satisfied.
 
 ---
 
