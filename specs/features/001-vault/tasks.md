@@ -8,7 +8,7 @@ Tasks are prefixed `T-V-` (V for Vault).
 
 ## Setup
 
-- [ ] **T-V-1 — Add new permissions and seed**
+- [x] **T-V-1 — Add new permissions and seed**
   - Extend the permission registry with `vault:read`, `vault:write`, `vault:delete`, `vault:orchestrator:reveal`.
   - Update seed: Owner gets all four; Admin and Member get the first three.
   - Refs: REQ-VAULT-17, DESIGN-VAULT-PERMISSIONS.

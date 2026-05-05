@@ -51,6 +51,10 @@ export const PERMISSIONS = {
   ORCHESTRATOR_AUDIT_VIEW: 'orchestrator:audit:view',
   AI_READ: 'ai:read',
   AI_MANAGE: 'ai:manage',
+  VAULT_READ: 'vault:read',
+  VAULT_WRITE: 'vault:write',
+  VAULT_DELETE: 'vault:delete',
+  VAULT_ORCHESTRATOR_REVEAL: 'vault:orchestrator:reveal',
 
   // Team scope
   TEAM_READ: 'team:read',
@@ -280,6 +284,34 @@ export const PERMISSION_METADATA: Record<Permission, PermissionMetadata> = {
     description: 'Can configure provider credentials, default model and AI display name',
     scope: 'organisation',
     category: 'ai',
+  },
+  [PERMISSIONS.VAULT_READ]: {
+    code: PERMISSIONS.VAULT_READ,
+    name: 'View Vault',
+    description: 'Can view vault entries (requires unlocked vault)',
+    scope: 'organisation',
+    category: 'vault',
+  },
+  [PERMISSIONS.VAULT_WRITE]: {
+    code: PERMISSIONS.VAULT_WRITE,
+    name: 'Write Vault',
+    description: 'Can create and update vault entries, folders and tags',
+    scope: 'organisation',
+    category: 'vault',
+  },
+  [PERMISSIONS.VAULT_DELETE]: {
+    code: PERMISSIONS.VAULT_DELETE,
+    name: 'Delete Vault Entries',
+    description: 'Can delete vault entries (soft delete) and purge from trash',
+    scope: 'organisation',
+    category: 'vault',
+  },
+  [PERMISSIONS.VAULT_ORCHESTRATOR_REVEAL]: {
+    code: PERMISSIONS.VAULT_ORCHESTRATOR_REVEAL,
+    name: 'Allow Orchestrator Secret Reveal',
+    description: 'Can let the orchestrator reveal vault secrets to the LLM provider (high trust)',
+    scope: 'organisation',
+    category: 'vault',
   },
 
   // Team scope
