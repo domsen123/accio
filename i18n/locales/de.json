@@ -859,11 +859,9 @@
     },
     "editor": {
       "markdown": {
-        "label": "Markdown",
         "placeholder": "Schreibe hier deine Notiz. Wikilinks: [[other-slug]] oder [[Titel|other-slug]]."
       },
       "preview": {
-        "label": "Vorschau",
         "empty": "Die Vorschau erscheint hier während du schreibst."
       },
       "help": "Wikilinks: [[slug]] für einen einfachen Link, [[Titel|slug]] für angepassten Anzeigetext. Nicht aufgelöste Ziele werden mit gepunkteter Unterstreichung und einem ?-Badge dargestellt."

@@ -2,39 +2,27 @@
 /**
  * KB entry create/edit form (T-1.9).
  *
- * Two layout columns:
- *   - left: title field + Markdown editor + preview (split panes).
- *   - right: status selector, category picker, tag picker.
+ * Single-column markdown editor (Nuxt UI `UEditor` in `content-type="markdown"`
+ * mode) on the left, sidebar with status / category / tags on the right.
  *
- * Editor stack: a plain `<textarea>` with monospace font on the left, our
- * `KbMarkdownPreview` on the right. Rationale (vs Nuxt UI's TipTap-backed
- * `UEditor`): TipTap in `content-type="markdown"` mode does **not** round-
- * trip Markdown faithfully — its serialiser drops less common syntax
- * (footnotes, raw HTML, advanced wikilink-style tokens) and rewrites
- * whitespace in code blocks. For a wiki-style editor where the body is
- * authoritative Markdown and wikilinks are first-class, a textarea + live
- * preview is simpler and lossless. See specs/tasks.md T-1.9 deviations.
- *
- * Tag picker emits names (not ids); the API's create+update endpoints
- * accept `tagNames` with server-side findOrCreate so user-typed values
- * materialise on save without an extra call. Category creation, by
- * contrast, requires an explicit `POST /api/kb/categories` first because
- * the entry endpoint only accepts an existing `categoryId`.
+ * Tag picker emits names (not ids); the API's create+update endpoints accept
+ * `tagNames` with server-side findOrCreate so user-typed values materialise on
+ * save without an extra call. Category creation, by contrast, requires an
+ * explicit `POST /api/kb/categories` first because the entry endpoint only
+ * accepts an existing `categoryId`.
  *
  * Submit fires create or update via the matching mutation composable. On
  * success the parent emits `success` with the resulting entry so the page
  * can navigate.
  */
-import type { FormSubmitEvent } from '@nuxt/ui'
+import type { EditorToolbarItem, FormSubmitEvent } from '@nuxt/ui'
 import type { KbEntry, KbEntryStatus } from '../types/kb.types'
-import { refDebounced } from '@vueuse/core'
 import * as z from 'zod'
 import {
   useCreateKbEntry,
   useUpdateKbEntry,
 } from '../composables/useKbEntryMutations'
 import KbCategoryPicker from './KbCategoryPicker.vue'
-import KbMarkdownPreview from './KbMarkdownPreview.vue'
 import KbTagPicker from './KbTagPicker.vue'
 
 const props = defineProps<{
@@ -73,16 +61,45 @@ const state = reactive<Schema>({
   status: props.entry?.status ?? 'draft',
 })
 
-// Debounce the body for the preview pane so each keystroke isn't a re-render
-// + bulk-resolve hit.
-const debouncedBody = refDebounced(toRef(state, 'body'), 250)
-
 const statusOptions = computed(() =>
   STATUSES.map(value => ({
     value,
     label: t(`kb.status.${value}`),
   })),
 )
+
+const toolbarItems: EditorToolbarItem[][] = [
+  [
+    { kind: 'undo', icon: 'i-lucide-undo', tooltip: { text: 'Undo' } },
+    { kind: 'redo', icon: 'i-lucide-redo', tooltip: { text: 'Redo' } },
+  ],
+  [
+    {
+      icon: 'i-lucide-heading',
+      tooltip: { text: 'Headings' },
+      content: { align: 'start' },
+      items: [
+        { kind: 'heading', level: 1, icon: 'i-lucide-heading-1', label: 'Heading 1' },
+        { kind: 'heading', level: 2, icon: 'i-lucide-heading-2', label: 'Heading 2' },
+        { kind: 'heading', level: 3, icon: 'i-lucide-heading-3', label: 'Heading 3' },
+      ],
+    },
+    { kind: 'bulletList', icon: 'i-lucide-list', tooltip: { text: 'Bullet List' } },
+    { kind: 'orderedList', icon: 'i-lucide-list-ordered', tooltip: { text: 'Ordered List' } },
+    { kind: 'blockquote', icon: 'i-lucide-text-quote', tooltip: { text: 'Blockquote' } },
+    { kind: 'codeBlock', icon: 'i-lucide-square-code', tooltip: { text: 'Code Block' } },
+    { kind: 'horizontalRule', icon: 'i-lucide-separator-horizontal', tooltip: { text: 'Horizontal Rule' } },
+  ],
+  [
+    { kind: 'mark', mark: 'bold', icon: 'i-lucide-bold', tooltip: { text: 'Bold' } },
+    { kind: 'mark', mark: 'italic', icon: 'i-lucide-italic', tooltip: { text: 'Italic' } },
+    { kind: 'mark', mark: 'strike', icon: 'i-lucide-strikethrough', tooltip: { text: 'Strikethrough' } },
+    { kind: 'mark', mark: 'code', icon: 'i-lucide-code', tooltip: { text: 'Code' } },
+  ],
+  [
+    { kind: 'link', icon: 'i-lucide-link', tooltip: { text: 'Link' } },
+  ],
+]
 
 const { mutateAsync: createEntry, asyncStatus: createStatus, error: createError } = useCreateKbEntry()
 const { mutateAsync: updateEntry, asyncStatus: updateStatus, error: updateError } = useUpdateKbEntry()
@@ -123,7 +140,6 @@ const onSubmit = async (event: FormSubmitEvent<Schema>) => {
     emit('success', result.entry)
   }
   catch {
-    // The error refs already capture the failure — toast it for visibility.
     toast.add({ title: t('kb.form.toast.error'), color: 'error' })
   }
 }
@@ -166,36 +182,16 @@ const onSubmit = async (event: FormSubmitEvent<Schema>) => {
           />
         </UFormField>
 
-        <!-- Split editor + preview -->
         <UFormField name="body">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 min-h-[24rem]">
-            <div class="flex flex-col">
-              <label class="text-xs font-medium text-muted mb-1">
-                {{ t('kb.editor.markdown.label') }}
-              </label>
-              <UTextarea
-                v-model="state.body"
-                :placeholder="t('kb.editor.markdown.placeholder')"
-                :maxlength="BODY_MAX"
-                :rows="20"
-                class="font-mono"
-                resize
-                :ui="{
-                  base: 'font-mono text-sm leading-relaxed',
-                }"
-              />
-            </div>
-            <div class="flex flex-col">
-              <label class="text-xs font-medium text-muted mb-1">
-                {{ t('kb.editor.preview.label') }}
-              </label>
-              <div
-                class="rounded-md ring ring-default p-3 overflow-auto bg-elevated min-h-[24rem] max-h-[40rem]"
-              >
-                <KbMarkdownPreview :body="debouncedBody" />
-              </div>
-            </div>
-          </div>
+          <UEditor
+            v-slot="{ editor }"
+            v-model="state.body"
+            content-type="markdown"
+            :placeholder="t('kb.editor.markdown.placeholder')"
+            class="w-full min-h-96 flex flex-col gap-4 rounded-lg bg-elevated/50 ring ring-default p-4"
+          >
+            <UEditorToolbar :editor="editor" :items="toolbarItems" class="pb-4 border-b border-default" />
+          </UEditor>
           <p class="text-xs text-muted mt-1">
             {{ t('kb.editor.help') }}
           </p>

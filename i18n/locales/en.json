@@ -859,11 +859,9 @@
     },
     "editor": {
       "markdown": {
-        "label": "Markdown",
         "placeholder": "Write your note here. Wikilinks: [[other-slug]] or [[Title|other-slug]]."
       },
       "preview": {
-        "label": "Preview",
         "empty": "Preview appears here as you type."
       },
       "help": "Wikilinks: [[slug]] for a plain link, [[Title|slug]] for custom display text. Unresolved targets show with a dotted underline and a ? badge."
