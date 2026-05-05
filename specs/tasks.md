@@ -324,9 +324,10 @@ Mark tasks done by changing `[ ]` to `[x]`. Add a brief note when deviating from
   - **Quality gates:** `pnpm lint` clean, `pnpm typecheck` clean, `pnpm test:run` 214/214.
 
 ### Phase 2 acceptance
-- [ ] **T-2.X — Phase 2 complete**
+- [x] **T-2.X — Phase 2 complete**
   - End-to-end: create todos in different views, with subtasks, link to KB, complete, soft delete, restore.
   - Done when: Manual run-through succeeds; permissions enforced.
+  - **Verified:** dev server restarted to re-fire `seedAdmin` (Default Workspace re-created with admin Owner membership). Curl-driven E2E covered every assertion in the brief and all passed cleanly: today/upcoming/open membership + counts `{today:1, upcoming:1, open:3, completed:0}`; subtask depth-2 + depth-3 created, depth-4 rejected with 409 `todo.subtask.depth_exceeded`; KB↔Todo link round-trip (POST 201 → linked-todos includes upcoming → DELETE 204 → linked-todos empty); complete (counts → `today:0, completed:1`) and uncomplete (counts revert); soft delete excludes from default list, restore re-includes; tag round-trip (`POST /tags` 200, detail GET shows `Work`+`Important`, `?tagId=<work>` filter returns the today todo); 401 floor for unauthenticated `POST /api/todos`; cross-workspace isolation confirmed — todo created in WS2 with `X-Organisation-Id` header has the correct `organisationId` and is invisible from WS1's list (and vice versa). Baseline gates green: lint clean, typecheck clean, 214/214 tests passing. No bug fixes required during the run.
 
 ---
 
