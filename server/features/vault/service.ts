@@ -225,18 +225,98 @@ export const createVaultService = (deps: CreateVaultServiceDeps) => {
   }
 
   // ---------------------------------------------------------------------
-  // Folders (skeleton — T-V-15 layers on depth check + delete strategy)
+  // Folders (T-V-15: depth check + delete strategy)
   // ---------------------------------------------------------------------
+
+  // REQ-VAULT-9: max depth 5. Root entries are depth 0; a folder directly
+  // under root is depth 1; the deepest allowed folder is depth 5.
+  const MAX_FOLDER_DEPTH = 5
+
+  /**
+   * Walk from `folderId` up to root, returning the chain of ancestors
+   * (excluding the starting folder). Throws on a detected cycle so
+   * malformed data can't trap depth-checks in an infinite loop.
+   */
+  const getAncestorChain = async (
+    organisationId: string,
+    folderId: string,
+  ): Promise<string[]> => {
+    const visited = new Set<string>()
+    const chain: string[] = []
+    let cursor: string | null = folderId
+    while (cursor !== null) {
+      if (visited.has(cursor)) {
+        throw createError({ statusCode: 500, statusMessage: 'vault.folder.cycle_detected' })
+      }
+      visited.add(cursor)
+      const row = await vaultFoldersItemService.readOne(cursor)
+      if (!row || row.organisationId !== organisationId)
+        break
+      const parentId: string | null = row.parentId
+      if (parentId === null)
+        break
+      chain.push(parentId)
+      cursor = parentId
+    }
+    return chain
+  }
+
+  /**
+   * Depth = ancestors.length + 1. A folder with no parent is depth 1.
+   */
+  const computeFolderDepth = async (
+    organisationId: string,
+    folderId: string,
+  ): Promise<number> => {
+    const ancestors = await getAncestorChain(organisationId, folderId)
+    return ancestors.length + 1
+  }
+
+  /**
+   * Walk down from `rootFolderId` collecting the maximum descendant depth
+   * relative to that root (root itself is depth 0).
+   */
+  const computeMaxSubtreeDepth = async (
+    organisationId: string,
+    rootFolderId: string,
+  ): Promise<number> => {
+    const visited = new Set<string>([rootFolderId])
+    let maxDepth = 0
+    const stack: Array<{ id: string, depthFromRoot: number }> = [{ id: rootFolderId, depthFromRoot: 0 }]
+    while (stack.length > 0) {
+      const { id, depthFromRoot } = stack.pop()!
+      if (depthFromRoot > maxDepth)
+        maxDepth = depthFromRoot
+      const children = await vaultFoldersItemService.findMany({
+        filter: { organisationId, parentId: id, deletedAt: { _null: true } },
+      })
+      for (const child of children) {
+        if (visited.has(child.id))
+          continue
+        visited.add(child.id)
+        stack.push({ id: child.id, depthFromRoot: depthFromRoot + 1 })
+      }
+    }
+    return maxDepth
+  }
 
   const createFolder = async (input: {
     organisationId: string
     name: string
     parentId?: string | null
-  }) => vaultFoldersItemService.create({
-    organisationId: input.organisationId,
-    name: input.name,
-    parentId: input.parentId ?? null,
-  })
+  }) => {
+    if (input.parentId) {
+      const parentDepth = await computeFolderDepth(input.organisationId, input.parentId)
+      if (parentDepth + 1 > MAX_FOLDER_DEPTH) {
+        throw createError({ statusCode: 400, statusMessage: 'vault.folder.depth_exceeded' })
+      }
+    }
+    return vaultFoldersItemService.create({
+      organisationId: input.organisationId,
+      name: input.name,
+      parentId: input.parentId ?? null,
+    })
+  }
 
   const updateFolder = async (
     id: string,
@@ -253,6 +333,144 @@ export const createVaultService = (deps: CreateVaultServiceDeps) => {
 
   const softDeleteFolder = async (id: string) =>
     vaultFoldersItemService.update(id, { deletedAt: new Date() })
+
+  /**
+   * Move a folder under a new parent. Validates that the target is in the
+   * same workspace, that no cycle is introduced (the new parent must not be
+   * the folder itself or any of its descendants), and that the resulting
+   * subtree fits within MAX_FOLDER_DEPTH.
+   *
+   * Pass `parentId: null` to move to root.
+   */
+  const moveFolder = async (input: {
+    id: string
+    organisationId: string
+    parentId: string | null
+  }) => {
+    const folder = await vaultFoldersItemService.readOne(input.id)
+    if (!folder || folder.organisationId !== input.organisationId) {
+      throw createError({ statusCode: 404, statusMessage: 'vault.folder.not_found' })
+    }
+    if (folder.id === input.parentId) {
+      throw createError({ statusCode: 400, statusMessage: 'vault.folder.self_parent' })
+    }
+
+    let newParentDepth = 0
+    if (input.parentId !== null) {
+      const target = await vaultFoldersItemService.readOne(input.parentId)
+      if (!target || target.organisationId !== input.organisationId) {
+        throw createError({ statusCode: 404, statusMessage: 'vault.folder.parent_not_found' })
+      }
+      // Cycle check: the new parent must not be a descendant of the folder
+      // being moved. Walk the new parent's ancestors and ensure none of them
+      // is `folder.id`.
+      const targetAncestors = await getAncestorChain(input.organisationId, input.parentId)
+      const wouldCycle = input.parentId === folder.id || targetAncestors.includes(folder.id)
+      if (wouldCycle) {
+        throw createError({ statusCode: 400, statusMessage: 'vault.folder.cycle_forbidden' })
+      }
+      newParentDepth = await computeFolderDepth(input.organisationId, input.parentId)
+    }
+
+    const subtreeDepth = await computeMaxSubtreeDepth(input.organisationId, input.id)
+    // After move, the deepest descendant sits at: newParentDepth + 1 + subtreeDepth
+    // (newParentDepth is the parent's depth; the moved folder itself adds +1;
+    //  subtreeDepth is the deepest descendant relative to the moved folder).
+    const projected = newParentDepth + 1 + subtreeDepth
+    if (projected > MAX_FOLDER_DEPTH) {
+      throw createError({ statusCode: 400, statusMessage: 'vault.folder.depth_exceeded' })
+    }
+
+    return vaultFoldersItemService.update(input.id, { parentId: input.parentId })
+  }
+
+  /**
+   * Delete a folder per REQ-VAULT-9: caller chooses between re-parenting
+   * children to the folder's parent (`move_to_parent`) or recursively
+   * soft-deleting the entire subtree along with its entries
+   * (`delete_recursive`).
+   *
+   * Both strategies are *soft* deletes; hard delete is reserved for the
+   * Trash UI's purge action and the vault Reset flow.
+   */
+  const deleteFolder = async (input: {
+    id: string
+    organisationId: string
+    strategy: 'move_to_parent' | 'delete_recursive'
+  }) => {
+    const folder = await vaultFoldersItemService.readOne(input.id)
+    if (!folder || folder.organisationId !== input.organisationId) {
+      throw createError({ statusCode: 404, statusMessage: 'vault.folder.not_found' })
+    }
+
+    if (input.strategy === 'move_to_parent') {
+      // Re-parent direct children + entries to `folder.parentId`. Indirect
+      // descendants come along for the ride because their parentId still
+      // points at one of the now-reparented folders.
+      await db.transaction(async (tx) => {
+        const now = new Date()
+        await tx
+          .update(schema.vaultFolders)
+          .set({ parentId: folder.parentId, updatedAt: now })
+          .where(and(
+            eq(schema.vaultFolders.organisationId, input.organisationId),
+            eq(schema.vaultFolders.parentId, folder.id),
+            isNull(schema.vaultFolders.deletedAt),
+          ))
+        await tx
+          .update(schema.vaultEntries)
+          .set({ folderId: folder.parentId, updatedAt: now })
+          .where(and(
+            eq(schema.vaultEntries.organisationId, input.organisationId),
+            eq(schema.vaultEntries.folderId, folder.id),
+            isNull(schema.vaultEntries.deletedAt),
+          ))
+        await tx
+          .update(schema.vaultFolders)
+          .set({ deletedAt: now, updatedAt: now })
+          .where(eq(schema.vaultFolders.id, input.id))
+      })
+      return
+    }
+
+    // delete_recursive: soft-delete every descendant folder and every entry
+    // inside any of them.
+    const allIds = new Set<string>([input.id])
+    const stack = [input.id]
+    while (stack.length > 0) {
+      const current = stack.pop()!
+      const children = await vaultFoldersItemService.findMany({
+        filter: { organisationId: input.organisationId, parentId: current, deletedAt: { _null: true } },
+      })
+      for (const child of children) {
+        if (!allIds.has(child.id)) {
+          allIds.add(child.id)
+          stack.push(child.id)
+        }
+      }
+    }
+
+    const ids = Array.from(allIds)
+    await db.transaction(async (tx) => {
+      const now = new Date()
+      await tx
+        .update(schema.vaultEntries)
+        .set({ deletedAt: now, updatedAt: now })
+        .where(and(
+          eq(schema.vaultEntries.organisationId, input.organisationId),
+          inArray(schema.vaultEntries.folderId, ids),
+          isNull(schema.vaultEntries.deletedAt),
+        ))
+      await tx
+        .update(schema.vaultFolders)
+        .set({ deletedAt: now, updatedAt: now })
+        .where(and(
+          eq(schema.vaultFolders.organisationId, input.organisationId),
+          inArray(schema.vaultFolders.id, ids),
+          isNull(schema.vaultFolders.deletedAt),
+        ))
+    })
+  }
 
   // ---------------------------------------------------------------------
   // Tags
@@ -594,6 +812,10 @@ export const createVaultService = (deps: CreateVaultServiceDeps) => {
     listFolders,
     findFolderById,
     softDeleteFolder,
+    moveFolder,
+    deleteFolder,
+    computeFolderDepth,
+    MAX_FOLDER_DEPTH,
 
     // Tags
     findOrCreateTag,

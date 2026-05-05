@@ -336,6 +336,130 @@ describe('vaultService.updateFolder (basic move)', () => {
   })
 })
 
+describe('vaultService folder depth + move + delete (T-V-15)', () => {
+  it('rejects creating a folder past MAX_FOLDER_DEPTH', async () => {
+    const { orgId } = await setupWorkspace()
+    let parent: { id: string } | null = null
+    // Build a chain at the maximum allowed depth (5).
+    for (let i = 0; i < vaultService.MAX_FOLDER_DEPTH; i += 1) {
+      parent = await vaultService.createFolder({
+        organisationId: orgId,
+        name: `L${i + 1}`,
+        parentId: parent?.id ?? null,
+      })
+    }
+    // Attempting to create a 6th level should throw.
+    await expect(
+      vaultService.createFolder({
+        organisationId: orgId,
+        name: 'L6',
+        parentId: parent!.id,
+      }),
+    ).rejects.toMatchObject({ statusCode: 400 })
+  })
+
+  it('moveFolder rejects a cycle (parent into descendant)', async () => {
+    const { orgId } = await setupWorkspace()
+    const a = await vaultService.createFolder({ organisationId: orgId, name: 'A' })
+    const b = await vaultService.createFolder({ organisationId: orgId, name: 'B', parentId: a.id })
+    const c = await vaultService.createFolder({ organisationId: orgId, name: 'C', parentId: b.id })
+
+    // Moving A under C would form a cycle.
+    await expect(
+      vaultService.moveFolder({ id: a.id, organisationId: orgId, parentId: c.id }),
+    ).rejects.toMatchObject({ statusCode: 400 })
+
+    // Moving A onto itself.
+    await expect(
+      vaultService.moveFolder({ id: a.id, organisationId: orgId, parentId: a.id }),
+    ).rejects.toMatchObject({ statusCode: 400 })
+  })
+
+  it('moveFolder enforces resulting subtree depth', async () => {
+    const { orgId } = await setupWorkspace()
+    // Build a 3-deep chain X→Y→Z, then a 3-deep separate chain A→B→C, then
+    // try to move A under Z which would push A,B,C to depths 4,5,6.
+    const x = await vaultService.createFolder({ organisationId: orgId, name: 'X' })
+    const y = await vaultService.createFolder({ organisationId: orgId, name: 'Y', parentId: x.id })
+    const z = await vaultService.createFolder({ organisationId: orgId, name: 'Z', parentId: y.id })
+
+    const a = await vaultService.createFolder({ organisationId: orgId, name: 'A' })
+    const b = await vaultService.createFolder({ organisationId: orgId, name: 'B', parentId: a.id })
+    await vaultService.createFolder({ organisationId: orgId, name: 'C', parentId: b.id })
+
+    await expect(
+      vaultService.moveFolder({ id: a.id, organisationId: orgId, parentId: z.id }),
+    ).rejects.toMatchObject({ statusCode: 400 })
+  })
+
+  it('deleteFolder move_to_parent re-parents children + entries', async () => {
+    const { orgId, masterKey } = await setupWorkspace()
+    const root = await vaultService.createFolder({ organisationId: orgId, name: 'Root' })
+    const mid = await vaultService.createFolder({ organisationId: orgId, name: 'Mid', parentId: root.id })
+    const leaf = await vaultService.createFolder({ organisationId: orgId, name: 'Leaf', parentId: mid.id })
+    const entry = await vaultService.createEntry({
+      organisationId: orgId,
+      masterKey,
+      title: 'In Mid',
+      folderId: mid.id,
+      payload: samplePayload(),
+    })
+
+    await vaultService.deleteFolder({
+      id: mid.id,
+      organisationId: orgId,
+      strategy: 'move_to_parent',
+    })
+
+    // Mid is soft-deleted.
+    const midAfter = await vaultService.findFolderById(mid.id)
+    expect(midAfter!.deletedAt).not.toBeNull()
+    // Leaf re-parented to root.
+    const leafAfter = await vaultService.findFolderById(leaf.id)
+    expect(leafAfter!.parentId).toBe(root.id)
+    // Entry re-parented to root.
+    const [entryRow] = await db
+      .select()
+      .from(schema.vaultEntries)
+      .where(eq(schema.vaultEntries.id, entry.id))
+    expect(entryRow.folderId).toBe(root.id)
+    expect(entryRow.deletedAt).toBeNull()
+  })
+
+  it('deleteFolder delete_recursive cascades to descendants and entries', async () => {
+    const { orgId, masterKey } = await setupWorkspace()
+    const root = await vaultService.createFolder({ organisationId: orgId, name: 'Root' })
+    const mid = await vaultService.createFolder({ organisationId: orgId, name: 'Mid', parentId: root.id })
+    const leaf = await vaultService.createFolder({ organisationId: orgId, name: 'Leaf', parentId: mid.id })
+    const entry = await vaultService.createEntry({
+      organisationId: orgId,
+      masterKey,
+      title: 'In Leaf',
+      folderId: leaf.id,
+      payload: samplePayload(),
+    })
+
+    await vaultService.deleteFolder({
+      id: mid.id,
+      organisationId: orgId,
+      strategy: 'delete_recursive',
+    })
+
+    const midAfter = await vaultService.findFolderById(mid.id)
+    const leafAfter = await vaultService.findFolderById(leaf.id)
+    const rootAfter = await vaultService.findFolderById(root.id)
+    expect(midAfter!.deletedAt).not.toBeNull()
+    expect(leafAfter!.deletedAt).not.toBeNull()
+    expect(rootAfter!.deletedAt).toBeNull()
+
+    const [entryRow] = await db
+      .select()
+      .from(schema.vaultEntries)
+      .where(eq(schema.vaultEntries.id, entry.id))
+    expect(entryRow.deletedAt).not.toBeNull()
+  })
+})
+
 describe('vaultService title substring search', () => {
   it('matches case-insensitively', async () => {
     const { orgId, masterKey } = await setupWorkspace()

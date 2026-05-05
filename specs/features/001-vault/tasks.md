@@ -160,9 +160,16 @@ Tasks are prefixed `T-V-` (V for Vault).
     - `vaultEntryTagsItemService` was initially in deps but the junction is touched directly via Drizzle, so it was removed to avoid a dead parameter; container DI updated to match.
     - Test verifies that the raw row's JSON-stringified payload does NOT contain the plaintext password — sanity check that encryption actually happened.
 
-- [ ] **T-V-15 — Folder operations**
+- [x] **T-V-15 — Folder operations**
   - Move folder (and children); delete folder with `move_to_parent` or `delete_recursive` strategy; depth check (≤ 5).
   - Refs: REQ-VAULT-9.
+  - **Notes:**
+    - `MAX_FOLDER_DEPTH = 5` is exported from the service. Depth is 1-indexed: a folder directly under root is depth 1; the deepest allowed is depth 5.
+    - `createFolder` rejects with 400 `vault.folder.depth_exceeded` when the new folder would land below depth 5.
+    - `moveFolder` validates: target in same workspace, no self-parent, no cycle (target must not be the folder or a descendant), and the resulting *subtree* fits in MAX_FOLDER_DEPTH — `subtreeDepth = newParentDepth + 1 + maxDescendantDepth`.
+    - `getAncestorChain` and `computeMaxSubtreeDepth` walk via the item-service to keep the logic DB-agnostic; cycle detection on the way up throws 500 (data corruption) rather than spinning forever.
+    - `deleteFolder` runs both strategies in a single transaction. `move_to_parent` re-parents direct children + entries to the deleted folder's `parentId` (descendants ride along). `delete_recursive` walks the subtree and soft-deletes every descendant folder + every entry inside any of them. Both are *soft* deletes — hard delete is reserved for the Trash UI's purge action and the Reset flow.
+    - 5 new tests cover: depth-cap on create, cycle rejection on move (self + descendant), depth-cap on move (subtree projection), `move_to_parent` re-parenting, `delete_recursive` cascade. All 19 vault-service tests pass.
 
 - [ ] **T-V-16 — Entry CRUD endpoints**
   - All entry routes per DESIGN-VAULT-API.
