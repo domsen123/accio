@@ -196,9 +196,10 @@ Tasks are prefixed `T-V-` (V for Vault).
     - Folder PATCH splits rename vs move: rename runs through `updateFolder` directly; if `parentId` is also supplied it routes through `moveFolder` so cycle and subtree-depth checks fire. Both can run in one request.
     - Tag DELETE pre-checks workspace membership via `listTags` to avoid leaking tags from other orgs through a bare-id 404.
 
-- [ ] **T-V-18 — Title search**
+- [x] **T-V-18 — Title search**
   - List endpoint accepts `q` parameter, case-insensitive substring match against `title`.
   - Refs: REQ-VAULT-11.
+  - **Notes:** Implemented as part of T-V-14 (service.ts `listEntries.query` → Drizzle `ilike('%' + trimmed + '%')`) and exposed in T-V-16 (`GET /api/vault/entries?q=…`). Case-insensitive title-substring match covered by the `'matches case-insensitively'` test in `tests/vault-service.test.ts`. No additional code; this task acts as the explicit confirmation that REQ-VAULT-11 is satisfied.
 
 - [ ] **T-V-19 — Access log writes**
   - Every state-changing operation and every reveal-equivalent write a row to `vault_access_log` with the appropriate `event_type`.
