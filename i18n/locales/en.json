@@ -38,6 +38,88 @@
       }
     }
   },
+  "kb": {
+    "list": {
+      "title": "Knowledge Base",
+      "subtitle": "Search, filter, and browse your workspace knowledge.",
+      "create": "Create entry",
+      "search": {
+        "placeholder": "Search title and body..."
+      },
+      "error": {
+        "title": "Failed to load entries"
+      },
+      "pagination": {
+        "prev": "Previous",
+        "next": "Next",
+        "page": "Page {page}"
+      }
+    },
+    "filters": {
+      "reset": "Clear filters",
+      "status": {
+        "label": "Status"
+      },
+      "category": {
+        "label": "Category",
+        "all": "All categories"
+      },
+      "tag": {
+        "label": "Tag",
+        "all": "All tags"
+      },
+      "author": {
+        "label": "Author",
+        "all": "All authors",
+        "human": "Human",
+        "ai": "AI"
+      },
+      "source": {
+        "label": "Source",
+        "all": "All sources"
+      }
+    },
+    "status": {
+      "inbox": "Inbox",
+      "draft": "Draft",
+      "verified": "Verified",
+      "archived": "Archived"
+    },
+    "author": {
+      "human": "Human",
+      "ai": "AI"
+    },
+    "source": {
+      "manual": "Manual",
+      "commit": "Commit",
+      "claude_code_session": "Claude Code session",
+      "chat": "Chat",
+      "external": "External"
+    },
+    "empty": {
+      "title": "No entries yet",
+      "subtitle": "Adjust your filters or create a new knowledge base entry to get started."
+    },
+    "detail": {
+      "title": {
+        "fallback": "Knowledge base entry"
+      },
+      "back": "Back to list",
+      "edit": "Edit",
+      "delete": "Delete",
+      "updatedAt": "Updated {date}",
+      "error": {
+        "title": "Failed to load entry"
+      },
+      "body": {
+        "empty": "This entry has no content yet."
+      },
+      "backlinks": {
+        "title": "Backlinks",
+        "empty": "No entries link here yet."
+      }
+    }
+  },
   "shell": {
     "header": {
       "signed-in-as": "Signed in as {email}",

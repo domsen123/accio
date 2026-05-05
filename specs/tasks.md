@@ -131,12 +131,20 @@ Mark tasks done by changing `[ ]` to `[x]`. Add a brief note when deviating from
     - Route-level integration tests deferred — the existing `tests/` harness drives services directly and stands in for service-level coverage. A Nuxt-test-utils harness for full-stack route auth/permission cases is a follow-up (track with T-1.8/T-1.9 since they will need the same harness for page-level smoke tests). Service coverage remains green at 154/154.
 
 ### Client feature: kb
-- [ ] **T-1.8 — KB list and detail pages**
+- [x] **T-1.8 — KB list and detail pages**
   - `app/pages/app/kb/index.vue`, `app/pages/app/kb/[slug].vue`.
   - Search box with FTS, filter chips (tag, category, status, author type, source type).
   - Pinia Colada queries.
   - Refs: REQ-KB-5, DESIGN-FRONTEND.
   - Done when: Pages render lists, navigate to detail, filters change query results.
+  - **Deviations:**
+    - The list view renders entries as a card list rather than `UDataTable`. At this density (variable-length tag/category metadata, optional AI-author indicator) cards read better than a multi-column table; the admin blog-posts page uses the same shape.
+    - Tag filter is a single-select today, not a multi-select. The server's `listKbEntries` filters by a single `tagId`; multi-tag filtering is a TODO once the API supports it.
+    - The `GET /api/kb/entries` route does not return a total count, so the list page uses prev/next buttons (with "is current page full?" as the has-next heuristic) rather than `UPagination`. Switching to `UPagination` is a one-line change once the API exposes a total.
+    - Markdown body on the detail page renders as `<div class="whitespace-pre-wrap font-mono">`. T-1.9 introduces the editor + preview pair and will swap in the proper renderer with wikilink resolution; using a Markdown lib here would have to be replaced again, so the placeholder is intentional.
+    - The "Create entry" button links to `/app/kb/new`, which T-1.9 will add. Clicking it today 404s — accepted per the task brief.
+    - Detail page "Edit" links to `/app/kb/[slug]/edit` (T-1.9); "Delete" is a disabled stub (T-1.10 owns the delete action from the trash workflow).
+    - Workspace context: no `X-Organisation-Id` header is sent. The session payload still doesn't expose the active workspace, so the server's earliest-org fallback applies — same behaviour as T-1.7 manual smoke tests. The API wrapper (`app/features/kb/api/kb.api.ts`) is the right place to inject the header once the workspace switcher persists a selection.
 
 - [ ] **T-1.9 — Markdown editor with preview**
   - Split editor + preview. Wikilinks render as `<a>` to the target slug, with a visual indicator for unresolved links.

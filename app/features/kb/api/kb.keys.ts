@@ -1,0 +1,18 @@
+/**
+ * Pinia Colada query keys for the KB feature.
+ * Convention follows `app/features/admin/api/admin.keys.ts`.
+ */
+import type { KbEntriesListParams, KbTagsListParams } from '../types/kb.types'
+
+export const kbKeys = {
+  all: ['kb'] as const,
+  entries: (params?: KbEntriesListParams) => params
+    ? [...kbKeys.all, 'entries', params] as const
+    : [...kbKeys.all, 'entries'] as const,
+  entry: (slug: string) => [...kbKeys.all, 'entry', slug] as const,
+  entryBacklinks: (id: string) => [...kbKeys.all, 'entry', id, 'backlinks'] as const,
+  categories: () => [...kbKeys.all, 'categories'] as const,
+  tags: (params?: KbTagsListParams) => params
+    ? [...kbKeys.all, 'tags', params] as const
+    : [...kbKeys.all, 'tags'] as const,
+}

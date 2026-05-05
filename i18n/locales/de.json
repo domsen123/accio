@@ -38,6 +38,88 @@
       }
     }
   },
+  "kb": {
+    "list": {
+      "title": "Wissensdatenbank",
+      "subtitle": "Durchsuche, filtere und erkunde dein Wissen.",
+      "create": "Eintrag erstellen",
+      "search": {
+        "placeholder": "Titel und Inhalt durchsuchen..."
+      },
+      "error": {
+        "title": "Einträge konnten nicht geladen werden"
+      },
+      "pagination": {
+        "prev": "Zurück",
+        "next": "Weiter",
+        "page": "Seite {page}"
+      }
+    },
+    "filters": {
+      "reset": "Filter zurücksetzen",
+      "status": {
+        "label": "Status"
+      },
+      "category": {
+        "label": "Kategorie",
+        "all": "Alle Kategorien"
+      },
+      "tag": {
+        "label": "Tag",
+        "all": "Alle Tags"
+      },
+      "author": {
+        "label": "Autor",
+        "all": "Alle Autoren",
+        "human": "Mensch",
+        "ai": "KI"
+      },
+      "source": {
+        "label": "Quelle",
+        "all": "Alle Quellen"
+      }
+    },
+    "status": {
+      "inbox": "Posteingang",
+      "draft": "Entwurf",
+      "verified": "Verifiziert",
+      "archived": "Archiviert"
+    },
+    "author": {
+      "human": "Mensch",
+      "ai": "KI"
+    },
+    "source": {
+      "manual": "Manuell",
+      "commit": "Commit",
+      "claude_code_session": "Claude-Code-Sitzung",
+      "chat": "Chat",
+      "external": "Extern"
+    },
+    "empty": {
+      "title": "Noch keine Einträge",
+      "subtitle": "Passe deine Filter an oder erstelle einen neuen Eintrag, um loszulegen."
+    },
+    "detail": {
+      "title": {
+        "fallback": "Eintrag der Wissensdatenbank"
+      },
+      "back": "Zurück zur Liste",
+      "edit": "Bearbeiten",
+      "delete": "Löschen",
+      "updatedAt": "Aktualisiert {date}",
+      "error": {
+        "title": "Eintrag konnte nicht geladen werden"
+      },
+      "body": {
+        "empty": "Dieser Eintrag hat noch keinen Inhalt."
+      },
+      "backlinks": {
+        "title": "Rückverweise",
+        "empty": "Bisher verlinkt kein Eintrag hierher."
+      }
+    }
+  },
   "shell": {
     "header": {
       "signed-in-as": "Angemeldet als {email}",
