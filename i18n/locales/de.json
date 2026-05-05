@@ -182,6 +182,97 @@
         "successCategory": "Kategorie \"{name}\" erstellt",
         "errorCategory": "Kategorie \"{name}\" konnte nicht erstellt werden"
       }
+    },
+    "subnav": {
+      "all": "Alle",
+      "inbox": "Posteingang",
+      "trash": "Papierkorb"
+    },
+    "actions": {
+      "verify": "Verifizieren",
+      "draft": "Entwurf",
+      "archive": "Archivieren",
+      "delete": "Löschen",
+      "restore": "Wiederherstellen",
+      "purge": "Endgültig löschen"
+    },
+    "inbox": {
+      "title": "Posteingang",
+      "subtitle": "Unbearbeitete Einträge mit einem Klick triagieren.",
+      "error": {
+        "title": "Posteingang konnte nicht geladen werden"
+      },
+      "empty": {
+        "title": "Posteingang ist leer",
+        "subtitle": "Neue KI-generierte Einträge landen hier zur Verifizierung."
+      },
+      "actions": {
+        "verify": {
+          "toast": {
+            "success": "Eintrag verifiziert",
+            "error": "Eintrag konnte nicht verifiziert werden"
+          }
+        },
+        "draft": {
+          "toast": {
+            "success": "Als Entwurf gespeichert",
+            "error": "Eintrag konnte nicht in Entwürfe verschoben werden"
+          }
+        },
+        "archive": {
+          "toast": {
+            "success": "Eintrag archiviert",
+            "error": "Eintrag konnte nicht archiviert werden"
+          }
+        },
+        "delete": {
+          "toast": {
+            "success": "Eintrag in den Papierkorb verschoben",
+            "error": "Eintrag konnte nicht gelöscht werden"
+          }
+        }
+      }
+    },
+    "trash": {
+      "title": "Papierkorb",
+      "subtitle": "Einträge wiederherstellen oder endgültig entfernen.",
+      "warning": "Endgültiges Löschen kann nicht rückgängig gemacht werden.",
+      "deletedAt": "Gelöscht {when}",
+      "error": {
+        "title": "Papierkorb konnte nicht geladen werden"
+      },
+      "empty": {
+        "title": "Papierkorb ist leer",
+        "subtitle": "Gelöschte Einträge erscheinen hier. Du kannst sie jederzeit wiederherstellen oder endgültig entfernen."
+      },
+      "actions": {
+        "restore": {
+          "toast": {
+            "success": "Eintrag wiederhergestellt",
+            "error": "Eintrag konnte nicht wiederhergestellt werden"
+          }
+        },
+        "purge": {
+          "toast": {
+            "success": "Eintrag endgültig gelöscht",
+            "error": "Eintrag konnte nicht endgültig gelöscht werden"
+          }
+        }
+      }
+    },
+    "confirm": {
+      "delete": {
+        "title": "In den Papierkorb verschieben?",
+        "body": "Dieser Eintrag wird in den Papierkorb verschoben. Du kannst ihn dort jederzeit wiederherstellen.",
+        "cta": "In Papierkorb verschieben",
+        "cancel": "Abbrechen"
+      },
+      "purge": {
+        "title": "Eintrag endgültig löschen?",
+        "body": "Der Eintrag wird unwiderruflich gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.",
+        "cta": "Endgültig löschen",
+        "cancel": "Abbrechen"
+      }
     }
   },
   "shell": {

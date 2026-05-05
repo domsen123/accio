@@ -92,6 +92,11 @@ export interface KbEntriesListParams {
   sort?: string[]
 }
 
+export interface KbPaginatedListParams {
+  limit?: number
+  offset?: number
+}
+
 export interface KbEntriesListResponse {
   data: KbEntry[]
   limit: number | null

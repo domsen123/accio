@@ -18,6 +18,7 @@ import type {
   KbEntriesListParams,
   KbEntriesListResponse,
   KbEntryResponse,
+  KbPaginatedListParams,
   KbTagsListParams,
   KbTagsResponse,
 } from '../types/kb.types'
@@ -34,6 +35,12 @@ export const useKbApi = () => {
 
     getEntryBacklinks: (id: string): Promise<KbBacklinksResponse> =>
       $api(`/api/kb/entries/${encodeURIComponent(id)}/backlinks`),
+
+    listInbox: (params?: KbPaginatedListParams): Promise<KbEntriesListResponse> =>
+      $api('/api/kb/inbox', { query: params }),
+
+    listTrash: (params?: KbPaginatedListParams): Promise<KbEntriesListResponse> =>
+      $api('/api/kb/trash', { query: params }),
 
     listCategories: (): Promise<KbCategoriesResponse> =>
       $api('/api/kb/categories'),

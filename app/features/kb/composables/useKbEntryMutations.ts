@@ -1,10 +1,18 @@
 /**
- * KB entry mutations (T-1.9).
+ * KB entry mutations (T-1.9, extended in T-1.10).
  *
  * Mirrors the `useAdminBlogPostMutations` pattern: each call returns a
  * Pinia Colada `useMutation` so the form/page owns the loading + error
- * surface. We invalidate both the list query family and the affected
- * `entry-by-slug` query so subsequent navigations pick up fresh data.
+ * surface. Invalidation is centralised in `invalidateEntry` so every page
+ * (list, detail, inbox, trash) stays in sync after any mutation.
+ *
+ * T-1.10 additions:
+ *   - `useVerifyKbEntry` / `useMarkKbEntryDraft` / `useArchiveKbEntry` —
+ *     thin wrappers around `setStatus` for the inbox one-click actions.
+ *   - `usePurgeKbEntry` — hard-delete from Trash (ADR-009: only Trash UI
+ *     calls this; service enforces "must be soft-deleted first").
+ *   - Invalidation now also clears `inbox` and `trash` query families so
+ *     status / soft-delete / restore / purge all keep both pages fresh.
  */
 import type {
   KbCategory,
@@ -41,11 +49,20 @@ export interface UpdateKbEntryInput {
   sourceRef?: string | null
 }
 
+/**
+ * Centralised invalidation. Every entry-mutating call should funnel through
+ * this so list / detail / inbox / trash / backlinks views stay coherent.
+ *
+ * `entry` may be undefined when the server returns no payload (e.g. purge:
+ * 204 No Content). In that case we still wipe the broad families.
+ */
 const invalidateEntry = (
   queryCache: ReturnType<typeof useQueryCache>,
   entry: KbEntry | undefined,
 ) => {
   queryCache.invalidateQueries({ key: kbKeys.entries() })
+  queryCache.invalidateQueries({ key: kbKeys.inbox() })
+  queryCache.invalidateQueries({ key: kbKeys.trash() })
   if (entry?.slug)
     queryCache.invalidateQueries({ key: kbKeys.entry(entry.slug) })
   if (entry?.id)
@@ -116,6 +133,52 @@ export const useSetKbEntryStatus = () => {
       }),
     onSuccess: ({ entry }) => {
       invalidateEntry(queryCache, entry)
+    },
+  })
+}
+
+/**
+ * Inbox quick-actions: Verify / Draft / Archive (T-1.10).
+ *
+ * Each one is a setStatus call to a fixed target status — wrapped so the
+ * inbox page can name what the click does (`verify(id)` reads better than
+ * `setStatus({ id, status: 'verified' })` at the call site).
+ */
+const useSetStatusFixed = (target: KbEntryStatus) => {
+  const queryCache = useQueryCache()
+  const { $api } = useNuxtApp()
+
+  return useMutation({
+    mutation: (id: string): Promise<{ entry: KbEntry }> =>
+      $api(`/api/kb/entries/${id}/status`, {
+        method: 'POST',
+        body: { status: target },
+      }),
+    onSuccess: ({ entry }) => {
+      invalidateEntry(queryCache, entry)
+    },
+  })
+}
+
+export const useVerifyKbEntry = () => useSetStatusFixed('verified')
+export const useMarkKbEntryDraft = () => useSetStatusFixed('draft')
+export const useArchiveKbEntry = () => useSetStatusFixed('archived')
+
+/**
+ * Hard-delete (T-1.10, ADR-009). Only callable from the Trash UI on
+ * already-soft-deleted entries; the server returns 204 No Content, so the
+ * mutation resolves to `null`. Invalidation runs without an entry payload
+ * (we don't need a slug — the trash list is what matters here).
+ */
+export const usePurgeKbEntry = () => {
+  const queryCache = useQueryCache()
+  const { $api } = useNuxtApp()
+
+  return useMutation({
+    mutation: (id: string): Promise<null> =>
+      $api(`/api/kb/entries/${id}/purge`, { method: 'DELETE' }),
+    onSuccess: () => {
+      invalidateEntry(queryCache, undefined)
     },
   })
 }

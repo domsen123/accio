@@ -182,6 +182,97 @@
         "successCategory": "Category \"{name}\" created",
         "errorCategory": "Could not create category \"{name}\""
       }
+    },
+    "subnav": {
+      "all": "All",
+      "inbox": "Inbox",
+      "trash": "Trash"
+    },
+    "actions": {
+      "verify": "Verify",
+      "draft": "Draft",
+      "archive": "Archive",
+      "delete": "Delete",
+      "restore": "Restore",
+      "purge": "Permanently delete"
+    },
+    "inbox": {
+      "title": "Inbox",
+      "subtitle": "Triage unprocessed entries with one click.",
+      "error": {
+        "title": "Failed to load inbox"
+      },
+      "empty": {
+        "title": "Inbox is empty",
+        "subtitle": "New AI-generated entries land here for verification."
+      },
+      "actions": {
+        "verify": {
+          "toast": {
+            "success": "Entry verified",
+            "error": "Could not verify entry"
+          }
+        },
+        "draft": {
+          "toast": {
+            "success": "Moved to drafts",
+            "error": "Could not move entry to drafts"
+          }
+        },
+        "archive": {
+          "toast": {
+            "success": "Entry archived",
+            "error": "Could not archive entry"
+          }
+        },
+        "delete": {
+          "toast": {
+            "success": "Entry moved to trash",
+            "error": "Could not delete entry"
+          }
+        }
+      }
+    },
+    "trash": {
+      "title": "Trash",
+      "subtitle": "Restore entries or remove them for good.",
+      "warning": "Permanent deletion cannot be undone.",
+      "deletedAt": "Deleted {when}",
+      "error": {
+        "title": "Failed to load trash"
+      },
+      "empty": {
+        "title": "Trash is empty",
+        "subtitle": "Soft-deleted entries appear here. Restore or purge them at any time."
+      },
+      "actions": {
+        "restore": {
+          "toast": {
+            "success": "Entry restored",
+            "error": "Could not restore entry"
+          }
+        },
+        "purge": {
+          "toast": {
+            "success": "Entry permanently deleted",
+            "error": "Could not permanently delete entry"
+          }
+        }
+      }
+    },
+    "confirm": {
+      "delete": {
+        "title": "Move to trash?",
+        "body": "This entry will be moved to the Trash. You can restore it from there at any time.",
+        "cta": "Move to trash",
+        "cancel": "Cancel"
+      },
+      "purge": {
+        "title": "Permanently delete entry?",
+        "body": "This will permanently delete the entry. This action cannot be undone.",
+        "cta": "Permanently delete",
+        "cancel": "Cancel"
+      }
     }
   },
   "shell": {

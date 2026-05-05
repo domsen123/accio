@@ -15,6 +15,7 @@
  *     plus "is the current page full?" as a heuristic for "has next page".
  */
 import type { KbEntriesListParams, KbEntry, KbEntryAuthorType, KbEntrySourceType, KbEntryStatus } from '~/features/kb/types/kb.types'
+import KbSubNav from '~/features/kb/components/KbSubNav.vue'
 
 definePageMeta({
   layout: 'app',
@@ -203,6 +204,9 @@ const detailHref = (entry: KbEntry) => `/app/kb/${encodeURIComponent(entry.slug)
         to="/app/kb/new"
       />
     </div>
+
+    <!-- Sub-navigation between All / Inbox / Trash (T-1.10) -->
+    <KbSubNav />
 
     <!-- Filter bar: search + chips/dropdowns -->
     <div class="space-y-3">

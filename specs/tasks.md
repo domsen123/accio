@@ -163,10 +163,17 @@ Mark tasks done by changing `[ ]` to `[x]`. Add a brief note when deviating from
     - Form is shared between create and edit (`app/features/kb/components/KbEntryForm.vue`) so both pages stay thin. Default status is `draft` for human authors per REQ-KB-1; AI-author defaults are handled server-side and out of scope here.
     - New tests: `tests/kb-render-markdown.test.ts` covers the renderer's resolved/unresolved classes, the `[[Title|slug]]` form, code-block exclusion (fenced + inline), plain-Markdown pass-through, and `extractWikilinkTargets` ordering. Suite count moves from 154 → 164.
 
-- [ ] **T-1.10 — Inbox and Trash views**
+- [x] **T-1.10 — Inbox and Trash views**
   - `app/pages/app/kb/inbox.vue` and `app/pages/app/kb/trash.vue` with one-click actions.
   - Refs: REQ-KB-8, REQ-KB-9.
   - Done when: Inbox lists `status='inbox'` entries with Verify / Draft / Archive / Delete buttons; Trash lists `deleted_at IS NOT NULL` with Restore / Purge.
+  - **Deviations / notes:**
+    - Sub-navigation: implemented as a horizontal **tab strip** (`KbSubNav.vue`) rendered inside each KB top-level page (`/app/kb`, `/app/kb/inbox`, `/app/kb/trash`), not as nested side-nav entries. Lower-friction for inbox-triage UX and keeps the global side nav scoped to feature-level entries.
+    - Action buttons render **inline per row** (Verify/Draft/Archive/Delete on inbox cards; Restore/Purge on trash cards). No dropdown menu — bulk actions are out of scope (T-NTH-2).
+    - Confirm modals: a single-step `UModal` for both Soft-Delete (inbox) and Purge (trash). Type-to-confirm was deemed overkill for a single-user hub; the body explicitly states irreversibility and the CTA is `color="error"`. Body translation (DE: *„endgültig gelöscht … kann nicht rückgängig gemacht werden"*).
+    - `useKbEntryMutations` extended with `useVerifyKbEntry` / `useMarkKbEntryDraft` / `useArchiveKbEntry` (thin `setStatus` wrappers) and `usePurgeKbEntry` (DELETE → 204). Centralised invalidation now also wipes `inbox` + `trash` query families so mutations on either page keep both lists fresh.
+    - Pagination matches the list page (prev/next + "is page full?" heuristic) since the API still returns no total.
+    - No new tests added — pages exercise existing service + API paths; suite stays at 164/164.
 
 - [ ] **T-1.11 — Categories tree UI**
   - Sidebar with a collapsible tree; selecting a category filters the entry list.
