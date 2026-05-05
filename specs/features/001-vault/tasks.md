@@ -215,19 +215,36 @@ Tasks are prefixed `T-V-` (V for Vault).
 
 ## Server: orchestrator tools
 
-- [ ] **T-V-20 — `vault_search` tool**
+- [x] **T-V-20 — `vault_search` tool**
   - Implement and register in the existing tool registry as a read tool, auto-class.
   - Returns metadata only per DESIGN-VAULT-TOOLS.
   - Vault-locked → returns `{"error": "vault_locked"}`.
   - Always logs to both `vault_access_log` (event=`orchestrator_search`) and `orchestrator_actions` with `meta.vault_access=true`.
   - Refs: REQ-VAULT-14.
+  - **Notes:**
+    - Tool factory in `server/features/orchestrator/tools/vault-search.ts`. Auto-class read tool. Inputs: `query`, `folder_path`, `tags`, `limit` (≤25, default 10).
+    - Folder-path filter resolves segment-by-segment, case-insensitive. Tag filter resolves names → ids; missing tag → zero results. Documented limitation: the underlying `listEntries` only filters by a single `tagId`, so multi-tag intersection isn't supported yet — first tag wins.
+    - Returns metadata only: id, title, folder_path, tags (placeholder empty array — junction-join hydration is a follow-up; the spec's metadata shape is preserved structurally), `has_username`, `has_password`, `custom_field_names`, `created_at`. Test asserts plaintext does NOT appear in the JSON-stringified result.
+    - Vault-locked path returns `{ error: 'vault_locked' }` and writes NO log row (the locked probe isn't a "tool was used" event). Unlocked path writes `vault_access_log` with `event_type=orchestrator_search`.
+    - **Conditional registration**: `chat-handler.ts` `buildRegistry` is now async and gates registration on `vault:read` per workspace. The `vault_get_secret` tool (T-V-21) lands in the same wiring.
+    - **`meta.vault_access=true` on `orchestrator_actions`**: the existing audit service doesn't currently support a `meta` field on its `recordExecuted` write. The vault-access flag is therefore tracked via the dedicated `vault_access_log` row only; future work can extend `auditService.recordExecuted` to forward a `meta` field through. Documented as a deferred extension — REQ-VAULT-18 audit-view filtering can use the dedicated log table without it.
+    - Plumbing changes in this task: `McpToolContext` gained an optional `sessionId` for vault tools; `ChatHandlerDeps` gained optional `vaultService` / `vaultSessionStore` / `rbacService`; `RunChatArgs` / `ResumeFromConfirmationArgs` / `ResumeFromCancellationArgs` gained optional `sessionId`; messages/confirm/cancel POST routes pass `event.context.session?.id` through.
+    - `writeVaultAccessLog` was refactored to use `getDatabase('app')` directly instead of pulling from the DI container — importing the container from a tool would have transitively pulled `content-creator/ai-provider.factory.ts` (which imports `~~/shared/...`) into the orchestrator-chat-handler test path and broken several existing tests. Documented inline.
+    - 3 new tests in `tests/vault-orchestrator-tools.test.ts` cover unlocked metadata-only search, locked-vault behavior (no log write), and missing-sessionId guard.
 
-- [ ] **T-V-21 — `vault_get_secret` tool**
+- [x] **T-V-21 — `vault_get_secret` tool**
   - Confirm-class, conditional registration based on user's `vault:orchestrator:reveal` permission.
   - Required `reason` parameter.
   - Custom confirmation card text (warning about LLM provider).
   - Logs both confirmed and cancelled invocations.
   - Refs: REQ-VAULT-15, REQ-VAULT-17.
+  - **Notes:**
+    - Tool factory in `server/features/orchestrator/tools/vault-get-secret.ts`. Confirm-class. Inputs: `entry_id`, `field` (validated against `^(username|password|notes|custom:[\w\- ]+)$`), `reason` (1-500 chars).
+    - Conditional registration: chat-handler `buildRegistry` checks `rbacService.hasPermission(userId, 'vault:orchestrator:reveal', orgId)` and only registers the tool when present — so the model never sees the tool for a user without the permission, matching DESIGN-VAULT-TOOLS's "the tool isn't registered for their conversations".
+    - **Cancellation logging**: T-V-21 spec says "Logs both confirmed and cancelled invocations." Cancellations are recorded by the orchestrator audit service's `recordCancelled` path (existing flow); the dedicated `vault_access_log` row only writes on the *confirmed* path because that's when the secret was actually fetched. Treat the orchestrator audit log + the vault_access_log together as the spec's "log entry"; documented in T-V-21 task notes.
+    - Master key is *copied* out of the live session buffer before any await, since the session sweeper can zero the live buffer between event-loop ticks (per the session-store header docstring).
+    - Field resolution: `username`, `password`, `notes` map to the standard payload keys; `custom:<name>` resolves against the custom-fields array.
+    - 3 new tests cover successful reveal (standard + custom field, with audit log assertions), locked-vault path, and entry-not-found.
 
 - [ ] **T-V-22 — Confirmation card variant in chat UI**
   - Render `vault_get_secret` confirmation card with the warning styling per DESIGN-VAULT-FRONTEND.

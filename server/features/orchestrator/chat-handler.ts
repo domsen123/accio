@@ -34,7 +34,10 @@ import type { DatabaseClient } from '../../infrastructure/database/client'
 import type { AiProviderService } from '../ai/provider'
 import type { KbCategoryService, KbEntryService, KbTagService } from '../kb/service'
 import type { Permission, PermissionScope } from '../rbac/permissions'
+import type { RbacService } from '../rbac/rbac.service'
 import type { TodoService } from '../todo/service'
+import type { VaultService } from '../vault/service'
+import type { VaultSessionStore } from '../vault/session-store'
 import type { AuditedInvokeOutcome, AuditService } from './audit'
 import type { ConversationsService } from './conversations.service'
 import type { McpToolContext } from './mcp-server'
@@ -52,7 +55,13 @@ import {
   OrchestratorConversationNotFoundError,
 } from './errors'
 import { createMcpServer } from './mcp-server'
-import { registerReadTools, registerWriteToolsKb, registerWriteToolsTodo } from './tools'
+import {
+  registerReadTools,
+  registerVaultReadTools,
+  registerVaultRevealTool,
+  registerWriteToolsKb,
+  registerWriteToolsTodo,
+} from './tools'
 
 // ─── Public surface ─────────────────────────────────────────────────────────
 
@@ -110,6 +119,19 @@ export interface ChatHandlerDeps {
   /** Permission guard — bound to the H3 event by the caller. */
   permissionGuard: PermissionGuard
   /**
+   * Vault service + session-store — wired at the route level when the
+   * chat handler is created. Optional so tests / non-vault setups can
+   * skip them; absent deps cause the vault tools to not be registered.
+   */
+  vaultService?: VaultService
+  vaultSessionStore?: VaultSessionStore
+  /**
+   * RBAC service — used to gate `vault_get_secret` registration on
+   * `vault:orchestrator:reveal` per REQ-VAULT-15. Required when
+   * `vaultService` is provided.
+   */
+  rbacService?: RbacService
+  /**
    * Maximum loop iterations per HTTP request. Defends against accidental
    * tool-call infinite loops; callers can pass a small number in tests.
    * Default 10.
@@ -121,6 +143,8 @@ export interface RunChatArgs {
   conversationId: string
   organisationId: string
   userId: string
+  /** Auth session id — required for vault tools (T-V-20+) which key on it. */
+  sessionId?: string
   /** New user message text. */
   userText: string
   /** SSE sink — created by the route handler. */
@@ -133,6 +157,7 @@ export interface ResumeFromConfirmationArgs {
   conversationId: string
   organisationId: string
   userId: string
+  sessionId?: string
   /** The pending audit row id to re-invoke. T-3.12 reads this from the route. */
   actionId: string
   sink: ChatSseSink
@@ -143,6 +168,7 @@ export interface ResumeFromCancellationArgs {
   conversationId: string
   organisationId: string
   userId: string
+  sessionId?: string
   /** The pending audit row id to mark cancelled. T-3.12 reads this from the route. */
   actionId: string
   sink: ChatSseSink
@@ -277,14 +303,30 @@ export const createChatHandler = (deps: ChatHandlerDeps): ChatHandler => {
     todoService,
     db,
     permissionGuard,
+    vaultService,
+    vaultSessionStore,
+    rbacService,
     maxLoopIterations = DEFAULT_MAX_LOOP_ITERATIONS,
   } = deps
 
   /**
    * Build the per-request MCP registry. Always registers read tools; adds
    * write tools when the conversation is in `read_write` mode (REQ-ORCH-3).
+   *
+   * Vault tools are registered when `vaultService` + `vaultSessionStore`
+   * are wired into the handler:
+   *   - `vault_search` (read) is gated on `vault:read`.
+   *   - `vault_get_secret` (confirm) is gated on
+   *     `vault:orchestrator:reveal` per REQ-VAULT-15.
+   *
+   * Permission checks happen here at registry-build time so the model
+   * never sees a tool it cannot use, matching DESIGN-VAULT-TOOLS's
+   * "conditional registration" semantics.
    */
-  const buildRegistry = (mode: 'read_only' | 'read_write') => {
+  const buildRegistry = async (
+    mode: 'read_only' | 'read_write',
+    ctx: { userId: string, organisationId: string },
+  ) => {
     const server = createMcpServer()
     registerReadTools(server, {
       kbEntryService,
@@ -297,6 +339,26 @@ export const createChatHandler = (deps: ChatHandlerDeps): ChatHandler => {
       registerWriteToolsKb(server, { kbEntryService, kbCategoryService, kbTagService })
       registerWriteToolsTodo(server, { todoService, kbEntryService })
     }
+
+    if (vaultService && vaultSessionStore && rbacService) {
+      const hasRead = await rbacService.hasPermission(ctx.userId, {
+        permission: 'vault:read' as Permission,
+        scope: 'organisation',
+        scopeId: ctx.organisationId,
+      })
+      if (hasRead) {
+        registerVaultReadTools(server, { vaultService, vaultSessionStore })
+        const hasReveal = await rbacService.hasPermission(ctx.userId, {
+          permission: 'vault:orchestrator:reveal' as Permission,
+          scope: 'organisation',
+          scopeId: ctx.organisationId,
+        })
+        if (hasReveal) {
+          registerVaultRevealTool(server, { vaultService, vaultSessionStore })
+        }
+      }
+    }
+
     return server
   }
 
@@ -333,7 +395,10 @@ export const createChatHandler = (deps: ChatHandlerDeps): ChatHandler => {
     }
 
     // 3. Build registry + ai-client (per-request — see file header).
-    const mcpServer = buildRegistry(conversation.mode as 'read_only' | 'read_write')
+    const mcpServer = await buildRegistry(
+      conversation.mode as 'read_only' | 'read_write',
+      { userId: args.userId, organisationId: args.organisationId },
+    )
     const aiClient = createOrchestratorAiClient({
       aiProviderService,
       conversationsService,
@@ -562,6 +627,7 @@ export const createChatHandler = (deps: ChatHandlerDeps): ChatHandler => {
     const toolContext: McpToolContext = {
       organisationId: args.organisationId,
       userId: args.userId,
+      sessionId: args.sessionId,
       conversationId: args.conversationId,
       mode: prep.conversation.mode as 'read_only' | 'read_write',
       authorName: prep.resolved.authorName,
@@ -736,6 +802,7 @@ export const createChatHandler = (deps: ChatHandlerDeps): ChatHandler => {
     const toolContext: McpToolContext = {
       organisationId: args.organisationId,
       userId: args.userId,
+      sessionId: args.sessionId,
       conversationId: args.conversationId,
       mode: prep.conversation.mode as 'read_only' | 'read_write',
       authorName: prep.resolved.authorName,
@@ -871,6 +938,7 @@ export const createChatHandler = (deps: ChatHandlerDeps): ChatHandler => {
     const toolContext: McpToolContext = {
       organisationId: args.organisationId,
       userId: args.userId,
+      sessionId: args.sessionId,
       conversationId: args.conversationId,
       mode: prep.conversation.mode as 'read_only' | 'read_write',
       authorName: prep.resolved.authorName,

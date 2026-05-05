@@ -66,6 +66,13 @@ export type ToolMode = 'read' | 'write'
 export interface McpToolContext {
   organisationId: string
   userId: string
+  /**
+   * Auth session id for the active request. Required by vault tools
+   * (T-V-20+) which key the in-memory master-key store on
+   * `(userId, sessionId)`. Optional because non-vault tools and most tests
+   * don't need it.
+   */
+  sessionId?: string
   conversationId?: string
   /**
    * The conversation's current mode. `read_only` conversations must not be

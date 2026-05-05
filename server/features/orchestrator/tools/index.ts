@@ -15,6 +15,8 @@
 import type { DatabaseClient } from '../../../infrastructure/database/client'
 import type { KbCategoryService, KbEntryService, KbTagService } from '../../kb/service'
 import type { TodoService } from '../../todo/service'
+import type { VaultService } from '../../vault/service'
+import type { VaultSessionStore } from '../../vault/session-store'
 import type { McpServer, Tool } from '../mcp-server'
 
 import { createKbAddTagTool } from './kb-add-tag'
@@ -41,6 +43,8 @@ import { createTodoSoftDeleteTool } from './todo-soft-delete'
 import { createTodoUncompleteTool } from './todo-uncomplete'
 import { createTodoUnlinkKbTool } from './todo-unlink-kb'
 import { createTodoUpdateTool } from './todo-update'
+import { createVaultGetSecretTool } from './vault-get-secret'
+import { createVaultSearchTool } from './vault-search'
 
 export {
   createKbAddTagTool,
@@ -197,6 +201,19 @@ export {
   todoUpdateInputSchema,
   type TodoUpdateOutput,
 } from './todo-update'
+export {
+  createVaultGetSecretTool,
+  type VaultGetSecretInput,
+  vaultGetSecretInputSchema,
+  type VaultGetSecretOutput,
+} from './vault-get-secret'
+export {
+  createVaultSearchTool,
+  type VaultSearchInput,
+  vaultSearchInputSchema,
+  type VaultSearchOutput,
+  type VaultSearchResultItem,
+} from './vault-search'
 
 export interface ReadToolDeps {
   kbEntryService: KbEntryService
@@ -225,11 +242,44 @@ export interface WriteToolTodoDeps {
   kbEntryService: KbEntryService
 }
 
+export interface VaultToolsDeps {
+  vaultService: VaultService
+  vaultSessionStore: VaultSessionStore
+}
+
 /**
  * Combined dep set for `createAllTools`. As future write/project slots arrive
  * (Phase 4 projects) they'll add their service deps here.
  */
 export interface AllToolDeps extends ReadToolDeps, WriteToolKbDeps, WriteToolTodoDeps {}
+
+/**
+ * Build the vault read tool set. `vault_get_secret` is included but the
+ * caller (chat-handler) is responsible for the conditional registration
+ * gate on `vault:orchestrator:reveal` per REQ-VAULT-15. Use the dedicated
+ * `createVaultRevealTool` factory to opt into reveal separately.
+ */
+export const createVaultReadTools = (deps: VaultToolsDeps): Tool[] => [
+  createVaultSearchTool({
+    vaultService: deps.vaultService,
+    vaultSessionStore: deps.vaultSessionStore,
+  }) as unknown as Tool,
+]
+
+export const createVaultRevealTool = (deps: VaultToolsDeps): Tool =>
+  createVaultGetSecretTool({
+    vaultService: deps.vaultService,
+    vaultSessionStore: deps.vaultSessionStore,
+  }) as unknown as Tool
+
+export const registerVaultReadTools = (server: McpServer, deps: VaultToolsDeps): void => {
+  for (const tool of createVaultReadTools(deps))
+    server.register(tool)
+}
+
+export const registerVaultRevealTool = (server: McpServer, deps: VaultToolsDeps): void => {
+  server.register(createVaultRevealTool(deps))
+}
 
 /**
  * Build every read tool against the supplied service deps. Returned in a

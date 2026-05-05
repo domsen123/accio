@@ -6,12 +6,16 @@
  * (T-V-29) can render a per-workspace timeline of who decrypted what
  * and when, regardless of channel.
  *
- * This is a thin wrapper around `container.items.vaultAccessLog.create`
- * that gives callers a typed `eventType` and a single seam to extend
- * if we ever batch or async-flush logs (we don't today — synchronous
- * inserts inside the request keep "the log shows the action" tight).
+ * This module deliberately does NOT import the DI container — vault
+ * tooling and the orchestrator chat-handler test path would otherwise
+ * pull in every container-wired service (incl. content-creator) just
+ * to write a log row. We resolve `getDatabase('app')` directly, the
+ * same lazy seam container.ts uses, and run a typed insert via the
+ * shared schema definition.
  */
-import { container } from '../../utils/container'
+import { ulid } from 'ulid'
+import { vaultAccessLog } from '../../database/schema'
+import { getDatabase } from '../../infrastructure/database/client'
 
 export type VaultAccessEventType
   = | 'unlock'
@@ -38,13 +42,19 @@ export interface WriteVaultAccessLogInput {
 }
 
 export const writeVaultAccessLog = async (input: WriteVaultAccessLogInput) => {
-  return container.items.vaultAccessLog.create({
-    organisationId: input.organisationId,
-    userId: input.userId,
-    eventType: input.eventType,
-    entryId: input.entryId ?? null,
-    fieldName: input.fieldName ?? null,
-    reason: input.reason ?? null,
-    conversationId: input.conversationId ?? null,
-  })
+  const db = getDatabase('app')
+  const [row] = await db
+    .insert(vaultAccessLog)
+    .values({
+      id: ulid(),
+      organisationId: input.organisationId,
+      userId: input.userId,
+      eventType: input.eventType,
+      entryId: input.entryId ?? null,
+      fieldName: input.fieldName ?? null,
+      reason: input.reason ?? null,
+      conversationId: input.conversationId ?? null,
+    })
+    .returning()
+  return row
 }

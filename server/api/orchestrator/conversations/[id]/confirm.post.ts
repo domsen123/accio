@@ -58,6 +58,9 @@ export default defineEventHandler(async (event) => {
     todoService: container.todoService,
     db: getDatabase('app'),
     permissionGuard: createH3PermissionGuard(event, requirePermission),
+    vaultService: container.vaultService,
+    vaultSessionStore: container.vaultSessionStore,
+    rbacService: container.rbacService,
   })
 
   // Pre-flight validation throws before SSE opens (404 / 409). The chat
@@ -88,6 +91,7 @@ export default defineEventHandler(async (event) => {
       conversationId: id,
       organisationId: ws.organisationId,
       userId: ws.userId,
+      sessionId: event.context.session?.id,
       actionId: body.actionId,
       sink,
       abortSignal: abortController.signal,

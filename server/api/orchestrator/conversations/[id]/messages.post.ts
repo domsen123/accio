@@ -60,6 +60,9 @@ export default defineEventHandler(async (event) => {
     todoService: container.todoService,
     db: getDatabase('app'),
     permissionGuard: createH3PermissionGuard(event, requirePermission),
+    vaultService: container.vaultService,
+    vaultSessionStore: container.vaultSessionStore,
+    rbacService: container.rbacService,
   })
 
   // Open the SSE stream. h3 sets the right headers; we push events as
@@ -87,6 +90,7 @@ export default defineEventHandler(async (event) => {
       conversationId: id,
       organisationId: ws.organisationId,
       userId: ws.userId,
+      sessionId: event.context.session?.id,
       userText: body.content,
       sink,
       abortSignal: abortController.signal,
