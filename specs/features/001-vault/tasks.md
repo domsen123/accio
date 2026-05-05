@@ -201,9 +201,15 @@ Tasks are prefixed `T-V-` (V for Vault).
   - Refs: REQ-VAULT-11.
   - **Notes:** Implemented as part of T-V-14 (service.ts `listEntries.query` → Drizzle `ilike('%' + trimmed + '%')`) and exposed in T-V-16 (`GET /api/vault/entries?q=…`). Case-insensitive title-substring match covered by the `'matches case-insensitively'` test in `tests/vault-service.test.ts`. No additional code; this task acts as the explicit confirmation that REQ-VAULT-11 is satisfied.
 
-- [ ] **T-V-19 — Access log writes**
+- [x] **T-V-19 — Access log writes**
   - Every state-changing operation and every reveal-equivalent write a row to `vault_access_log` with the appropriate `event_type`.
   - Refs: REQ-VAULT-19.
+  - **Notes:**
+    - Helper `writeVaultAccessLog` in `server/features/vault/access-log.ts` wraps `container.items.vaultAccessLog.create` with a typed `eventType` and the standard fields.
+    - Wired into entry endpoints (T-V-16): `entries/index.post.ts` (entry_create), `entries/[id].patch.ts` (entry_update), `entries/[id].delete.ts` (entry_delete), `entries/[id]/duplicate.post.ts` (entry_create on the new clone), `entries/[id]/restore.post.ts` (entry_update — no `entry_restore` enum value, restoring is a row-level update), `entries/[id]/purge.delete.ts` (entry_delete; logged BEFORE the hard delete so `entry_id` FK is briefly present in the same request).
+    - `ui_reveal` events land with the entry-detail UI in T-V-26 (per-click reveal toggle).
+    - `orchestrator_search` and `orchestrator_reveal` land in T-V-20 / T-V-21 with the tool implementations.
+    - `unlock` / `lock` / `auto_lock` events deferred: the `vault_access_log.organisation_id` column is `NOT NULL`, but unlock/lock are per-user and span every workspace the user can access. Logging "the unlock" cleanly would require either a schema relaxation or fan-out to every workspace the user is a member of — both exceed the spec's silence on the matter. Documented and parked; revisit during T-V-29 (audit view) when the UX shape is clearer.
 
 ---
 

@@ -6,6 +6,7 @@
 import { resolveWorkspace } from '~~/server/features/kb/workspace'
 import { PERMISSIONS } from '~~/server/features/rbac/permissions'
 import { requirePermission } from '~~/server/features/rbac/rbac.guard'
+import { writeVaultAccessLog } from '~~/server/features/vault/access-log'
 import { requireVaultUnlocked } from '~~/server/features/vault/api-utils'
 import { container } from '~~/server/utils/container'
 
@@ -28,6 +29,13 @@ export default defineEventHandler(async (event) => {
     organisationId: ws.organisationId,
     masterKey: vault.session.masterKey,
     createdBy: ws.userId,
+  })
+
+  await writeVaultAccessLog({
+    organisationId: ws.organisationId,
+    userId: ws.userId,
+    eventType: 'entry_create',
+    entryId: entry.id,
   })
 
   setResponseStatus(event, 201)

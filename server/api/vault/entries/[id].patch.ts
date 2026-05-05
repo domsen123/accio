@@ -10,6 +10,7 @@
 import { resolveWorkspace } from '~~/server/features/kb/workspace'
 import { PERMISSIONS } from '~~/server/features/rbac/permissions'
 import { requirePermission } from '~~/server/features/rbac/rbac.guard'
+import { writeVaultAccessLog } from '~~/server/features/vault/access-log'
 import { requireVaultUnlocked } from '~~/server/features/vault/api-utils'
 import { updateEntryBodySchema } from '~~/server/features/vault/schemas'
 import { container } from '~~/server/utils/container'
@@ -35,6 +36,13 @@ export default defineEventHandler(async (event) => {
     organisationId: ws.organisationId,
     masterKey: vault.session.masterKey,
     patch: body,
+  })
+
+  await writeVaultAccessLog({
+    organisationId: ws.organisationId,
+    userId: ws.userId,
+    eventType: 'entry_update',
+    entryId: entry.id,
   })
 
   return { entry }
