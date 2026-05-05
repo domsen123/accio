@@ -288,16 +288,25 @@ Tasks are prefixed `T-V-` (V for Vault).
     - **Drag-to-reparent deferred**: out of scope for the spec's "ship the data layer cleanly" intent and adds significant complexity (collision detection, depth re-validation in the drop handler that mirrors the server-side check). The server already supports moves via `PATCH /api/vault/folders/[id]` so the affordance can be added later without API churn.
     - Depth cap is enforced server-side (T-V-15) — the tree component doesn't pre-empt; it surfaces the 400 error inline when a depth-exceeding rename / move comes back.
 
-- [ ] **T-V-26 — Entry detail / edit form**
+- [x] **T-V-26 — Entry detail / edit form**
   - Standard fields, custom fields with add/remove, folder picker, tag picker.
   - Reveal toggle on every secret field (logs `ui_reveal` per click).
   - Copy buttons on every value field; clipboard auto-clear after 30s for secrets.
   - Refs: REQ-VAULT-7, REQ-VAULT-8, REQ-VAULT-12, REQ-VAULT-19.
+  - **Notes:**
+    - `VaultEntryForm.vue` handles both create (`/app/vault/entries/new`) and edit (`/app/vault/entries/[id]`). The form binds to a decrypted payload via `useVaultEntry`, builds a fresh `PlainEntryPayload` on submit, and PATCHes / POSTs in one round-trip (no per-field updates).
+    - Folder picker uses `folderPath` to render `Work / GitHub / Production` paths in the dropdown. Tag picker is a free-text chip input — the server's `findOrCreate` resolves names case-insensitively.
+    - **Reveal toggle**: each click flips `revealed[key]` and (for existing entries) calls `POST /api/vault/entries/[id]/reveal` to log `ui_reveal` with the field name. New endpoint `server/api/vault/entries/[id]/reveal.post.ts` added — keeps plaintext off the wire (we only ship the field name) so the audit log captures the click without re-transmitting the secret.
+    - **Clipboard auto-clear**: `useSecretClipboard` writes via `navigator.clipboard.writeText` and schedules a 30s clear. The clear is best-effort: it `readText`s first to avoid stomping a value the user has since copied elsewhere; on permission failure it falls back to an unconditional clear. Browser limitations (OS clipboard history, mobile autofill) acknowledged here per T-V-NTH-1 — full investigation deferred.
+    - Save error messages are server-side codes routed through i18n; an unknown code defaults to `vault.entry.error_generic`.
 
-- [ ] **T-V-27 — Password generator**
+- [x] **T-V-27 — Password generator**
   - Generator button next to password field; popover with length slider and character-class toggles.
   - Uses `crypto.getRandomValues`.
   - Refs: REQ-VAULT-20.
+  - **Notes:**
+    - `VaultPasswordGenerator.vue` popover with length slider (8-64) + lowercase/uppercase/digits/symbols toggles. Drives `generatePassword` from `app/features/vault/utils/passwordGenerator.ts` which uses `crypto.getRandomValues` for both the per-pool seed character (one from each enabled pool) and the Fisher-Yates shuffle. Excludes ambiguous characters (`0/O`, `1/l/I`) by default; `excludeAmbiguous: false` opts back to the raw pools.
+    - Wired into the password field of `VaultEntryForm.vue` — the popover button sits between the reveal-eye and copy buttons, and the `generated` event sets `password.value`.
 
 - [ ] **T-V-28 — Trash view**
   - `/app/vault/trash` lists soft-deleted entries; restore and purge actions.

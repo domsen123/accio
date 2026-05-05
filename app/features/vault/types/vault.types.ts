@@ -19,6 +19,8 @@ export interface VaultCustomField {
   value: string
 }
 
+export type CustomField = VaultCustomField
+
 export interface PlainEntryPayload {
   username: string | null
   password: string | null

@@ -76,6 +76,9 @@ export const useVaultApi = () => {
     purgeEntry: (id: string): Promise<{ ok: true }> =>
       $api(`/api/vault/entries/${encodeURIComponent(id)}/purge`, { method: 'DELETE' }),
 
+    logFieldReveal: (id: string, body: { field: string }): Promise<{ ok: true }> =>
+      $api(`/api/vault/entries/${encodeURIComponent(id)}/reveal`, { method: 'POST', body }),
+
     listTrash: (): Promise<{ data: VaultEntryMeta[] }> =>
       $api('/api/vault/trash'),
 
