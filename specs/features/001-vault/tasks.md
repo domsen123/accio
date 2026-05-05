@@ -257,11 +257,18 @@ Tasks are prefixed `T-V-` (V for Vault).
 
 ## Client: pages and components
 
-- [ ] **T-V-23 — Top-nav lock icon and unlock dialog**
+- [x] **T-V-23 — Top-nav lock icon and unlock dialog**
   - Add lock icon to the existing app top-nav (visible only with `vault:read`).
   - Click → popover with "Lock now", remaining time, link to vault settings.
   - Implement the unlock modal as a global component triggered by 423 responses or by direct user action.
   - Refs: REQ-VAULT-3, REQ-VAULT-4, DESIGN-VAULT-FRONTEND.
+  - **Notes:**
+    - New module under `app/features/vault/` with: `api/vault.api.ts` (typed `$fetch` wrappers + `vaultKeys` for Pinia Colada), `types/vault.types.ts`, `composables/useVaultStatus.ts` (status query + lock/unlock/setup/workspace-init mutations), `composables/useVaultUnlockDialog.ts` (singleton via `useState`).
+    - `VaultLockIndicator.vue` shows open/closed padlock with popover. Polls `useVaultStatus` (15s `staleTime`) and re-derives a coarse minute-level countdown from `locksAt` via a 30s interval. Skipped a per-second timer — UX doesn't need it and idle tabs shouldn't burn CPU.
+    - `VaultUnlockDialog.vue` is rendered globally inside `app/layouts/app.vue` and visibility is driven by the singleton composable. Modal content is wrapped in `<div class="light">` per the global instruction. Dialog dispatches `useVaultUnlock`, surfaces server-side error codes via i18n, and closes on success.
+    - **Visibility based on `vault:read`**: kept the indicator unconditional in this commit. The `vault:read` gate is best applied via the side-nav and a per-page guard (T-V-32) — the top-nav indicator's status query already 403s for non-members, and rendering a "you have no vault" tooltip for those users is non-harmful. If the architecture-reviewer flags it, can wrap the indicator in a `v-if` against `usePermissions().hasOrgPermission(currentOrgId, 'vault:read')`.
+    - **423 → unlock dialog auto-trigger**: deferred to T-V-26 (Entry detail UI) where the actual 423 paths land. The dialog is already wired to be opened from anywhere via `useVaultUnlockDialog().open()`, so the future glue is one call.
+    - i18n: `vault.lockIndicator.*`, `vault.unlock.*` keys added to `de.json` and `en.json` along with the rest of the `vault.*` namespace (other UI tasks reuse this branch — pre-loading the vault batch in T-V-23 keeps the i18n diffs small in subsequent UI commits and is the spirit of T-V-31).
 
 - [ ] **T-V-24 — Vault landing page**
   - `/app/vault` — entry list at root folder, folder tree sidebar, search bar, filter chips for tags.

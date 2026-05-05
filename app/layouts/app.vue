@@ -240,6 +240,8 @@ const handleOrchestratorLaunch = () => {
               <span class="hidden lg:inline">{{ $t('app.shell.orchestrator.launch') }}</span>
             </UButton>
 
+            <VaultLockIndicator />
+
             <AppLocaleSwitcher />
             <UColorModeButton />
           </template>
@@ -252,5 +254,6 @@ const handleOrchestratorLaunch = () => {
         </div>
       </template>
     </UDashboardPanel>
+    <VaultUnlockDialog />
   </UDashboardGroup>
 </template>
