@@ -171,12 +171,20 @@ Tasks are prefixed `T-V-` (V for Vault).
     - `deleteFolder` runs both strategies in a single transaction. `move_to_parent` re-parents direct children + entries to the deleted folder's `parentId` (descendants ride along). `delete_recursive` walks the subtree and soft-deletes every descendant folder + every entry inside any of them. Both are *soft* deletes — hard delete is reserved for the Trash UI's purge action and the Reset flow.
     - 5 new tests cover: depth-cap on create, cycle rejection on move (self + descendant), depth-cap on move (subtree projection), `move_to_parent` re-parenting, `delete_recursive` cascade. All 19 vault-service tests pass.
 
-- [ ] **T-V-16 — Entry CRUD endpoints**
+- [x] **T-V-16 — Entry CRUD endpoints**
   - All entry routes per DESIGN-VAULT-API.
   - Permission guards.
   - Zod input validation; secret fields tagged for log redaction (DESIGN-VAULT-LOGGING).
   - Vault-locked → HTTP 423.
   - Refs: REQ-VAULT-7, REQ-VAULT-8, REQ-VAULT-12.
+  - **Notes:**
+    - Routes added: `POST /api/vault/entries`, `GET /api/vault/entries`, `GET /api/vault/entries/[id]`, `PATCH /api/vault/entries/[id]`, `DELETE /api/vault/entries/[id]`, `POST /api/vault/entries/[id]/restore`, `POST /api/vault/entries/[id]/duplicate`, `DELETE /api/vault/entries/[id]/purge`, `GET /api/vault/trash`.
+    - Folder & tag routes split out to T-V-17 per the original task split.
+    - Single-seam helpers: `requireVaultUnlocked(event)` returns `{ userId, sessionId, session }` or throws 423; `resolveWorkspace` reused from KB. Permissions resolved via the existing `requirePermission` guard.
+    - LIST + TRASH endpoints strip the encrypted `payload` from the response — only the GET-by-id route returns the decrypted payload. This keeps cross-list views from accidentally serializing ciphertext blobs over the wire.
+    - List endpoint accepts a `rootOnly` boolean as a sentinel for `folderId IS NULL` (URL queries can't carry `null` cleanly).
+    - Patch endpoint takes a *full* `payload` blob when it's supplied — partial-payload updates would force a server-side decrypt + re-encrypt round-trip, which we deliberately push to the client to keep the server's plaintext window minimal. Documented inline.
+    - Zod schemas live in `server/features/vault/schemas.ts`. T-V-33 will add the actual log-redaction wiring; the schemas already structure secret fields under `payload.*` so the redactor has a clear seam.
 
 - [ ] **T-V-17 — Folder & tag endpoints**
   - All folder and tag routes per DESIGN-VAULT-API.
