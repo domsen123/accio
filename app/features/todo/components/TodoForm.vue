@@ -8,17 +8,11 @@
  *
  * Editor stack:
  *   - Title: plain `UInput`.
- *   - Description: `UTextarea` with monospace styling. KB's editor splits
- *     into editor + live preview because wikilinks make the preview load-
- *     bearing; on a todo description the body is short and the preview
- *     buys nothing, so we render only the textarea and let users open
- *     the detail page if they want to see the rendered Markdown.
+ *   - Description: Nuxt UI `UEditor` in `content-type="markdown"` mode,
+ *     same toolbar as the KB editor.
  *   - Priority: chip-style toggle group (small, ergonomic).
- *   - Due date: native `<input type="datetime-local">` via `UInput`.
- *     Picker support varies across Nuxt UI builds; the native control is
- *     reliable and parses cleanly. The form sends the value through
- *     `new Date(...).toISOString()` so the server gets an unambiguous
- *     instant in time.
+ *   - Due date: `UInputDate` bound to a `CalendarDateTime` (minute
+ *     granularity); converted to/from ISO at the form boundary.
  *   - Parent: typeahead (`TodoParentPicker`) backed by
  *     `GET /api/todos?search=...&limit=10`. Self / descendant rejection is
  *     enforced server-side; any error surfaces here as a toast.
@@ -26,7 +20,7 @@
  *   - KB links: `TodoKbEntryPicker` — multi-select autocomplete against
  *     `GET /api/kb/entries?search=...&limit=10`.
  */
-import type { FormSubmitEvent } from '@nuxt/ui'
+import type { EditorToolbarItem, FormSubmitEvent } from '@nuxt/ui'
 import type {
   CreateTodoInput,
   Todo,
@@ -34,6 +28,7 @@ import type {
   TodoWithRelations,
   UpdateTodoInput,
 } from '../types/todo.types'
+import { CalendarDateTime } from '@internationalized/date'
 import * as z from 'zod'
 import KbTagPicker from '~/features/kb/components/KbTagPicker.vue'
 import { useKbEntry } from '~/features/kb/composables/useKbEntry'
@@ -77,38 +72,25 @@ interface TodoFormState {
   title: string
   description: string
   priority: TodoPriority
-  dueAt: string
+  dueAt: string | null
   parentTodoId: string | null
   tagNames: string[]
   kbEntryIds: string[]
 }
 
-/**
- * `<input type="datetime-local">` produces strings shaped like
- * `2025-04-30T18:00` (no seconds, no timezone). We render an existing
- * UTC ISO from the server in the user's local time so the picker shows
- * what they originally entered.
- */
-const toDatetimeLocalString = (iso: string | null): string => {
-  if (!iso)
-    return ''
+const isoToCalendarDateTime = (iso: string): CalendarDateTime => {
   const d = new Date(iso)
-  if (Number.isNaN(d.getTime()))
-    return ''
-  // YYYY-MM-DDTHH:mm in local time.
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+  return new CalendarDateTime(
+    d.getFullYear(),
+    d.getMonth() + 1,
+    d.getDate(),
+    d.getHours(),
+    d.getMinutes(),
+  )
 }
 
-const fromDatetimeLocalString = (value: string): string | null => {
-  const v = value.trim()
-  if (!v)
-    return null
-  const d = new Date(v)
-  if (Number.isNaN(d.getTime()))
-    return null
-  return d.toISOString()
-}
+const calendarDateTimeToIso = (cdt: CalendarDateTime): string =>
+  new Date(cdt.year, cdt.month - 1, cdt.day, cdt.hour, cdt.minute).toISOString()
 
 const initialTodo = props.todo as TodoWithRelations | null | undefined
 
@@ -126,12 +108,21 @@ const state = reactive<TodoFormState>({
   title: initialTodo?.title ?? '',
   description: initialTodo?.descriptionMd ?? '',
   priority: initialTodo?.priority ?? 'medium',
-  dueAt: toDatetimeLocalString(initialTodo?.dueAt ?? null),
+  dueAt: initialTodo?.dueAt ?? null,
   // Edit mode wins; create mode falls back to the optional `initialParentTodoId`
   // prop (used by the "+ Subtask" navigate-with-prefill flow from T-2.7).
   parentTodoId: initialTodo?.parentTodoId ?? props.initialParentTodoId ?? null,
   tagNames: initialTodo?.tags?.map(tag => tag.name) ?? [],
   kbEntryIds: initialKbEntryIdsForCreate.value,
+})
+
+// `UInputDate` speaks `CalendarDateTime`; the schema-validated source of
+// truth is `state.dueAt` (ISO string or null). This computed bridges the two.
+const dueAtCdt = computed<CalendarDateTime | undefined>({
+  get: () => (state.dueAt ? isoToCalendarDateTime(state.dueAt) : undefined),
+  set: (value) => {
+    state.dueAt = value ? calendarDateTimeToIso(value) : null
+  },
 })
 
 /**
@@ -185,7 +176,7 @@ const schema = z.object({
   title: z.string().trim().min(1, t('todo.form.errors.titleRequired')).max(TITLE_MAX),
   description: z.string().max(DESCRIPTION_MAX),
   priority: z.enum(TODO_PRIORITIES as unknown as [TodoPriority, ...TodoPriority[]]),
-  dueAt: z.string(),
+  dueAt: z.string().nullable(),
   parentTodoId: z.string().nullable(),
   tagNames: z.array(z.string().trim().min(1).max(50)),
   kbEntryIds: z.array(z.string().trim().min(1)),
@@ -208,6 +199,39 @@ const priorityColor = (value: TodoPriority) => {
     case 'low': return 'info' as const
   }
 }
+
+const toolbarItems: EditorToolbarItem[][] = [
+  [
+    { kind: 'undo', icon: 'i-lucide-undo', tooltip: { text: 'Undo' } },
+    { kind: 'redo', icon: 'i-lucide-redo', tooltip: { text: 'Redo' } },
+  ],
+  [
+    {
+      icon: 'i-lucide-heading',
+      tooltip: { text: 'Headings' },
+      content: { align: 'start' },
+      items: [
+        { kind: 'heading', level: 1, icon: 'i-lucide-heading-1', label: 'Heading 1' },
+        { kind: 'heading', level: 2, icon: 'i-lucide-heading-2', label: 'Heading 2' },
+        { kind: 'heading', level: 3, icon: 'i-lucide-heading-3', label: 'Heading 3' },
+      ],
+    },
+    { kind: 'bulletList', icon: 'i-lucide-list', tooltip: { text: 'Bullet List' } },
+    { kind: 'orderedList', icon: 'i-lucide-list-ordered', tooltip: { text: 'Ordered List' } },
+    { kind: 'blockquote', icon: 'i-lucide-text-quote', tooltip: { text: 'Blockquote' } },
+    { kind: 'codeBlock', icon: 'i-lucide-square-code', tooltip: { text: 'Code Block' } },
+    { kind: 'horizontalRule', icon: 'i-lucide-separator-horizontal', tooltip: { text: 'Horizontal Rule' } },
+  ],
+  [
+    { kind: 'mark', mark: 'bold', icon: 'i-lucide-bold', tooltip: { text: 'Bold' } },
+    { kind: 'mark', mark: 'italic', icon: 'i-lucide-italic', tooltip: { text: 'Italic' } },
+    { kind: 'mark', mark: 'strike', icon: 'i-lucide-strikethrough', tooltip: { text: 'Strikethrough' } },
+    { kind: 'mark', mark: 'code', icon: 'i-lucide-code', tooltip: { text: 'Code' } },
+  ],
+  [
+    { kind: 'link', icon: 'i-lucide-link', tooltip: { text: 'Link' } },
+  ],
+]
 
 const { mutateAsync: createTodo, asyncStatus: createStatus, error: createError } = useCreateTodo()
 const { mutateAsync: updateTodo, asyncStatus: updateStatus, error: updateError } = useUpdateTodo()
@@ -232,13 +256,12 @@ const apiError = computed(() => {
 
 const onSubmit = async (event: FormSubmitEvent<Schema>) => {
   try {
-    const dueAt = fromDatetimeLocalString(event.data.dueAt)
     if (isEditMode.value && props.todo) {
       const payload: UpdateTodoInput = {
         title: event.data.title,
         description: event.data.description.length > 0 ? event.data.description : null,
         priority: event.data.priority,
-        dueAt,
+        dueAt: event.data.dueAt,
         parentTodoId: event.data.parentTodoId,
         tagNames: event.data.tagNames,
         kbEntryIds: event.data.kbEntryIds,
@@ -252,7 +275,7 @@ const onSubmit = async (event: FormSubmitEvent<Schema>) => {
         title: event.data.title,
         description: event.data.description.length > 0 ? event.data.description : null,
         priority: event.data.priority,
-        dueAt,
+        dueAt: event.data.dueAt,
         parentTodoId: event.data.parentTodoId,
         tagNames: event.data.tagNames,
         kbEntryIds: event.data.kbEntryIds,
@@ -293,6 +316,26 @@ const onSubmit = async (event: FormSubmitEvent<Schema>) => {
       />
     </Transition>
 
+    <div class="flex justify-end gap-2">
+      <UButton
+        variant="ghost"
+        color="neutral"
+        size="sm"
+        :disabled="isLoading"
+        @click="emit('cancel')"
+      >
+        {{ t('todo.form.actions.cancel') }}
+      </UButton>
+      <UButton
+        form="todo-form"
+        type="submit"
+        size="sm"
+        :loading="isLoading"
+      >
+        {{ isEditMode ? t('todo.form.actions.update') : t('todo.form.actions.create') }}
+      </UButton>
+    </div>
+
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
       <!-- Main column -->
       <div class="lg:col-span-8 space-y-4">
@@ -315,44 +358,20 @@ const onSubmit = async (event: FormSubmitEvent<Schema>) => {
           :label="t('todo.form.description.label')"
           :hint="t('todo.form.description.hint')"
         >
-          <UTextarea
+          <UEditor
+            v-slot="{ editor }"
             v-model="state.description"
+            content-type="markdown"
             :placeholder="t('todo.form.description.placeholder')"
-            :maxlength="DESCRIPTION_MAX"
-            :rows="10"
-            resize
-            class="w-full font-mono"
-            :ui="{
-              base: 'font-mono text-sm leading-relaxed',
-            }"
-          />
+            class="w-full min-h-64 flex flex-col gap-4 rounded-lg bg-elevated/50 ring ring-default p-4"
+          >
+            <UEditorToolbar :editor="editor" :items="toolbarItems" class="pb-4 border-b border-default" />
+          </UEditor>
         </UFormField>
       </div>
 
       <!-- Sidebar -->
       <div class="lg:col-span-4 space-y-4">
-        <UPageCard :title="t('todo.form.publish.title')" variant="subtle">
-          <div class="flex gap-2 justify-end">
-            <UButton
-              variant="ghost"
-              color="neutral"
-              size="sm"
-              :disabled="isLoading"
-              @click="emit('cancel')"
-            >
-              {{ t('todo.form.actions.cancel') }}
-            </UButton>
-            <UButton
-              form="todo-form"
-              type="submit"
-              size="sm"
-              :loading="isLoading"
-            >
-              {{ isEditMode ? t('todo.form.actions.update') : t('todo.form.actions.create') }}
-            </UButton>
-          </div>
-        </UPageCard>
-
         <UPageCard :title="t('todo.form.priority.label')" variant="subtle">
           <UFormField name="priority">
             <div class="flex flex-wrap gap-1.5">
@@ -373,9 +392,11 @@ const onSubmit = async (event: FormSubmitEvent<Schema>) => {
         <UPageCard :title="t('todo.form.dueAt.label')" variant="subtle">
           <UFormField name="dueAt" :hint="t('todo.form.dueAt.hint')">
             <div class="flex items-center gap-2">
-              <UInput
-                v-model="state.dueAt"
-                type="datetime-local"
+              <UInputDate
+                v-model="dueAtCdt"
+                granularity="minute"
+                :hide-time-zone="true"
+                size="sm"
                 class="flex-1"
               />
               <UButton
@@ -385,7 +406,7 @@ const onSubmit = async (event: FormSubmitEvent<Schema>) => {
                 size="xs"
                 icon="i-lucide-x"
                 :aria-label="t('todo.form.dueAt.clear')"
-                @click="state.dueAt = ''"
+                @click="state.dueAt = null"
               />
             </div>
           </UFormField>

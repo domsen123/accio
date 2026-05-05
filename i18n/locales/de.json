@@ -1142,9 +1142,6 @@
         "hint": "Verbinde diese Aufgabe mit einem oder mehreren Knowledge-Base-Einträgen.",
         "empty": "Keine passenden Einträge."
       },
-      "publish": {
-        "title": "Speichern"
-      },
       "actions": {
         "create": "Aufgabe anlegen",
         "update": "Änderungen speichern",

@@ -1142,9 +1142,6 @@
         "hint": "Connect this todo to one or more knowledge-base entries.",
         "empty": "No matching entries."
       },
-      "publish": {
-        "title": "Save"
-      },
       "actions": {
         "create": "Create todo",
         "update": "Save changes",
