@@ -25,6 +25,7 @@ import type { GhProjectsReadService } from '../features/projects/read.service'
 import type { GhSyncService } from '../features/projects/sync.service'
 import type { RbacService } from '../features/rbac/rbac.service'
 import type { TodoService } from '../features/todo/service'
+import type { VaultSessionStore } from '../features/vault/session-store'
 import type { EventBus } from '../infrastructure/events'
 import * as schema from '../database/schema'
 import { createImpersonationService } from '../features/admin/impersonation.service'
@@ -55,6 +56,7 @@ import { createGhProjectsReadService } from '../features/projects/read.service'
 import { createGhSyncService } from '../features/projects/sync.service'
 import { createRbacService } from '../features/rbac/rbac.service'
 import { createTodoService } from '../features/todo/service'
+import { createVaultSessionStore } from '../features/vault/session-store'
 import { getDatabase } from '../infrastructure/database/client'
 import { createItemService } from '../infrastructure/database/item-service'
 import { createEventBus } from '../infrastructure/events'
@@ -445,6 +447,11 @@ const getGhProjectsReadService = lazy(() =>
   }),
 )
 
+// Vault session store (T-V-6) — process-wide map of unlocked vault sessions
+// keyed by `(userId, sessionId)`. Lazy so test harnesses can stub it; the
+// Nitro plugin starts the periodic sweep timer.
+const getVaultSessionStore = lazy((): VaultSessionStore => createVaultSessionStore())
+
 // Public exports
 export const container = {
   get authService(): AuthService {
@@ -524,6 +531,9 @@ export const container = {
   },
   get ghProjectsReadService(): GhProjectsReadService {
     return getGhProjectsReadService()
+  },
+  get vaultSessionStore(): VaultSessionStore {
+    return getVaultSessionStore()
   },
   get eventBus(): EventBus {
     return getEventBus()

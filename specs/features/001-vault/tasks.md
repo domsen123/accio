@@ -67,13 +67,19 @@ Tasks are prefixed `T-V-` (V for Vault).
     - Reviewer flagged AAD on AES-GCM as worth considering when binding `entry_id`/`field_name` at the entry-encryption layer (T-V-8 area). Out of scope here.
     - Reviewer also flagged that base64 (de)serialisation helpers for `{ct, iv, tag}` blobs may want to live here vs. in the entries service — decide before T-V-8.
 
-- [ ] **T-V-6 — Session store**
+- [x] **T-V-6 — Session store**
   - `server/features/vault/session-store.ts` implements the in-memory map and eviction timer per DESIGN-VAULT-SESSION.
   - On eviction, zero the master key buffer.
   - Provide `getSession`, `createSession`, `evictSession`, `evictByUser`.
   - Run an interval timer in a Nitro plugin.
   - Refs: DESIGN-VAULT-SESSION.
   - Done when: Tests verify auto-eviction after configured inactivity (use a short test override), explicit eviction zeroes the buffer, getSession returns null for evicted sessions.
+  - **Notes:**
+    - 13 unit tests in `tests/vault-session-store.test.ts` cover create/get, lazy expiry on `getSession`, periodic `sweep`, `start/stop` idempotency, `evictByUser` scoping, replace-on-recreate buffer zeroisation, and `stop` zeros remaining keys.
+    - Wired through the DI container as `container.vaultSessionStore` to match the codebase's existing service pattern; module-level singleton dropped per architecture review.
+    - Nitro plugin `server/plugins/03.vault-session-sweeper.ts` calls `start()` on boot and `stop()` on the `close` hook.
+    - Added a header docstring caveat for upcoming endpoints (T-V-7..12): callers that `await` between `getSession` and crypto must copy the master key first, since the sweeper can zero the live buffer.
+    - `evictByUser` wiring on logout is deferred to T-V-11 per the original task split.
 
 ---
 
