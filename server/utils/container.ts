@@ -1,4 +1,5 @@
 import type { ImpersonationService } from '../features/admin/impersonation.service'
+import type { AiProviderService } from '../features/ai/provider'
 import type { AuthProvidersService } from '../features/auth/auth-providers.service'
 import type { AuthService } from '../features/auth/auth.service'
 import type { ContentCreatorService } from '../features/content-creator/content-creator.service'
@@ -18,6 +19,7 @@ import type { TodoService } from '../features/todo/service'
 import type { EventBus } from '../infrastructure/events'
 import * as schema from '../database/schema'
 import { createImpersonationService } from '../features/admin/impersonation.service'
+import { createAiProviderService } from '../features/ai/provider'
 import { createAuthProvidersService } from '../features/auth/auth-providers.service'
 import { createAuthService } from '../features/auth/auth.service'
 import { createContentCreatorService } from '../features/content-creator/content-creator.service'
@@ -311,6 +313,15 @@ const getTodoService = lazy(() =>
   }),
 )
 
+// AI Provider Service (T-3.1d) — resolves a model_id + workspace into a fresh
+// AI SDK client. No request-level caching: see DESIGN-AI §Provider-Model
+// resolution flow.
+const getAiProviderService = lazy(() =>
+  createAiProviderService({
+    db: getDatabase('app'),
+  }),
+)
+
 // Public exports
 export const container = {
   get authService(): AuthService {
@@ -363,6 +374,9 @@ export const container = {
   },
   get todoService(): TodoService {
     return getTodoService()
+  },
+  get aiProviderService(): AiProviderService {
+    return getAiProviderService()
   },
   get eventBus(): EventBus {
     return getEventBus()

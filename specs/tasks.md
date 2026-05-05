@@ -366,11 +366,20 @@ Mark tasks done by changing `[ ]` to `[x]`. Add a brief note when deviating from
     - Smoke-tested imports of `generateText` (from `ai`), `anthropic`, `openai`, `google` resolve under `pnpm typecheck`; smoke file reverted before commit.
   - Quality gates: `pnpm lint` clean, `pnpm typecheck` clean, `pnpm test:run` 214/214.
 
-- [ ] **T-3.1d — Provider client builder**
+- [x] **T-3.1d — Provider client builder**
   - `server/features/ai/provider.ts`: given a `model_id`, resolves provider, fetches and decrypts credentials for the active workspace, returns a ready-to-use AI SDK model instance.
   - Caches nothing across requests (DESIGN-AI: avoid stale-key issues).
   - Refs: DESIGN-AI §Provider-Model resolution flow.
   - Done when: Unit test with fixture credentials produces a working SDK client for each of Anthropic / OpenAI / Google (mocked transport).
+  - **Implementation notes:**
+    - Service: `server/features/ai/provider.ts` — `createAiProviderService({ db })` exposing `resolveModelClient({ organisationId, modelId })` and `getDefaultModel({ organisationId })`. Errors live in `server/features/ai/errors.ts`: `AiModelNotFoundError`, `AiModelDisabledError`, `AiProviderDisabledError`, `AiProviderUnsupportedError`, `AiCredentialsMissingError`, `AiNoDefaultModelError`.
+    - Resolution flow mirrors DESIGN-AI: load `ai_models ⨝ ai_providers` by model id, validate `enabled` on both, load `ai_provider_credentials` for `(organisation_id, provider_id)`, look up org `crypto_salt`, `decryptForOrg(api_key_encrypted, crypto_salt)`, then dispatch on `ai_providers.key`: `anthropic → createAnthropic({ apiKey })(model.modelId)`, `openai → createOpenAI(...)`, `google → createGoogleGenerativeAI(...)`. Returns a `LanguageModelV3` plus the originating `ai_models` row and provider key.
+    - **No request-level caching** — each call re-queries the DB and re-builds the SDK client. Test asserts three identical calls produce three `createAnthropic` invocations.
+    - `getDefaultModel` fallback chain: `orchestrator_workspace_settings.default_model_id` (only if the target row is enabled) → `ai_models WHERE is_default = true AND enabled = true` → throws `AiNoDefaultModelError`.
+    - Wired into `server/utils/container.ts` as `aiProviderService`.
+    - **Schema/seed naming deviation from the task brief:** the task description used `provider.code` / `model.code` / `is_enabled`; the actual schema uses `ai_providers.key`, `ai_models.modelId`, and `enabled` (per T-3.1 / T-3.1b). Implementation follows the schema.
+    - **Tests:** `tests/ai-provider.test.ts` — 13 tests. Mocks `@ai-sdk/anthropic`, `@ai-sdk/openai`, `@ai-sdk/google` via `vi.mock` + `vi.hoisted` so each provider call returns a sentinel `{ provider, modelId }` and we can assert (a) the factory was called with the decrypted `apiKey`, (b) the provider object was called with the provider-side model id. AI tables aren't covered by the global `cleanDatabase` TRUNCATE, so the suite truncates `ai_providers`, `ai_models`, `ai_provider_credentials`, and `orchestrator_workspace_settings` itself in `beforeEach`.
+  - Quality gates: `pnpm lint` clean, `pnpm typecheck` clean, `pnpm test:run` 227/227 (was 214; +13).
 
 - [ ] **T-3.1e — AI configuration API + UI**
   - Routes per DESIGN-API §AI Configuration.
