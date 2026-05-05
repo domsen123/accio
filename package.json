@@ -44,6 +44,7 @@
     "@vueuse/nuxt": "catalog:",
     "@vueuse/router": "catalog:",
     "ai": "catalog:",
+    "argon2": "catalog:",
     "bcrypt": "catalog:",
     "better-sqlite3": "catalog:",
     "date-fns": "catalog:",

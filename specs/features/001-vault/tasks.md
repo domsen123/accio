@@ -14,11 +14,12 @@ Tasks are prefixed `T-V-` (V for Vault).
   - Refs: REQ-VAULT-17, DESIGN-VAULT-PERMISSIONS.
   - Done when: Fresh seed produces roles with the new permissions; existing tests pass.
 
-- [ ] **T-V-2 — Install crypto dependency**
+- [x] **T-V-2 — Install crypto dependency**
   - Add `argon2` package.
   - Verify it builds in the Coolify deploy environment (native bindings).
   - Refs: DESIGN-VAULT-CRYPTO §Ciphers.
   - Done when: `pnpm install` succeeds locally and in a Docker build.
+  - **Note:** Installed argon2@0.44.0 via pnpm catalog; added to `onlyBuiltDependencies` so native bindings build (same pattern as `bcrypt`). Local install + rebuild succeed; runtime hash works. Coolify-side build verification deferred until first deploy attempt — if Nixpacks lacks `python3`/`g++` for source compile fallback, may need a defensive `nixpacks.toml`.
 
 - [ ] **T-V-3 — Add `meta` column to `orchestrator_actions` if not present**
   - Conditional migration: add `meta jsonb` only if the column doesn't already exist.

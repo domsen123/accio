@@ -24,6 +24,7 @@ catalog:
   '@vueuse/nuxt': ^14.2.1
   '@vueuse/router': ^14.2.1
   ai: ^6.0.116
+  argon2: ^0.44.0
   bcrypt: ^6.0.0
   better-sqlite3: ^12.6.2
   date-fns: ^4.1.0
@@ -57,6 +58,7 @@ catalogMode: prefer
 
 onlyBuiltDependencies:
   - '@parcel/watcher'
+  - argon2
   - bcrypt
   - better-sqlite3
   - esbuild
