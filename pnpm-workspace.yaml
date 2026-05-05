@@ -1,6 +1,7 @@
 catalog:
   '@ai-sdk/anthropic': ^3.0.58
   '@ai-sdk/google': ^3.0.43
+  '@ai-sdk/openai': ^3.0.60
   '@ai-sdk/vue': ^3.0.116
   '@antfu/eslint-config': ^7.6.1
   '@faker-js/faker': ^10.3.0

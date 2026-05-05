@@ -357,9 +357,14 @@ Mark tasks done by changing `[ ]` to `[x]`. Add a brief note when deviating from
   - Quality gates: `pnpm typecheck` green, `pnpm test:run` 214/214. Pre-existing `pnpm lint` errors in `server/database/migrations/meta/{0005_snapshot.json,_journal.json}` (`style/eol-last`) inherited from T-3.1 — orthogonal to this task; flagged but not fixed here.
 
 ### AI provider abstraction
-- [ ] **T-3.1c — Install Vercel AI SDK and provider packages**
+- [x] **T-3.1c — Install Vercel AI SDK and provider packages**
   - Add deps: `ai`, `@ai-sdk/anthropic`, `@ai-sdk/openai`, `@ai-sdk/google`.
   - Refs: DESIGN-AI.
+  - **Implementation notes:**
+    - Already present from earlier scaffolding: `ai@6.0.116`, `@ai-sdk/anthropic@3.0.58`, `@ai-sdk/google@3.0.43`, `@ai-sdk/vue@3.0.116`.
+    - Newly added in this task: `@ai-sdk/openai@3.0.60` (catalog entry `^3.0.60`, referenced via `catalog:` in `package.json`, matching the pattern of the other AI SDK packages).
+    - Smoke-tested imports of `generateText` (from `ai`), `anthropic`, `openai`, `google` resolve under `pnpm typecheck`; smoke file reverted before commit.
+  - Quality gates: `pnpm lint` clean, `pnpm typecheck` clean, `pnpm test:run` 214/214.
 
 - [ ] **T-3.1d — Provider client builder**
   - `server/features/ai/provider.ts`: given a `model_id`, resolves provider, fetches and decrypts credentials for the active workspace, returns a ready-to-use AI SDK model instance.
