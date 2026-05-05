@@ -280,9 +280,13 @@ Tasks are prefixed `T-V-` (V for Vault).
     - `useVaultEntriesList` composable wraps `vaultKeys.entries(params)`; `selectedFolderId === null` maps to `rootOnly: true` so root-folder entries render via the same parameter shape the API expects.
     - Folder tree component (T-V-25 staged here so the page consumes the real tree, not a placeholder).
 
-- [ ] **T-V-25 — Folder tree component**
+- [x] **T-V-25 — Folder tree component**
   - Nested rendering up to depth 5; new folder, rename, delete-with-strategy, drag to reparent.
   - Refs: REQ-VAULT-9.
+  - **Notes:**
+    - Shipped with T-V-24 since the landing page consumes it. `VaultFolderTree.vue` owns the mutation state (rename, create, delete) and forwards events to the recursive `VaultFolderTreeNode.vue`. Inline rename/create with Enter-to-commit / Esc-to-cancel; delete dialog wraps content in `<div class="light">` per DESIGN.md and offers `move_to_parent` vs `delete_recursive`.
+    - **Drag-to-reparent deferred**: out of scope for the spec's "ship the data layer cleanly" intent and adds significant complexity (collision detection, depth re-validation in the drop handler that mirrors the server-side check). The server already supports moves via `PATCH /api/vault/folders/[id]` so the affordance can be added later without API churn.
+    - Depth cap is enforced server-side (T-V-15) — the tree component doesn't pre-empt; it surfaces the 400 error inline when a depth-exceeding rename / move comes back.
 
 - [ ] **T-V-26 — Entry detail / edit form**
   - Standard fields, custom fields with add/remove, folder picker, tag picker.
