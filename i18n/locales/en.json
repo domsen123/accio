@@ -321,6 +321,97 @@
       }
     }
   },
+  "todo": {
+    "list": {
+      "title": "Todos",
+      "subtitle": "Plan, prioritise, and finish things one tab at a time.",
+      "create": "New todo",
+      "search": {
+        "placeholder": "Search title and description..."
+      },
+      "error": {
+        "title": "Failed to load todos"
+      },
+      "pagination": {
+        "prev": "Previous",
+        "next": "Next",
+        "page": "Page {page}"
+      }
+    },
+    "subnav": {
+      "today": "Today",
+      "upcoming": "Upcoming",
+      "open": "Open",
+      "completed": "Completed"
+    },
+    "filters": {
+      "reset": "Clear filters",
+      "priority": {
+        "label": "Priority",
+        "all": "All priorities"
+      },
+      "tag": {
+        "label": "Tag",
+        "all": "All tags"
+      }
+    },
+    "priority": {
+      "urgent": "Urgent",
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low"
+    },
+    "due": {
+      "overdue": "Overdue",
+      "today": "Today",
+      "tomorrow": "Tomorrow",
+      "in_n_days": "In {days} days",
+      "no_due": "No due date"
+    },
+    "actions": {
+      "menu": "Actions",
+      "edit": "Edit",
+      "complete": {
+        "label": "Mark as completed",
+        "toast": {
+          "success": "Todo completed",
+          "error": "Could not complete todo"
+        }
+      },
+      "uncomplete": {
+        "label": "Mark as not completed",
+        "toast": {
+          "success": "Todo reopened",
+          "error": "Could not reopen todo"
+        }
+      },
+      "delete": {
+        "label": "Delete",
+        "toast": {
+          "success": "Todo moved to trash",
+          "error": "Could not delete todo"
+        }
+      }
+    },
+    "empty": {
+      "today": {
+        "title": "Nothing due today",
+        "subtitle": "Overdue items also surface here. Enjoy the calm or schedule something new."
+      },
+      "upcoming": {
+        "title": "No upcoming todos",
+        "subtitle": "Items due in the next 7 days appear here. Add a todo with a due date to plan ahead."
+      },
+      "open": {
+        "title": "No open todos",
+        "subtitle": "Every active todo lives here. Create your first one to get started."
+      },
+      "completed": {
+        "title": "No completed todos yet",
+        "subtitle": "Finished items show up here, newest first."
+      }
+    }
+  },
   "shell": {
     "header": {
       "signed-in-as": "Signed in as {email}",

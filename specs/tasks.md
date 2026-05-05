@@ -267,10 +267,18 @@ Mark tasks done by changing `[ ]` to `[x]`. Add a brief note when deviating from
   - **Smoke test (admin@example.com / Default Workspace):** `POST /api/todos`→201, `GET /api/todos`→200, `GET /api/todos/[id]`→200, `PATCH /api/todos/[id]`→200, `POST .../complete`→200, `POST .../uncomplete`→200, `DELETE /api/todos/[id]`→200, list default omits soft-deleted (✓), `?includeDeleted=1` includes (✓), `POST .../restore`→200, `today/upcoming/open/completed/counts`→200, `POST .../tags`→200 (tag findOrCreate), `DELETE .../tags/[id]`→204, `POST .../kb-links`→201, `DELETE .../kb-links/[id]`→204, `DELETE .../purge` on active→409 (`todo.purge.active`), soft-delete + purge→204, GET after purge→404, validation `priority:"bogus"`→400, link nonexistent KB id→404 (`todo.kb_link.not_found`), unauthenticated POST→401.
 
 ### Client feature: todos
-- [ ] **T-2.5 — Todo list pages**
+- [x] **T-2.5 — Todo list pages**
   - `app/pages/app/todos/index.vue` with the canonical views as tabs/segments.
   - Refs: REQ-TODO-4.
   - Done when: Switching views changes the rendered list correctly.
+  - **Implementation:** vertical-slice scaffold under `app/features/todo/` (api wrappers + Pinia-Colada keys, four view composables — `useTodos`, `useTodoView`, `useTodoCounts`, `useTodoMutations`, plus a `TodoSubNav` component). The page itself is a single shell with a `?view=...` URL param swap rather than four separate routes — switching tabs swaps the active view and the underlying Pinia-Colada query while keeping search/filter/page state on the URL. Each tab shows a small count badge sourced from `GET /api/todos/counts`. Per-row UX: completion checkbox on the left (toggles complete/uncomplete with an optimistic toast), title + priority chip (urgent → red, high → orange, medium → grey, low → blue) + relative due date in red when overdue and active, and a kebab menu with Edit (links to `/app/todos/[id]/edit` — T-2.6 territory) and Delete (soft delete with toast). Mutations funnel through a shared `invalidateTodo` helper that busts the entire `todos` query family so all four views and the counts badge stay coherent after a state transition.
+  - **Deviations from the brief:**
+    - **Tag filter is single-select** (not multi). Server `tagId` is a single id today; a multi-select bar would imply a client-side OR which is misleading. Defer until the API accepts `tagIds[]`.
+    - **No row-level confirmation modal for soft-delete.** Toast feedback on success/error; restore is one click from `/app/todos?view=...` once T-2.7/T-2.8 surface trash. Two-step confirmation is appropriate for hard-delete (KB pattern); soft-delete here is reversible.
+    - **`subtaskCount` and KB-link counts are not surfaced on rows.** The list endpoints return bare rows without hydrated tags / subtask counts / link counts; rather than do an N+1 fetch from the page, the visual indicators are deferred to T-2.6 (which can introduce a hydrated list response) and T-2.7 (subtask UI specifically).
+    - **`topLevel: true` is forced on every view.** Subtasks render under their parents in T-2.7, so flattening them into the four canonical views would double-count. The server already supports this filter.
+    - **No tests added** — UI shell over four already-tested view endpoints. Suite remains at 211/211.
+  - **Smoke test:** `curl /app/todos` unauthenticated → 302 to `/auth/sign-in?redirect=/app/todos` (no 500). Authenticated curl → 200 with `<title>Aufgaben - …</title>` (German locale via admin's saved preference) and i18n-bound tab labels in the SSR HTML.
 
 - [ ] **T-2.6 — Todo detail / edit**
   - Side-panel or page for editing a todo: title, Markdown description, priority, due date, parent, tags, KB links picker.

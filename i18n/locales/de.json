@@ -321,6 +321,97 @@
       }
     }
   },
+  "todo": {
+    "list": {
+      "title": "Aufgaben",
+      "subtitle": "Plane, priorisiere und erledige Schritt für Schritt.",
+      "create": "Neue Aufgabe",
+      "search": {
+        "placeholder": "Titel und Beschreibung durchsuchen..."
+      },
+      "error": {
+        "title": "Aufgaben konnten nicht geladen werden"
+      },
+      "pagination": {
+        "prev": "Zurück",
+        "next": "Weiter",
+        "page": "Seite {page}"
+      }
+    },
+    "subnav": {
+      "today": "Heute",
+      "upcoming": "Demnächst",
+      "open": "Offen",
+      "completed": "Erledigt"
+    },
+    "filters": {
+      "reset": "Filter zurücksetzen",
+      "priority": {
+        "label": "Priorität",
+        "all": "Alle Prioritäten"
+      },
+      "tag": {
+        "label": "Tag",
+        "all": "Alle Tags"
+      }
+    },
+    "priority": {
+      "urgent": "Dringend",
+      "high": "Hoch",
+      "medium": "Mittel",
+      "low": "Niedrig"
+    },
+    "due": {
+      "overdue": "Überfällig",
+      "today": "Heute",
+      "tomorrow": "Morgen",
+      "in_n_days": "In {days} Tagen",
+      "no_due": "Kein Fälligkeitsdatum"
+    },
+    "actions": {
+      "menu": "Aktionen",
+      "edit": "Bearbeiten",
+      "complete": {
+        "label": "Als erledigt markieren",
+        "toast": {
+          "success": "Aufgabe erledigt",
+          "error": "Aufgabe konnte nicht abgeschlossen werden"
+        }
+      },
+      "uncomplete": {
+        "label": "Als nicht erledigt markieren",
+        "toast": {
+          "success": "Aufgabe wieder geöffnet",
+          "error": "Aufgabe konnte nicht wieder geöffnet werden"
+        }
+      },
+      "delete": {
+        "label": "Löschen",
+        "toast": {
+          "success": "Aufgabe in den Papierkorb verschoben",
+          "error": "Aufgabe konnte nicht gelöscht werden"
+        }
+      }
+    },
+    "empty": {
+      "today": {
+        "title": "Heute steht nichts an",
+        "subtitle": "Auch überfällige Aufgaben tauchen hier auf. Genieße die Ruhe oder plane etwas Neues."
+      },
+      "upcoming": {
+        "title": "Keine kommenden Aufgaben",
+        "subtitle": "Aufgaben mit Fälligkeit in den nächsten 7 Tagen erscheinen hier. Lege eine Aufgabe mit Fälligkeitsdatum an, um vorzusorgen."
+      },
+      "open": {
+        "title": "Keine offenen Aufgaben",
+        "subtitle": "Alle aktiven Aufgaben leben hier. Lege deine erste Aufgabe an, um loszulegen."
+      },
+      "completed": {
+        "title": "Noch nichts erledigt",
+        "subtitle": "Abgeschlossene Aufgaben erscheinen hier, neueste zuerst."
+      }
+    }
+  },
   "shell": {
     "header": {
       "signed-in-as": "Angemeldet als {email}",
