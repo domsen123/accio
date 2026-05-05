@@ -334,10 +334,11 @@ Mark tasks done by changing `[ ]` to `[x]`. Add a brief note when deviating from
 ## Phase 3 — Orchestrator
 
 ### Schema
-- [ ] **T-3.1 — Drizzle schema for orchestrator and AI**
+- [x] **T-3.1 — Drizzle schema for orchestrator and AI**
   - Tables: `orchestrator_conversations`, `orchestrator_messages`, `orchestrator_actions`, `ai_providers`, `ai_provider_credentials`, `ai_models`, `orchestrator_workspace_settings`.
   - `orchestrator_conversations.model_id` and `orchestrator_actions.model_id` set up with FK to `ai_models`.
   - Refs: DESIGN-DATA §Orchestrator + §AI Provider.
+  - Migration: `0005_flashy_mandarin.sql`. Verified all 7 tables present via `\dt`. pgEnums: `orchestrator_message_role`, `orchestrator_conversation_mode`, `orchestrator_action_class`, `orchestrator_action_status`. Tests still 214/214.
 
 - [ ] **T-3.1b — Seed AI providers and initial models**
   - Seed `ai_providers` rows for Anthropic, OpenAI, Google.

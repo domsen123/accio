@@ -1,4 +1,7 @@
 import { relations } from 'drizzle-orm'
+import { aiModels } from './ai-models'
+import { aiProviderCredentials } from './ai-provider-credentials'
+import { aiProviders } from './ai-providers'
 import { blogCategories } from './blog-categories'
 import { blogPostTags } from './blog-post-tags'
 import { blogPosts } from './blog-posts'
@@ -12,6 +15,10 @@ import { kbEntries } from './kb-entries'
 import { kbEntryLinks } from './kb-entry-links'
 import { kbEntryTags } from './kb-entry-tags'
 import { kbTags } from './kb-tags'
+import { orchestratorActions } from './orchestrator-actions'
+import { orchestratorConversations } from './orchestrator-conversations'
+import { orchestratorMessages } from './orchestrator-messages'
+import { orchestratorWorkspaceSettings } from './orchestrator-workspace-settings'
 import { organisationInvitations } from './organisation-invitations'
 import { organisationMembers } from './organisation-members'
 import { organisations } from './organisations'
@@ -37,6 +44,9 @@ export const usersRelations = relations(users, ({ many }) => ({
   userRoles: many(userRoles),
   files: many(files),
   blogPosts: many(blogPosts),
+  aiProviderCredentials: many(aiProviderCredentials),
+  orchestratorConversations: many(orchestratorConversations),
+  orchestratorActions: many(orchestratorActions),
 }))
 
 export const sessionsRelations = relations(sessions, ({ one }) => ({
@@ -53,7 +63,7 @@ export const passwordResetTokensRelations = relations(passwordResetTokens, ({ on
   }),
 }))
 
-export const organisationsRelations = relations(organisations, ({ many }) => ({
+export const organisationsRelations = relations(organisations, ({ one, many }) => ({
   teams: many(teams),
   members: many(organisationMembers),
   customRoles: many(roles),
@@ -62,6 +72,10 @@ export const organisationsRelations = relations(organisations, ({ many }) => ({
   kbCategories: many(kbCategories),
   kbTags: many(kbTags),
   todos: many(todos),
+  aiProviderCredentials: many(aiProviderCredentials),
+  orchestratorConversations: many(orchestratorConversations),
+  orchestratorActions: many(orchestratorActions),
+  orchestratorWorkspaceSettings: one(orchestratorWorkspaceSettings),
 }))
 
 export const organisationInvitationsRelations = relations(organisationInvitations, ({ one }) => ({
@@ -326,5 +340,96 @@ export const todoKbLinksRelations = relations(todoKbLinks, ({ one }) => ({
   entry: one(kbEntries, {
     fields: [todoKbLinks.entryId],
     references: [kbEntries.id],
+  }),
+}))
+
+// AI Provider Relations (DESIGN-DATA §AI Provider)
+export const aiProvidersRelations = relations(aiProviders, ({ many }) => ({
+  models: many(aiModels),
+  credentials: many(aiProviderCredentials),
+}))
+
+export const aiModelsRelations = relations(aiModels, ({ one, many }) => ({
+  provider: one(aiProviders, {
+    fields: [aiModels.providerId],
+    references: [aiProviders.id],
+  }),
+  conversations: many(orchestratorConversations),
+  actions: many(orchestratorActions),
+  workspaceSettings: many(orchestratorWorkspaceSettings),
+}))
+
+export const aiProviderCredentialsRelations = relations(aiProviderCredentials, ({ one }) => ({
+  organisation: one(organisations, {
+    fields: [aiProviderCredentials.organisationId],
+    references: [organisations.id],
+  }),
+  provider: one(aiProviders, {
+    fields: [aiProviderCredentials.providerId],
+    references: [aiProviders.id],
+  }),
+  createdByUser: one(users, {
+    fields: [aiProviderCredentials.createdBy],
+    references: [users.id],
+  }),
+}))
+
+// Orchestrator Relations (DESIGN-DATA §Orchestrator)
+export const orchestratorConversationsRelations = relations(orchestratorConversations, ({ one, many }) => ({
+  organisation: one(organisations, {
+    fields: [orchestratorConversations.organisationId],
+    references: [organisations.id],
+  }),
+  user: one(users, {
+    fields: [orchestratorConversations.userId],
+    references: [users.id],
+  }),
+  model: one(aiModels, {
+    fields: [orchestratorConversations.modelId],
+    references: [aiModels.id],
+  }),
+  messages: many(orchestratorMessages),
+  actions: many(orchestratorActions),
+}))
+
+export const orchestratorMessagesRelations = relations(orchestratorMessages, ({ one, many }) => ({
+  conversation: one(orchestratorConversations, {
+    fields: [orchestratorMessages.conversationId],
+    references: [orchestratorConversations.id],
+  }),
+  actions: many(orchestratorActions),
+}))
+
+export const orchestratorActionsRelations = relations(orchestratorActions, ({ one }) => ({
+  organisation: one(organisations, {
+    fields: [orchestratorActions.organisationId],
+    references: [organisations.id],
+  }),
+  conversation: one(orchestratorConversations, {
+    fields: [orchestratorActions.conversationId],
+    references: [orchestratorConversations.id],
+  }),
+  message: one(orchestratorMessages, {
+    fields: [orchestratorActions.messageId],
+    references: [orchestratorMessages.id],
+  }),
+  user: one(users, {
+    fields: [orchestratorActions.userId],
+    references: [users.id],
+  }),
+  model: one(aiModels, {
+    fields: [orchestratorActions.modelId],
+    references: [aiModels.id],
+  }),
+}))
+
+export const orchestratorWorkspaceSettingsRelations = relations(orchestratorWorkspaceSettings, ({ one }) => ({
+  organisation: one(organisations, {
+    fields: [orchestratorWorkspaceSettings.organisationId],
+    references: [organisations.id],
+  }),
+  defaultModel: one(aiModels, {
+    fields: [orchestratorWorkspaceSettings.defaultModelId],
+    references: [aiModels.id],
   }),
 }))
