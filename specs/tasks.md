@@ -340,12 +340,21 @@ Mark tasks done by changing `[ ]` to `[x]`. Add a brief note when deviating from
   - Refs: DESIGN-DATA §Orchestrator + §AI Provider.
   - Migration: `0005_flashy_mandarin.sql`. Verified all 7 tables present via `\dt`. pgEnums: `orchestrator_message_role`, `orchestrator_conversation_mode`, `orchestrator_action_class`, `orchestrator_action_status`. Tests still 214/214.
 
-- [ ] **T-3.1b — Seed AI providers and initial models**
+- [x] **T-3.1b — Seed AI providers and initial models**
   - Seed `ai_providers` rows for Anthropic, OpenAI, Google.
   - Seed `ai_models` with a small curated list of currently-recommended frontier models per provider; mark one as `is_default=true`.
   - The seed file (`server/database/seed/ai-models.ts`) is expected to be updated over time as models evolve.
   - Refs: DESIGN-AI §Seed data, REQ-AI-1, REQ-AI-3.
   - Done when: Fresh DB has providers and models; admin UI (T-3.x.UI below) lists them.
+  - **Seeded** (`server/database/seed/ai-models.ts`, wired into `server/plugins/01.init.ts`):
+    - Providers: `anthropic`, `openai`, `google` (all `enabled=true`).
+    - Anthropic models: `claude-opus-4-7`, **`claude-sonnet-4-6` (`is_default=true`)**, `claude-haiku-4-5`.
+    - OpenAI models: `gpt-5.5`, `gpt-5.4`, `gpt-5.4-mini`.
+    - Google models: `gemini-3.1-pro`, `gemini-2.5-pro`, `gemini-2.5-flash`.
+    - All rows: `supports_tools = supports_streaming = supports_vision = true`. Anthropic rows include `input/output_price_per_mtok` per the public pricing page; OpenAI/Google price columns left null pending the rest of T-3.x.
+    - Verified on the dev DB (`docker exec accio-postgres-db psql -U postgres -d accio …`): `ai_providers` returns 3 rows; `ai_models` returns the 9 rows above with exactly one `is_default=true`. Seed is idempotent — re-runs log "All providers and models already present".
+  - **Verification:** model IDs cross-checked against Anthropic, OpenAI, and Google docs (May 2026). Anthropic alias-form IDs (`claude-opus-4-7`, `claude-sonnet-4-6`, `claude-haiku-4-5`) used; if a future task wants pinned-snapshot IDs, the admin UI can add them alongside.
+  - Quality gates: `pnpm typecheck` green, `pnpm test:run` 214/214. Pre-existing `pnpm lint` errors in `server/database/migrations/meta/{0005_snapshot.json,_journal.json}` (`style/eol-last`) inherited from T-3.1 — orthogonal to this task; flagged but not fixed here.
 
 ### AI provider abstraction
 - [ ] **T-3.1c — Install Vercel AI SDK and provider packages**

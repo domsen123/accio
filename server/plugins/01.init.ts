@@ -3,6 +3,7 @@ import process from 'node:process'
 import { migrate } from 'drizzle-orm/postgres-js/migrator'
 import { ulid } from 'ulid'
 import { authProviders } from '../database/schema'
+import { seedAiProvidersAndModels } from '../database/seed/ai-models'
 import { getSystemRoleId, seedRbac } from '../features/rbac/rbac.seed'
 import { getDatabase } from '../infrastructure/database/client'
 import { container } from '../utils/container'
@@ -152,11 +153,19 @@ const seedAuthProviders = async () => {
   console.log('[Init] Auth providers seeded')
 }
 
+// ─── AI Providers + Models Seed ─────────────────────────────────────────────
+const runAiProvidersAndModelsSeed = async () => {
+  console.log('[Init] Seeding AI providers and models...')
+  await seedAiProvidersAndModels({ db: getDatabase('app') })
+  console.log('[Init] AI providers and models seed completed')
+}
+
 // ─── Main Plugin ─────────────────────────────────────────────────────────────
 export default defineNitroPlugin(async () => {
   await runMigration()
   await runRbacSeed()
   await seedAuthProviders()
+  await runAiProvidersAndModelsSeed()
   registerRbacListeners()
   registerEventBusLogging()
   await seedAdmin()
