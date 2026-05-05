@@ -228,11 +228,19 @@ Mark tasks done by changing `[ ]` to `[x]`. Add a brief note when deviating from
   - Done: migration `0004_condemned_puck.sql` creates `todo_priority` enum + 3 tables; FKs cascade on parent/org/todo/tag/entry deletion; `created_by` set null on user delete; indexes `(org, completed_at)`, `(org, due_at)`, `(parent_todo_id)` per spec; junctions use composite PKs. No deviations from DESIGN-DATA §Todo. Subtask depth-3 invariant (REQ-TODO-2) is enforced in service (T-2.2), not the DB — documented in `todos.ts`.
 
 ### Server feature: todos
-- [ ] **T-2.2 — Todos service**
+- [x] **T-2.2 — Todos service**
   - CRUD, complete/uncomplete, link/unlink KB, tag set replace.
   - Subtask depth check (max 3) enforced in service.
   - Refs: REQ-TODO-1, REQ-TODO-2, REQ-TODO-3.
   - Done when: Unit tests cover all of the above and reject depth > 3.
+  - **Deviations / notes:**
+    - Subtask soft-delete is **not** cascading (children may still be relevant after the parent is trashed). The default `list` scope hides only the soft-deleted row itself; siblings/descendants stay visible. Hard `purge` does cascade via the schema's `parent_todo_id ON DELETE CASCADE`.
+    - Search uses Postgres `ILIKE` on `title` + `description_md` (no FTS for todos in DESIGN-DATA). Whitespace-only `search` is treated as no filter.
+    - Subtask-depth check is a single recursive CTE walking ancestors from the proposed parent — one round-trip, workspace-scoped (a parent in another org returns no rows and surfaces as `TodoParentNotFoundError`). `update({ parentTodoId: <self> })` is rejected up-front to avoid a free-running CTE on a self-cycle.
+    - Tag rebuild reuses `kbTagService.findOrCreate` (ADR-008 — todos and KB share the `kb_tags` table). Tag rows are resolved outside the create/update transaction (idempotent, no lock contention); the junction rewrite happens inside the same transaction as the row insert/update.
+    - KB-link rebuild validates every supplied entry id is in the same workspace (`TodoKbLinkNotFoundError` on miss) before opening the transaction.
+    - `linkKb` / `unlinkKb` / `linkTag` / `unlinkTag` standalone helpers are idempotent (insert-if-absent, delete-if-present). Tag-set / link-set replacement is via `update({ tagNames })` / `update({ kbEntryIds })` — same as KB.
+    - New tests: 32 in `tests/todo-service.test.ts` (CRUD, depth 1–3 + depth-4 rejection, re-parenting depth check, cross-workspace parent rejection, tag-set replace + cross-ws isolation, KB-link replace + cross-ws rejection, idempotent link helpers, complete/uncomplete idempotency, list filters incl. completed/priority/dueBefore/parent/search/tag/kb, purge with cascade). Suite: 167 → 199 green.
 
 - [ ] **T-2.3 — Todo views (today/upcoming/open/completed)**
   - Service methods returning the four canonical views, plus filters by tag and priority.

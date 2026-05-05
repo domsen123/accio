@@ -14,6 +14,7 @@ import type { OrganisationMembersService } from '../features/organisation-member
 import type { OrganisationsService } from '../features/organisations/organisations.service'
 import type { ProfileService } from '../features/profile/profile.service'
 import type { RbacService } from '../features/rbac/rbac.service'
+import type { TodoService } from '../features/todo/service'
 import type { EventBus } from '../infrastructure/events'
 import * as schema from '../database/schema'
 import { createImpersonationService } from '../features/admin/impersonation.service'
@@ -33,6 +34,7 @@ import { createOrganisationMembersService } from '../features/organisation-membe
 import { createOrganisationsService } from '../features/organisations/organisations.service'
 import { createProfileService } from '../features/profile/profile.service'
 import { createRbacService } from '../features/rbac/rbac.service'
+import { createTodoService } from '../features/todo/service'
 import { getDatabase } from '../infrastructure/database/client'
 import { createItemService } from '../infrastructure/database/item-service'
 import { createEventBus } from '../infrastructure/events'
@@ -182,6 +184,15 @@ const getKbTagsItemService = lazy(() =>
 const getKbEntryTagsItemService = lazy(() =>
   createItemService({ db: getDatabase('app'), table: schema.kbEntryTags, tableName: 'kbEntryTags', eventBus: getEventBus() }),
 )
+const getTodosItemService = lazy(() =>
+  createItemService({ db: getDatabase('app'), table: schema.todos, tableName: 'todos', eventBus: getEventBus() }),
+)
+const getTodoTagsItemService = lazy(() =>
+  createItemService({ db: getDatabase('app'), table: schema.todoTags, tableName: 'todoTags', eventBus: getEventBus() }),
+)
+const getTodoKbLinksItemService = lazy(() =>
+  createItemService({ db: getDatabase('app'), table: schema.todoKbLinks, tableName: 'todoKbLinks', eventBus: getEventBus() }),
+)
 
 // RBAC Service (depends on ItemServices above)
 const getRbacService = lazy(() =>
@@ -291,6 +302,15 @@ const getKbEntryService = lazy(() =>
   }),
 )
 
+// Todo Service (T-2.2)
+const getTodoService = lazy(() =>
+  createTodoService({
+    db: getDatabase('app'),
+    todosItemService: getTodosItemService(),
+    kbTagService: getKbTagService(),
+  }),
+)
+
 // Public exports
 export const container = {
   get authService(): AuthService {
@@ -341,6 +361,9 @@ export const container = {
   get kbEntryService(): KbEntryService {
     return getKbEntryService()
   },
+  get todoService(): TodoService {
+    return getTodoService()
+  },
   get eventBus(): EventBus {
     return getEventBus()
   },
@@ -370,5 +393,8 @@ export const container = {
     get kbCategories() { return getKbCategoriesItemService() },
     get kbTags() { return getKbTagsItemService() },
     get kbEntryTags() { return getKbEntryTagsItemService() },
+    get todos() { return getTodosItemService() },
+    get todoTags() { return getTodoTagsItemService() },
+    get todoKbLinks() { return getTodoKbLinksItemService() },
   },
 }

@@ -69,3 +69,11 @@ export const createKbEntryData = (organisationId: string, overrides: Record<stri
     ...overrides,
   }
 }
+
+// --- Todo factories (T-2.2) ---
+
+export const createTodoData = (organisationId: string, overrides: Record<string, unknown> = {}) => ({
+  organisationId,
+  title: faker.lorem.sentence({ min: 2, max: 5 }),
+  ...overrides,
+})
