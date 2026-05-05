@@ -50,6 +50,8 @@ const sessionKey = (userId: string, sessionId: string): string =>
   `${userId}:${sessionId}`
 
 export interface VaultSessionStore {
+  /** Idle timeout in milliseconds — source of truth for `locks_at` in API responses. */
+  readonly inactivityMs: number
   /** Insert (or replace) a session. Replaces zero the existing master key. */
   createSession: (input: {
     userId: string
@@ -112,6 +114,7 @@ export const createVaultSessionStore = (
   }
 
   return {
+    inactivityMs: config.inactivityMs,
     createSession: ({ userId, sessionId, masterKey, now = new Date() }) => {
       const key = sessionKey(userId, sessionId)
       // If a session already exists (e.g. user re-unlocked in the same tab),

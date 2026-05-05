@@ -97,10 +97,15 @@ Tasks are prefixed `T-V-` (V for Vault).
   - Refs: REQ-VAULT-2.
   - **Notes:** Returns 412 `vault.workspace_init.master_password_not_set` when T-V-7 hasn't run, 401 on invalid password, 409 on already-initialised. Permission gated on `vault:write`. `dek` and `masterKey` buffers zeroed in a single `finally` block so they're wiped even if the DB write throws.
 
-- [ ] **T-V-9 — Unlock endpoint**
+- [x] **T-V-9 — Unlock endpoint**
   - `POST /api/vault/unlock`: verifies master password against the user's verifier; if correct, derives the master key, creates a vault session for the current `(user_id, session_id)`.
   - Rate limit: 5 attempts/minute/session.
   - Refs: REQ-VAULT-3.
+  - **Notes:**
+    - Adds `server/features/vault/rate-limiter.ts` — module-level singleton sliding-window limiter (5/60s) keyed by `session.id`, not in DI per architecture review.
+    - Order of operations after architecture review: auth → body parse → credentials lookup (412 precondition; doesn't burn rate-limit budget) → rate limit (only counts real verify attempts) → verify (401 generic) → derive + session create. Reviewer suggested merging 412 and 401 into a single generic 401; kept 412 because the workspace/init endpoint already uses it for the same precondition and `/api/vault/status` (T-V-10) will surface `is_setup` anyway — no info leak beyond what's already exposed.
+    - `locks_at` derived from `container.vaultSessionStore.inactivityMs` instead of a hardcoded 30 min so config changes stay consistent with the response.
+    - Added `inactivityMs` getter to `VaultSessionStore` interface.
 
 - [ ] **T-V-10 — Lock and status endpoints**
   - `POST /api/vault/lock` evicts the current session.
