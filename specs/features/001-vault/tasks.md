@@ -47,7 +47,7 @@ Tasks are prefixed `T-V-` (V for Vault).
 
 ## Crypto
 
-- [ ] **T-V-5 — Vault crypto module**
+- [x] **T-V-5 — Vault crypto module**
   - `server/features/vault/crypto.ts` exports:
     - `argon2idVerifier(password, salt) → buffer`
     - `argon2idDeriveKey(password, salt) → 32-byte key`
@@ -59,6 +59,13 @@ Tasks are prefixed `T-V-` (V for Vault).
   - Constant-time comparison helper for verifier checks.
   - Refs: DESIGN-VAULT-CRYPTO.
   - Done when: Unit tests cover round-trip encrypt/decrypt, wrap/unwrap with a known-vector master password, tampering detection (modify ciphertext → throw), wrong-password detection (verifier mismatch).
+  - **Notes:**
+    - 22 unit tests in `tests/vault-crypto.test.ts` cover all required cases plus tag-tampering, wrong-workspace-salt isolation, fresh-IV per call, length validations.
+    - `argon2idVerifier` and `argon2idDeriveKey` route through a shared private `argon2idRaw` so the params can never drift between the two paths; commented prominently that callers MUST supply different salts.
+    - `argon2_params` record stored as `{type: 'argon2id', t, m, p, version: 0x13}` for forward-compat. `argon2.version` isn't exported by the package; pinned to `0x13` per RFC 9106.
+    - Module is pure-function only — buffer zeroisation belongs to the session store (T-V-6); documented in the module header.
+    - Reviewer flagged AAD on AES-GCM as worth considering when binding `entry_id`/`field_name` at the entry-encryption layer (T-V-8 area). Out of scope here.
+    - Reviewer also flagged that base64 (de)serialisation helpers for `{ct, iv, tag}` blobs may want to live here vs. in the entries service — decide before T-V-8.
 
 - [ ] **T-V-6 — Session store**
   - `server/features/vault/session-store.ts` implements the in-memory map and eviction timer per DESIGN-VAULT-SESSION.
