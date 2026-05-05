@@ -11,6 +11,7 @@
  * is overkill for a single-user hub; a simple modal confirmation suffices
  * (the entry is already in trash; the user has triaged once).
  */
+import type { BreadcrumbItem } from '@nuxt/ui'
 import type { KbEntry, KbPaginatedListParams } from '~/features/kb/types/kb.types'
 import KbSubNav from '~/features/kb/components/KbSubNav.vue'
 import {
@@ -145,138 +146,147 @@ const formatRelative = (iso: string | null): string => {
 }
 
 const detailHref = (entry: KbEntry) => `/app/kb/${encodeURIComponent(entry.slug)}`
+
+const breadcrumbItems = computed<BreadcrumbItem[]>(() => [
+  { label: t('kb.list.title'), to: '/app/kb' },
+  { label: t('kb.trash.title') },
+])
 </script>
 
 <template>
-  <div class="p-4 md:p-6 space-y-6">
-    <!-- Header -->
-    <div class="space-y-1">
-      <h1 class="text-2xl font-bold text-highlighted">
-        {{ t('kb.trash.title') }}
-      </h1>
-      <p class="text-muted text-sm">
-        {{ t('kb.trash.subtitle') }}
-      </p>
-      <UAlert
-        color="warning"
-        variant="subtle"
-        icon="i-lucide-alert-triangle"
-        :description="t('kb.trash.warning')"
-        class="mt-3"
-      />
-    </div>
-
-    <!-- Sub-navigation between All / Inbox / Trash -->
-    <KbSubNav />
-
-    <!-- Error -->
-    <UAlert
-      v-if="error"
-      color="error"
-      variant="soft"
-      :title="t('kb.trash.error.title')"
-      :description="error.message"
-      icon="i-lucide-alert-circle"
-    />
-
-    <!-- Loading skeleton -->
-    <div v-if="isLoading" class="space-y-3">
-      <USkeleton v-for="i in 3" :key="i" class="h-24 w-full" />
-    </div>
-
-    <!-- Empty state -->
-    <UCard
-      v-else-if="entries.length === 0"
-      :ui="{ body: 'flex flex-col items-center text-center py-12 gap-2' }"
+  <UPage>
+    <UPageHeader
+      :title="t('kb.trash.title')"
+      :description="t('kb.trash.subtitle')"
+      :ui="{ root: 'border-none' }"
     >
-      <UIcon name="i-lucide-trash" class="size-10 text-muted" />
-      <h3 class="text-lg font-semibold text-highlighted">
-        {{ t('kb.trash.empty.title') }}
-      </h3>
-      <p class="text-sm text-muted max-w-md">
-        {{ t('kb.trash.empty.subtitle') }}
-      </p>
-    </UCard>
+      <template #headline>
+        <UBreadcrumb :items="breadcrumbItems" />
+      </template>
+      <div class="mt-4">
+        <KbSubNav />
+      </div>
+    </UPageHeader>
 
-    <!-- Result list -->
-    <div v-else class="space-y-2">
-      <UCard
-        v-for="entry in entries"
-        :key="entry.id"
-        :ui="{ body: 'p-4' }"
-      >
-        <div class="flex items-start justify-between gap-4 flex-wrap">
-          <div class="min-w-0 flex-1 space-y-1">
-            <div class="flex items-center gap-2 flex-wrap">
-              <NuxtLink
-                :to="detailHref(entry)"
-                class="text-base font-semibold text-highlighted truncate hover:underline"
-              >
-                {{ entry.title }}
-              </NuxtLink>
-              <UBadge variant="subtle" color="neutral" size="xs">
-                {{ t(`kb.status.${entry.status}`) }}
-              </UBadge>
-            </div>
-            <p class="text-xs text-muted truncate">
-              {{ entry.slug }}
-            </p>
-            <p class="text-xs text-muted font-mono">
-              {{ t('kb.trash.deletedAt', { when: formatRelative(entry.deletedAt) }) }}
-            </p>
-          </div>
+    <UPage>
+      <div class="space-y-6">
+        <UAlert
+          color="warning"
+          variant="subtle"
+          icon="i-lucide-alert-triangle"
+          :description="t('kb.trash.warning')"
+        />
 
-          <!-- Action buttons (per-row) -->
-          <div class="flex items-center gap-2 shrink-0 flex-wrap">
-            <UButton
-              size="sm"
-              color="primary"
-              icon="i-lucide-rotate-ccw"
-              :label="t('kb.actions.restore')"
-              :loading="isPending(entry.id, 'restore')"
-              :disabled="isRowBusy(entry.id)"
-              @click="onRestore(entry)"
-            />
-            <UButton
-              size="sm"
-              variant="outline"
-              color="error"
-              icon="i-lucide-trash-2"
-              :label="t('kb.actions.purge')"
-              :loading="isPending(entry.id, 'purge')"
-              :disabled="isRowBusy(entry.id)"
-              @click="askPurge(entry)"
-            />
-          </div>
+        <!-- Error -->
+        <UAlert
+          v-if="error"
+          color="error"
+          variant="soft"
+          :title="t('kb.trash.error.title')"
+          :description="error.message"
+          icon="i-lucide-alert-circle"
+        />
+
+        <!-- Loading skeleton -->
+        <div v-if="isLoading" class="space-y-3">
+          <USkeleton v-for="i in 3" :key="i" class="h-24 w-full" />
         </div>
-      </UCard>
-    </div>
 
-    <!-- Pagination -->
-    <div
-      v-if="entries.length > 0 && (hasPrevPage || hasNextPage)"
-      class="flex items-center justify-end gap-2"
-    >
-      <UButton
-        variant="outline"
-        color="neutral"
-        icon="i-lucide-chevron-left"
-        :label="t('kb.list.pagination.prev')"
-        :disabled="!hasPrevPage"
-        @click="page = Math.max(1, page - 1)"
-      />
-      <span class="text-sm text-muted">
-        {{ t('kb.list.pagination.page', { page }) }}
-      </span>
-      <UButton
-        variant="outline"
-        color="neutral"
-        trailing-icon="i-lucide-chevron-right"
-        :label="t('kb.list.pagination.next')"
-        :disabled="!hasNextPage"
-        @click="page = page + 1"
-      />
-    </div>
+        <!-- Empty state -->
+        <UCard
+          v-else-if="entries.length === 0"
+          :ui="{ body: 'flex flex-col items-center text-center py-12 gap-2' }"
+        >
+          <UIcon name="i-lucide-trash" class="size-10 text-muted" />
+          <h3 class="text-lg font-semibold text-highlighted">
+            {{ t('kb.trash.empty.title') }}
+          </h3>
+          <p class="text-sm text-muted max-w-md">
+            {{ t('kb.trash.empty.subtitle') }}
+          </p>
+        </UCard>
+
+        <!-- Result list -->
+        <div v-else class="space-y-2">
+          <UCard
+            v-for="entry in entries"
+            :key="entry.id"
+            :ui="{ body: 'p-4' }"
+          >
+            <div class="flex items-start justify-between gap-4 flex-wrap">
+              <div class="min-w-0 flex-1 space-y-1">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <NuxtLink
+                    :to="detailHref(entry)"
+                    class="text-base font-semibold text-highlighted truncate hover:underline"
+                  >
+                    {{ entry.title }}
+                  </NuxtLink>
+                  <UBadge variant="subtle" color="neutral" size="xs">
+                    {{ t(`kb.status.${entry.status}`) }}
+                  </UBadge>
+                </div>
+                <p class="text-xs text-muted truncate">
+                  {{ entry.slug }}
+                </p>
+                <p class="text-xs text-muted font-mono">
+                  {{ t('kb.trash.deletedAt', { when: formatRelative(entry.deletedAt) }) }}
+                </p>
+              </div>
+
+              <!-- Action buttons (per-row) -->
+              <div class="flex items-center gap-2 shrink-0 flex-wrap">
+                <UButton
+                  size="sm"
+                  color="primary"
+                  icon="i-lucide-rotate-ccw"
+                  :label="t('kb.actions.restore')"
+                  :loading="isPending(entry.id, 'restore')"
+                  :disabled="isRowBusy(entry.id)"
+                  @click="onRestore(entry)"
+                />
+                <UButton
+                  size="sm"
+                  variant="outline"
+                  color="error"
+                  icon="i-lucide-trash-2"
+                  :label="t('kb.actions.purge')"
+                  :loading="isPending(entry.id, 'purge')"
+                  :disabled="isRowBusy(entry.id)"
+                  @click="askPurge(entry)"
+                />
+              </div>
+            </div>
+          </UCard>
+        </div>
+
+        <!-- Pagination -->
+        <div
+          v-if="entries.length > 0 && (hasPrevPage || hasNextPage)"
+          class="flex items-center justify-end gap-2"
+        >
+          <UButton
+            variant="outline"
+            color="neutral"
+            icon="i-lucide-chevron-left"
+            :label="t('kb.list.pagination.prev')"
+            :disabled="!hasPrevPage"
+            @click="page = Math.max(1, page - 1)"
+          />
+          <span class="text-sm text-muted">
+            {{ t('kb.list.pagination.page', { page }) }}
+          </span>
+          <UButton
+            variant="outline"
+            color="neutral"
+            trailing-icon="i-lucide-chevron-right"
+            :label="t('kb.list.pagination.next')"
+            :disabled="!hasNextPage"
+            @click="page = page + 1"
+          />
+        </div>
+      </div>
+    </UPage>
 
     <!-- Purge confirmation modal -->
     <UModal v-model:open="isPurgeModalOpen">
@@ -322,5 +332,5 @@ const detailHref = (entry: KbEntry) => `/app/kb/${encodeURIComponent(entry.slug)
         </UCard>
       </template>
     </UModal>
-  </div>
+  </UPage>
 </template>

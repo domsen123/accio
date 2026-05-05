@@ -12,6 +12,7 @@
  * Refs: REQ-ORCH-1 (list past conversations and resume them), REQ-ORCH-3,
  * DESIGN-API §Orchestrator.
  */
+import type { BreadcrumbItem } from '@nuxt/ui'
 import type {
   ConversationListItem,
   ConversationListQuery,
@@ -199,204 +200,212 @@ const titleOrFallback = (row: ConversationListItem) =>
 
 const detailHref = (row: ConversationListItem) =>
   `/app/orchestrator/${row.id}`
+
+const breadcrumbItems = computed<BreadcrumbItem[]>(() => [
+  { label: t('orchestrator.list.title') },
+])
 </script>
 
 <template>
-  <div class="p-4 md:p-6 space-y-6 max-w-6xl">
-    <header class="flex items-start justify-between gap-4 flex-wrap">
-      <div>
-        <h1 class="text-2xl font-bold text-highlighted">
-          {{ t('orchestrator.list.title') }}
-        </h1>
-        <p class="text-muted text-sm mt-1">
-          {{ t('orchestrator.list.subtitle') }}
-        </p>
-      </div>
-      <UButton
-        v-if="canUse"
-        icon="i-lucide-plus"
-        :label="t('orchestrator.list.actions.create')"
-        :loading="createMutation.asyncStatus.value === 'loading'"
-        @click="handleCreate"
-      />
-    </header>
-
-    <UAlert
-      v-if="!canUse"
-      color="warning"
-      variant="soft"
-      icon="i-lucide-shield-alert"
-      :title="t('orchestrator.permissions.denied.title')"
-      :description="t('orchestrator.permissions.denied.description')"
-    />
-
-    <template v-else>
-      <!-- Filter bar -->
-      <div class="flex flex-wrap items-end gap-3">
-        <UFormField :label="t('orchestrator.list.filters.search.label')" class="grow min-w-60">
-          <UInput
-            v-model="titleFilter"
-            icon="i-lucide-search"
-            :placeholder="t('orchestrator.list.filters.search.placeholder')"
-          />
-        </UFormField>
-
-        <UFormField :label="t('orchestrator.list.filters.sort.label')" class="min-w-52">
-          <USelectMenu
-            v-model="sort"
-            :items="sortOptions"
-            value-key="value"
-            label-key="label"
-          />
-        </UFormField>
-
-        <UCheckbox
-          v-model="includeDeleted"
-          :label="t('orchestrator.list.filters.includeDeleted')"
-          class="pb-2"
+  <UPage>
+    <UPageHeader
+      :title="t('orchestrator.list.title')"
+      :description="t('orchestrator.list.subtitle')"
+      :ui="{ root: 'border-none' }"
+    >
+      <template #headline>
+        <UBreadcrumb :items="breadcrumbItems" />
+      </template>
+      <template v-if="canUse" #links>
+        <UButton
+          icon="i-lucide-plus"
+          :label="t('orchestrator.list.actions.create')"
+          :loading="createMutation.asyncStatus.value === 'loading'"
+          @click="handleCreate"
         />
-      </div>
-
-      <UAlert
-        v-if="error"
-        color="error"
-        variant="soft"
-        icon="i-lucide-alert-circle"
-        :title="t('orchestrator.errors.load.title')"
-        :description="error.message"
-      />
-
-      <UCard>
-        <template #header>
-          <div class="flex items-center justify-between flex-wrap gap-2">
-            <h2 class="text-lg font-semibold text-highlighted">
-              {{ t('orchestrator.list.table.title') }}
-            </h2>
-            <div class="text-sm text-muted">
-              {{ t('orchestrator.list.table.total', { total }) }}
-            </div>
-          </div>
-        </template>
-
-        <div v-if="isLoading && rows.length === 0" class="space-y-2">
-          <USkeleton v-for="i in 4" :key="i" class="h-12 w-full" />
-        </div>
-
-        <div v-else-if="filteredRows.length === 0" class="text-sm text-muted py-8 text-center space-y-1">
-          <p>{{ t('orchestrator.list.empty.title') }}</p>
-          <p class="text-xs">
-            {{ t('orchestrator.list.empty.subtitle') }}
-          </p>
-        </div>
-
-        <ul v-else class="divide-y divide-default">
-          <li
-            v-for="row in filteredRows"
-            :key="row.id"
-            class="flex items-center gap-3 py-3"
-            :class="{ 'opacity-60': row.deletedAt }"
-          >
-            <NuxtLink
-              :to="detailHref(row)"
-              class="flex-1 min-w-0 hover:bg-accented rounded p-2 -m-2 transition-colors"
-            >
-              <div class="flex items-center gap-2 flex-wrap">
-                <span class="font-medium text-highlighted truncate">
-                  {{ titleOrFallback(row) }}
-                </span>
-                <UBadge
-                  :color="modeColor(row.mode)"
-                  variant="subtle"
-                  size="xs"
-                >
-                  {{ t(`orchestrator.modes.${row.mode}`) }}
-                </UBadge>
-                <UBadge
-                  v-if="row.deletedAt"
-                  color="neutral"
-                  variant="outline"
-                  size="xs"
-                >
-                  {{ t('orchestrator.list.row.deleted') }}
-                </UBadge>
-              </div>
-              <div class="text-xs text-muted mt-1 flex items-center gap-3 flex-wrap">
-                <span>{{ modelLabel(row.modelId) }}</span>
-                <span v-if="row.lastMessageAt" class="font-mono">
-                  {{ t('orchestrator.list.row.lastMessage', { when: formatRelative(row.lastMessageAt) }) }}
-                </span>
-                <span v-else>{{ t('orchestrator.list.row.noMessages') }}</span>
-              </div>
-            </NuxtLink>
-            <UButton
-              variant="ghost"
-              size="sm"
-              icon="i-lucide-message-square"
-              :label="t('orchestrator.list.row.actions.open')"
-              :to="detailHref(row)"
-            />
-            <UButton
-              v-if="!row.deletedAt"
-              color="error"
-              variant="ghost"
-              size="sm"
-              icon="i-lucide-trash"
-              :aria-label="t('orchestrator.list.row.actions.delete')"
-              @click="confirmDelete(row)"
-            />
-          </li>
-        </ul>
-
-        <template #footer>
-          <div class="flex items-center justify-between flex-wrap gap-2">
-            <div class="text-sm text-muted">
-              {{ t('orchestrator.list.pagination.indicator', { page, totalPages }) }}
-            </div>
-            <div class="flex gap-2">
-              <UButton
-                variant="outline"
-                size="sm"
-                icon="i-lucide-chevron-left"
-                :label="t('orchestrator.list.pagination.prev')"
-                :disabled="!canPrev"
-                @click="goPrev"
-              />
-              <UButton
-                variant="outline"
-                size="sm"
-                trailing-icon="i-lucide-chevron-right"
-                :label="t('orchestrator.list.pagination.next')"
-                :disabled="!canNext"
-                @click="goNext"
-              />
-            </div>
-          </div>
-        </template>
-      </UCard>
-    </template>
-
-    <UModal v-model:open="deleteModalOpen" :title="t('orchestrator.list.delete.title')">
-      <template #body>
-        <p class="text-sm">
-          {{ t('orchestrator.list.delete.body', { title: deleteTarget ? titleOrFallback(deleteTarget) : '' }) }}
-        </p>
       </template>
-      <template #footer>
-        <div class="flex justify-end gap-2">
-          <UButton
-            color="neutral"
-            variant="ghost"
-            :label="t('common.cancel')"
-            @click="deleteModalOpen = false"
-          />
-          <UButton
+    </UPageHeader>
+
+    <UPage>
+      <div class="space-y-6 max-w-6xl">
+        <UAlert
+          v-if="!canUse"
+          color="warning"
+          variant="soft"
+          icon="i-lucide-shield-alert"
+          :title="t('orchestrator.permissions.denied.title')"
+          :description="t('orchestrator.permissions.denied.description')"
+        />
+
+        <template v-else>
+          <!-- Filter bar -->
+          <div class="flex flex-wrap items-end gap-3">
+            <UFormField :label="t('orchestrator.list.filters.search.label')" class="grow min-w-60">
+              <UInput
+                v-model="titleFilter"
+                icon="i-lucide-search"
+                :placeholder="t('orchestrator.list.filters.search.placeholder')"
+              />
+            </UFormField>
+
+            <UFormField :label="t('orchestrator.list.filters.sort.label')" class="min-w-52">
+              <USelectMenu
+                v-model="sort"
+                :items="sortOptions"
+                value-key="value"
+                label-key="label"
+              />
+            </UFormField>
+
+            <UCheckbox
+              v-model="includeDeleted"
+              :label="t('orchestrator.list.filters.includeDeleted')"
+              class="pb-2"
+            />
+          </div>
+
+          <UAlert
+            v-if="error"
             color="error"
-            :label="t('orchestrator.list.delete.confirm')"
-            :loading="deleteMutation.asyncStatus.value === 'loading'"
-            @click="handleDelete"
+            variant="soft"
+            icon="i-lucide-alert-circle"
+            :title="t('orchestrator.errors.load.title')"
+            :description="error.message"
           />
-        </div>
-      </template>
-    </UModal>
-  </div>
+
+          <UCard>
+            <template #header>
+              <div class="flex items-center justify-between flex-wrap gap-2">
+                <h2 class="text-lg font-semibold text-highlighted">
+                  {{ t('orchestrator.list.table.title') }}
+                </h2>
+                <div class="text-sm text-muted">
+                  {{ t('orchestrator.list.table.total', { total }) }}
+                </div>
+              </div>
+            </template>
+
+            <div v-if="isLoading && rows.length === 0" class="space-y-2">
+              <USkeleton v-for="i in 4" :key="i" class="h-12 w-full" />
+            </div>
+
+            <div v-else-if="filteredRows.length === 0" class="text-sm text-muted py-8 text-center space-y-1">
+              <p>{{ t('orchestrator.list.empty.title') }}</p>
+              <p class="text-xs">
+                {{ t('orchestrator.list.empty.subtitle') }}
+              </p>
+            </div>
+
+            <ul v-else class="divide-y divide-default">
+              <li
+                v-for="row in filteredRows"
+                :key="row.id"
+                class="flex items-center gap-3 py-3"
+                :class="{ 'opacity-60': row.deletedAt }"
+              >
+                <NuxtLink
+                  :to="detailHref(row)"
+                  class="flex-1 min-w-0 hover:bg-accented rounded p-2 -m-2 transition-colors"
+                >
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <span class="font-medium text-highlighted truncate">
+                      {{ titleOrFallback(row) }}
+                    </span>
+                    <UBadge
+                      :color="modeColor(row.mode)"
+                      variant="subtle"
+                      size="xs"
+                    >
+                      {{ t(`orchestrator.modes.${row.mode}`) }}
+                    </UBadge>
+                    <UBadge
+                      v-if="row.deletedAt"
+                      color="neutral"
+                      variant="outline"
+                      size="xs"
+                    >
+                      {{ t('orchestrator.list.row.deleted') }}
+                    </UBadge>
+                  </div>
+                  <div class="text-xs text-muted mt-1 flex items-center gap-3 flex-wrap">
+                    <span>{{ modelLabel(row.modelId) }}</span>
+                    <span v-if="row.lastMessageAt" class="font-mono">
+                      {{ t('orchestrator.list.row.lastMessage', { when: formatRelative(row.lastMessageAt) }) }}
+                    </span>
+                    <span v-else>{{ t('orchestrator.list.row.noMessages') }}</span>
+                  </div>
+                </NuxtLink>
+                <UButton
+                  variant="ghost"
+                  size="sm"
+                  icon="i-lucide-message-square"
+                  :label="t('orchestrator.list.row.actions.open')"
+                  :to="detailHref(row)"
+                />
+                <UButton
+                  v-if="!row.deletedAt"
+                  color="error"
+                  variant="ghost"
+                  size="sm"
+                  icon="i-lucide-trash"
+                  :aria-label="t('orchestrator.list.row.actions.delete')"
+                  @click="confirmDelete(row)"
+                />
+              </li>
+            </ul>
+
+            <template #footer>
+              <div class="flex items-center justify-between flex-wrap gap-2">
+                <div class="text-sm text-muted">
+                  {{ t('orchestrator.list.pagination.indicator', { page, totalPages }) }}
+                </div>
+                <div class="flex gap-2">
+                  <UButton
+                    variant="outline"
+                    size="sm"
+                    icon="i-lucide-chevron-left"
+                    :label="t('orchestrator.list.pagination.prev')"
+                    :disabled="!canPrev"
+                    @click="goPrev"
+                  />
+                  <UButton
+                    variant="outline"
+                    size="sm"
+                    trailing-icon="i-lucide-chevron-right"
+                    :label="t('orchestrator.list.pagination.next')"
+                    :disabled="!canNext"
+                    @click="goNext"
+                  />
+                </div>
+              </div>
+            </template>
+          </UCard>
+        </template>
+
+        <UModal v-model:open="deleteModalOpen" :title="t('orchestrator.list.delete.title')">
+          <template #body>
+            <p class="text-sm">
+              {{ t('orchestrator.list.delete.body', { title: deleteTarget ? titleOrFallback(deleteTarget) : '' }) }}
+            </p>
+          </template>
+          <template #footer>
+            <div class="flex justify-end gap-2">
+              <UButton
+                color="neutral"
+                variant="ghost"
+                :label="t('common.cancel')"
+                @click="deleteModalOpen = false"
+              />
+              <UButton
+                color="error"
+                :label="t('orchestrator.list.delete.confirm')"
+                :loading="deleteMutation.asyncStatus.value === 'loading'"
+                @click="handleDelete"
+              />
+            </div>
+          </template>
+        </UModal>
+      </div>
+    </UPage>
+  </UPage>
 </template>

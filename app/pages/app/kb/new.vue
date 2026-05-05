@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { BreadcrumbItem } from '@nuxt/ui'
 import type { KbEntry } from '~/features/kb/types/kb.types'
 /**
  * KB entry create page (T-1.9) — `/app/kb/new`.
@@ -28,30 +29,30 @@ const onSuccess = (entry: KbEntry) => {
 const onCancel = () => {
   router.push('/app/kb')
 }
+
+const breadcrumbItems = computed<BreadcrumbItem[]>(() => [
+  { label: t('kb.list.title'), to: '/app/kb' },
+  { label: t('kb.form.create.title') },
+])
 </script>
 
 <template>
-  <div class="p-4 md:p-6 space-y-6">
-    <div class="flex items-center justify-between gap-3 flex-wrap">
-      <div>
-        <h1 class="text-2xl font-bold text-highlighted">
-          {{ t('kb.form.create.title') }}
-        </h1>
-        <p class="text-muted text-sm mt-1">
-          {{ t('kb.form.create.subtitle') }}
-        </p>
-      </div>
-      <UButton
-        to="/app/kb"
-        variant="ghost"
-        color="neutral"
-        icon="i-lucide-arrow-left"
-        :label="t('kb.detail.back')"
+  <UPage>
+    <UPageHeader
+      :title="t('kb.form.create.title')"
+      :description="t('kb.form.create.subtitle')"
+      :ui="{ root: 'border-none' }"
+    >
+      <template #headline>
+        <UBreadcrumb :items="breadcrumbItems" />
+      </template>
+    </UPageHeader>
+
+    <UPage>
+      <KbEntryForm
+        @success="onSuccess"
+        @cancel="onCancel"
       />
-    </div>
-    <KbEntryForm
-      @success="onSuccess"
-      @cancel="onCancel"
-    />
-  </div>
+    </UPage>
+  </UPage>
 </template>

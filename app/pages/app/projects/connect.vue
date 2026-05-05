@@ -10,6 +10,7 @@
  *
  * Refs: REQ-PROJ-1.
  */
+import type { BreadcrumbItem } from '@nuxt/ui'
 import { usePermissions } from '~/features/permissions'
 import {
   useConnectGh,
@@ -130,198 +131,200 @@ const scopesLabel = computed(() => {
     return t('projects.connection.status.scopesEmpty')
   return scopes.join(', ')
 })
+
+const breadcrumbItems = computed<BreadcrumbItem[]>(() => [
+  { label: t('projects.list.title'), to: '/app/projects' },
+  { label: t('projects.connection.title') },
+])
 </script>
 
 <template>
-  <div class="p-4 md:p-6 space-y-6 max-w-3xl">
-    <UButton
-      variant="ghost"
-      icon="i-lucide-chevron-left"
-      :label="t('projects.connection.back')"
-      to="/app/projects"
-      class="-ml-2"
-    />
+  <UPage>
+    <UPageHeader
+      :title="t('projects.connection.title')"
+      :description="t('projects.connection.subtitle')"
+      :ui="{ root: 'border-none' }"
+    >
+      <template #headline>
+        <UBreadcrumb :items="breadcrumbItems" />
+      </template>
+    </UPageHeader>
 
-    <header>
-      <h1 class="text-2xl font-bold text-highlighted">
-        {{ t('projects.connection.title') }}
-      </h1>
-      <p class="text-muted text-sm mt-1">
-        {{ t('projects.connection.subtitle') }}
-      </p>
-    </header>
-
-    <UAlert
-      v-if="!canManage"
-      color="warning"
-      variant="soft"
-      icon="i-lucide-shield-alert"
-      :title="t('projects.permissions.denied.title')"
-      :description="t('projects.permissions.manage.tooltip')"
-    />
-
-    <UAlert
-      v-if="error"
-      color="error"
-      variant="soft"
-      icon="i-lucide-alert-circle"
-      :title="t('projects.errors.load.title')"
-      :description="error.message"
-    />
-
-    <div v-if="isLoading && !status" class="space-y-3">
-      <USkeleton class="h-32 w-full" />
-      <USkeleton class="h-32 w-full" />
-    </div>
-
-    <template v-else>
-      <!-- Status -->
-      <UCard>
-        <template #header>
-          <h2 class="text-lg font-semibold text-highlighted">
-            {{ t('projects.connection.status.title') }}
-          </h2>
-        </template>
-
-        <div class="flex flex-col gap-3 text-sm">
-          <div class="flex items-center gap-2">
-            <UBadge
-              :color="isConnected ? 'success' : 'neutral'"
-              variant="subtle"
-            >
-              {{ isConnected
-                ? t('projects.connection.status.connected')
-                : t('projects.connection.status.notConnected') }}
-            </UBadge>
-          </div>
-          <template v-if="isConnected">
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <div>
-                <span class="text-muted">{{ t('projects.connection.status.ghUserLogin') }}:</span>
-                <span class="ml-2 font-medium text-highlighted">{{ status?.ghUserLogin }}</span>
-              </div>
-              <div>
-                <span class="text-muted">{{ t('projects.connection.status.lastValidatedAt') }}:</span>
-                <span class="ml-2">{{ formatTimestamp(status?.lastValidatedAt) }}</span>
-              </div>
-              <div class="sm:col-span-2">
-                <span class="text-muted">{{ t('projects.connection.status.scopes') }}:</span>
-                <span class="ml-2 font-mono text-xs">{{ scopesLabel }}</span>
-              </div>
-            </div>
-          </template>
-        </div>
-
-        <template v-if="canManage && isConnected" #footer>
-          <div class="flex justify-end gap-2">
-            <UButton
-              color="neutral"
-              variant="outline"
-              icon="i-lucide-shield-check"
-              :label="t('projects.connection.validate.label')"
-              :loading="validateMutation.asyncStatus.value === 'loading'"
-              @click="handleValidate"
-            />
-          </div>
-        </template>
-      </UCard>
-
-      <!-- Token form -->
-      <UCard>
-        <template #header>
-          <div>
-            <h2 class="text-lg font-semibold text-highlighted">
-              {{ t('projects.connection.form.title') }}
-            </h2>
-            <p class="text-sm text-muted">
-              {{ t('projects.connection.form.subtitle') }}
-            </p>
-          </div>
-        </template>
-
-        <UFormField :label="t('projects.connection.form.tokenLabel')" :description="t('projects.connection.form.tokenHelp')">
-          <UInput
-            v-model="tokenInput"
-            type="password"
-            autocomplete="off"
-            :placeholder="t('projects.connection.form.tokenPlaceholder')"
-            :disabled="!canManage"
-          />
-        </UFormField>
-
-        <template #footer>
-          <div class="flex justify-end gap-2">
-            <UButton
-              color="primary"
-              :label="isConnected
-                ? t('projects.connection.form.replace')
-                : t('projects.connection.form.save')"
-              :loading="connectMutation.asyncStatus.value === 'loading'"
-              :disabled="!canManage || !tokenInput.trim()"
-              @click="handleSave"
-            />
-          </div>
-        </template>
-      </UCard>
-
-      <!-- Revoke -->
-      <UCard v-if="isConnected && canManage">
-        <template #header>
-          <div>
-            <h2 class="text-lg font-semibold text-highlighted">
-              {{ t('projects.connection.revoke.title') }}
-            </h2>
-            <p class="text-sm text-muted">
-              {{ t('projects.connection.revoke.subtitle') }}
-            </p>
-          </div>
-        </template>
-
-        <UCheckbox
-          v-model="purgeData"
-          :label="t('projects.connection.revoke.purgeLabel')"
+    <UPage>
+      <div class="space-y-6 max-w-3xl">
+        <UAlert
+          v-if="!canManage"
+          color="warning"
+          variant="soft"
+          icon="i-lucide-shield-alert"
+          :title="t('projects.permissions.denied.title')"
+          :description="t('projects.permissions.manage.tooltip')"
         />
 
-        <template #footer>
-          <div class="flex justify-end gap-2">
-            <UButton
-              color="error"
-              variant="outline"
-              icon="i-lucide-unplug"
-              :label="t('projects.connection.revoke.action')"
-              @click="revokeOpen = true"
-            />
-          </div>
-        </template>
-      </UCard>
-    </template>
+        <UAlert
+          v-if="error"
+          color="error"
+          variant="soft"
+          icon="i-lucide-alert-circle"
+          :title="t('projects.errors.load.title')"
+          :description="error.message"
+        />
 
-    <UModal v-model:open="revokeOpen" :title="t('projects.connection.revoke.confirmTitle')">
-      <template #body>
-        <p class="text-sm">
-          {{ t('projects.connection.revoke.confirmBody', {
-            purge: purgeData
-              ? t('projects.connection.revoke.confirmBodyPurge')
-              : t('projects.connection.revoke.confirmBodyKeep'),
-          }) }}
-        </p>
-      </template>
-      <template #footer>
-        <div class="flex justify-end gap-2">
-          <UButton
-            color="neutral"
-            variant="ghost"
-            :label="t('common.cancel')"
-            @click="revokeOpen = false"
-          />
-          <UButton
-            color="error"
-            :label="t('projects.connection.revoke.confirm')"
-            :loading="revokeMutation.asyncStatus.value === 'loading'"
-            @click="handleRevoke"
-          />
+        <div v-if="isLoading && !status" class="space-y-3">
+          <USkeleton class="h-32 w-full" />
+          <USkeleton class="h-32 w-full" />
         </div>
-      </template>
-    </UModal>
-  </div>
+
+        <template v-else>
+          <!-- Status -->
+          <UCard>
+            <template #header>
+              <h2 class="text-lg font-semibold text-highlighted">
+                {{ t('projects.connection.status.title') }}
+              </h2>
+            </template>
+
+            <div class="flex flex-col gap-3 text-sm">
+              <div class="flex items-center gap-2">
+                <UBadge
+                  :color="isConnected ? 'success' : 'neutral'"
+                  variant="subtle"
+                >
+                  {{ isConnected
+                    ? t('projects.connection.status.connected')
+                    : t('projects.connection.status.notConnected') }}
+                </UBadge>
+              </div>
+              <template v-if="isConnected">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div>
+                    <span class="text-muted">{{ t('projects.connection.status.ghUserLogin') }}:</span>
+                    <span class="ml-2 font-medium text-highlighted">{{ status?.ghUserLogin }}</span>
+                  </div>
+                  <div>
+                    <span class="text-muted">{{ t('projects.connection.status.lastValidatedAt') }}:</span>
+                    <span class="ml-2">{{ formatTimestamp(status?.lastValidatedAt) }}</span>
+                  </div>
+                  <div class="sm:col-span-2">
+                    <span class="text-muted">{{ t('projects.connection.status.scopes') }}:</span>
+                    <span class="ml-2 font-mono text-xs">{{ scopesLabel }}</span>
+                  </div>
+                </div>
+              </template>
+            </div>
+
+            <template v-if="canManage && isConnected" #footer>
+              <div class="flex justify-end gap-2">
+                <UButton
+                  color="neutral"
+                  variant="outline"
+                  icon="i-lucide-shield-check"
+                  :label="t('projects.connection.validate.label')"
+                  :loading="validateMutation.asyncStatus.value === 'loading'"
+                  @click="handleValidate"
+                />
+              </div>
+            </template>
+          </UCard>
+
+          <!-- Token form -->
+          <UCard>
+            <template #header>
+              <div>
+                <h2 class="text-lg font-semibold text-highlighted">
+                  {{ t('projects.connection.form.title') }}
+                </h2>
+                <p class="text-sm text-muted">
+                  {{ t('projects.connection.form.subtitle') }}
+                </p>
+              </div>
+            </template>
+
+            <UFormField :label="t('projects.connection.form.tokenLabel')" :description="t('projects.connection.form.tokenHelp')">
+              <UInput
+                v-model="tokenInput"
+                type="password"
+                autocomplete="off"
+                :placeholder="t('projects.connection.form.tokenPlaceholder')"
+                :disabled="!canManage"
+              />
+            </UFormField>
+
+            <template #footer>
+              <div class="flex justify-end gap-2">
+                <UButton
+                  color="primary"
+                  :label="isConnected
+                    ? t('projects.connection.form.replace')
+                    : t('projects.connection.form.save')"
+                  :loading="connectMutation.asyncStatus.value === 'loading'"
+                  :disabled="!canManage || !tokenInput.trim()"
+                  @click="handleSave"
+                />
+              </div>
+            </template>
+          </UCard>
+
+          <!-- Revoke -->
+          <UCard v-if="isConnected && canManage">
+            <template #header>
+              <div>
+                <h2 class="text-lg font-semibold text-highlighted">
+                  {{ t('projects.connection.revoke.title') }}
+                </h2>
+                <p class="text-sm text-muted">
+                  {{ t('projects.connection.revoke.subtitle') }}
+                </p>
+              </div>
+            </template>
+
+            <UCheckbox
+              v-model="purgeData"
+              :label="t('projects.connection.revoke.purgeLabel')"
+            />
+
+            <template #footer>
+              <div class="flex justify-end gap-2">
+                <UButton
+                  color="error"
+                  variant="outline"
+                  icon="i-lucide-unplug"
+                  :label="t('projects.connection.revoke.action')"
+                  @click="revokeOpen = true"
+                />
+              </div>
+            </template>
+          </UCard>
+        </template>
+
+        <UModal v-model:open="revokeOpen" :title="t('projects.connection.revoke.confirmTitle')">
+          <template #body>
+            <p class="text-sm">
+              {{ t('projects.connection.revoke.confirmBody', {
+                purge: purgeData
+                  ? t('projects.connection.revoke.confirmBodyPurge')
+                  : t('projects.connection.revoke.confirmBodyKeep'),
+              }) }}
+            </p>
+          </template>
+          <template #footer>
+            <div class="flex justify-end gap-2">
+              <UButton
+                color="neutral"
+                variant="ghost"
+                :label="t('common.cancel')"
+                @click="revokeOpen = false"
+              />
+              <UButton
+                color="error"
+                :label="t('projects.connection.revoke.confirm')"
+                :loading="revokeMutation.asyncStatus.value === 'loading'"
+                @click="handleRevoke"
+              />
+            </div>
+          </template>
+        </UModal>
+      </div>
+    </UPage>
+  </UPage>
 </template>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { BreadcrumbItem } from '@nuxt/ui'
 import type { KbEntry } from '~/features/kb/types/kb.types'
 /**
  * KB entry edit page (T-1.9) — `/app/kb/[slug]/edit`.
@@ -39,47 +40,55 @@ const onCancel = () => {
   else
     router.push('/app/kb')
 }
+
+const breadcrumbItems = computed<BreadcrumbItem[]>(() => {
+  const items: BreadcrumbItem[] = [{ label: t('kb.list.title'), to: '/app/kb' }]
+  if (entry.value) {
+    items.push({
+      label: entry.value.title,
+      to: `/app/kb/${encodeURIComponent(entry.value.slug)}`,
+    })
+  }
+  items.push({ label: t('kb.form.edit.heading') })
+  return items
+})
 </script>
 
 <template>
-  <div class="p-4 md:p-6 space-y-6">
-    <div class="flex items-center justify-between gap-3 flex-wrap">
-      <div>
-        <h1 class="text-2xl font-bold text-highlighted">
-          {{ t('kb.form.edit.heading') }}
-        </h1>
-        <p v-if="entry" class="text-muted text-sm mt-1 truncate max-w-2xl">
-          {{ entry.title }}
-        </p>
+  <UPage>
+    <UPageHeader
+      :title="t('kb.form.edit.heading')"
+      :description="entry?.title"
+      :ui="{ root: 'border-none' }"
+    >
+      <template #headline>
+        <UBreadcrumb :items="breadcrumbItems" />
+      </template>
+    </UPageHeader>
+
+    <UPage>
+      <div class="space-y-6">
+        <div v-if="isLoading" class="space-y-4">
+          <USkeleton class="h-8 w-3/4" />
+          <USkeleton class="h-64 w-full" />
+        </div>
+
+        <UAlert
+          v-else-if="error"
+          color="error"
+          variant="soft"
+          icon="i-lucide-alert-circle"
+          :title="t('kb.detail.error.title')"
+          :description="error.message"
+        />
+
+        <KbEntryForm
+          v-else-if="entry"
+          :entry="entry"
+          @success="onSuccess"
+          @cancel="onCancel"
+        />
       </div>
-      <UButton
-        :to="entry ? `/app/kb/${encodeURIComponent(entry.slug)}` : '/app/kb'"
-        variant="ghost"
-        color="neutral"
-        icon="i-lucide-arrow-left"
-        :label="t('kb.form.edit.backToEntry')"
-      />
-    </div>
-
-    <div v-if="isLoading" class="space-y-4">
-      <USkeleton class="h-8 w-3/4" />
-      <USkeleton class="h-64 w-full" />
-    </div>
-
-    <UAlert
-      v-else-if="error"
-      color="error"
-      variant="soft"
-      icon="i-lucide-alert-circle"
-      :title="t('kb.detail.error.title')"
-      :description="error.message"
-    />
-
-    <KbEntryForm
-      v-else-if="entry"
-      :entry="entry"
-      @success="onSuccess"
-      @cancel="onCancel"
-    />
-  </div>
+    </UPage>
+  </UPage>
 </template>

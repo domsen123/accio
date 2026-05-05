@@ -342,7 +342,6 @@
     },
     "chat": {
       "title": "Conversation",
-      "back": "Back to conversations",
       "titleField": {
         "label": "Title",
         "description": "Saved automatically when you leave the field.",
@@ -548,7 +547,6 @@
     "connection": {
       "title": "GitHub connection",
       "subtitle": "Connect a personal access token so we can sync repositories you own or collaborate on.",
-      "back": "Back to projects",
       "status": {
         "title": "Status",
         "connected": "Connected",
@@ -609,7 +607,6 @@
     "picker": {
       "title": "Add a repository",
       "subtitle": "Repositories accessible from the connected GitHub account. Tracking a repo schedules background syncs.",
-      "back": "Back to projects",
       "search": {
         "placeholder": "Filter by name or description..."
       },
@@ -639,7 +636,6 @@
       }
     },
     "detail": {
-      "back": "Back to projects",
       "header": {
         "tracked": "Tracked",
         "untracked": "Untracked",
@@ -789,7 +785,6 @@
       "title": {
         "fallback": "Knowledge base entry"
       },
-      "back": "Back to list",
       "edit": "Edit",
       "delete": "Delete",
       "updatedAt": "Updated {date}",
@@ -820,8 +815,7 @@
       "edit": {
         "title": "Edit — {title}",
         "fallback": "Edit entry",
-        "heading": "Edit entry",
-        "backToEntry": "Back to entry"
+        "heading": "Edit entry"
       },
       "title": {
         "placeholder": "Untitled entry"
@@ -1113,10 +1107,8 @@
       "edit": {
         "title": "Edit — {title}",
         "fallback": "Edit todo",
-        "heading": "Edit todo",
-        "backToTodo": "Back to todo"
+        "heading": "Edit todo"
       },
-      "backToList": "Back to todos",
       "title": {
         "label": "Title",
         "placeholder": "What needs doing?"
@@ -1173,7 +1165,6 @@
     "detail": {
       "title": "{title}",
       "fallback": "Todo",
-      "backToList": "Back to todos",
       "dueAt": "Due {date}",
       "completedAt": "Completed {date}",
       "description": "Description",

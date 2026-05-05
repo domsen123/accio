@@ -342,7 +342,6 @@
     },
     "chat": {
       "title": "Gespräch",
-      "back": "Zurück zur Übersicht",
       "titleField": {
         "label": "Titel",
         "description": "Wird beim Verlassen des Feldes automatisch gespeichert.",
@@ -548,7 +547,6 @@
     "connection": {
       "title": "GitHub-Verbindung",
       "subtitle": "Verbinde ein Personal Access Token, damit Repositories synchronisiert werden können.",
-      "back": "Zurück zu den Projekten",
       "status": {
         "title": "Status",
         "connected": "Verbunden",
@@ -609,7 +607,6 @@
     "picker": {
       "title": "Repository hinzufügen",
       "subtitle": "Repositories, auf die der verbundene GitHub-Account Zugriff hat. Verfolgte Repos werden automatisch synchronisiert.",
-      "back": "Zurück zu den Projekten",
       "search": {
         "placeholder": "Nach Name oder Beschreibung filtern..."
       },
@@ -639,7 +636,6 @@
       }
     },
     "detail": {
-      "back": "Zurück zu den Projekten",
       "header": {
         "tracked": "Verfolgt",
         "untracked": "Nicht verfolgt",
@@ -789,7 +785,6 @@
       "title": {
         "fallback": "Eintrag der Wissensdatenbank"
       },
-      "back": "Zurück zur Liste",
       "edit": "Bearbeiten",
       "delete": "Löschen",
       "updatedAt": "Aktualisiert {date}",
@@ -820,8 +815,7 @@
       "edit": {
         "title": "Bearbeiten — {title}",
         "fallback": "Eintrag bearbeiten",
-        "heading": "Eintrag bearbeiten",
-        "backToEntry": "Zurück zum Eintrag"
+        "heading": "Eintrag bearbeiten"
       },
       "title": {
         "placeholder": "Eintrag ohne Titel"
@@ -1113,10 +1107,8 @@
       "edit": {
         "title": "Bearbeiten — {title}",
         "fallback": "Aufgabe bearbeiten",
-        "heading": "Aufgabe bearbeiten",
-        "backToTodo": "Zurück zur Aufgabe"
+        "heading": "Aufgabe bearbeiten"
       },
-      "backToList": "Zurück zu den Aufgaben",
       "title": {
         "label": "Titel",
         "placeholder": "Was ist zu tun?"
@@ -1173,7 +1165,6 @@
     "detail": {
       "title": "{title}",
       "fallback": "Aufgabe",
-      "backToList": "Zurück zu den Aufgaben",
       "dueAt": "Fällig {date}",
       "completedAt": "Erledigt {date}",
       "description": "Beschreibung",

@@ -12,6 +12,7 @@
  * the KB preview pane so wikilinks resolve identically — todos are first-
  * class citizens in the wikilink graph for cross-domain references.
  */
+import type { BreadcrumbItem } from '@nuxt/ui'
 import { renderKbMarkdown } from '~/features/kb/utils/renderMarkdown'
 import TodoSubtaskList from '~/features/todo/components/TodoSubtaskList.vue'
 import TodoSubtaskProgress from '~/features/todo/components/TodoSubtaskProgress.vue'
@@ -107,157 +108,160 @@ const onToggleComplete = async () => {
     })
   }
 }
+
+const breadcrumbItems = computed<BreadcrumbItem[]>(() => [
+  { label: t('todo.list.title'), to: '/app/todos' },
+  { label: todo.value?.title ?? t('todo.detail.fallback') },
+])
 </script>
 
 <template>
-  <div class="p-4 md:p-6 space-y-6">
-    <div class="flex items-center justify-between gap-3 flex-wrap">
-      <UButton
-        to="/app/todos"
-        variant="ghost"
-        color="neutral"
-        icon="i-lucide-arrow-left"
-        :label="t('todo.detail.backToList')"
+  <UPage>
+    <UPageHeader
+      :title="todo?.title ?? t('todo.detail.fallback')"
+      :ui="{
+        root: 'border-none',
+        title: todo && isCompleted ? 'line-through text-muted' : '',
+      }"
+    >
+      <template #headline>
+        <UBreadcrumb :items="breadcrumbItems" />
+      </template>
+    </UPageHeader>
+
+    <UPage>
+      <div v-if="isLoading" class="space-y-4">
+        <USkeleton class="h-8 w-2/3" />
+        <USkeleton class="h-32 w-full" />
+      </div>
+
+      <UAlert
+        v-else-if="error"
+        color="error"
+        variant="soft"
+        icon="i-lucide-alert-circle"
+        :title="t('todo.detail.error.title')"
+        :description="error.message"
       />
-    </div>
 
-    <div v-if="isLoading" class="space-y-4">
-      <USkeleton class="h-8 w-2/3" />
-      <USkeleton class="h-32 w-full" />
-    </div>
-
-    <UAlert
-      v-else-if="error"
-      color="error"
-      variant="soft"
-      icon="i-lucide-alert-circle"
-      :title="t('todo.detail.error.title')"
-      :description="error.message"
-    />
-
-    <div v-else-if="todo" class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-      <div class="lg:col-span-8 space-y-6">
-        <div class="space-y-2">
-          <div class="flex items-center gap-2 flex-wrap">
-            <h1
-              class="text-2xl font-bold text-highlighted"
-              :class="{ 'line-through text-muted': isCompleted }"
-            >
-              {{ todo.title }}
-            </h1>
-            <UBadge :color="priorityColor" variant="subtle" size="sm">
-              {{ t(`todo.priority.${todo.priority}`) }}
-            </UBadge>
+      <div v-else-if="todo" class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div class="lg:col-span-8 space-y-6">
+          <div class="space-y-2">
+            <div class="flex items-center gap-2 flex-wrap">
+              <UBadge :color="priorityColor" variant="subtle" size="sm">
+                {{ t(`todo.priority.${todo.priority}`) }}
+              </UBadge>
+            </div>
+            <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted">
+              <span v-if="todo.dueAt">
+                <UIcon name="i-lucide-calendar" class="size-4 align-text-bottom mr-1" />
+                {{ t('todo.detail.dueAt', { date: formatDate(todo.dueAt) }) }}
+              </span>
+              <span v-if="isCompleted && todo.completedAt">
+                <UIcon name="i-lucide-check" class="size-4 align-text-bottom mr-1" />
+                {{ t('todo.detail.completedAt', { date: formatDate(todo.completedAt) }) }}
+              </span>
+            </div>
           </div>
-          <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted">
-            <span v-if="todo.dueAt">
-              <UIcon name="i-lucide-calendar" class="size-4 align-text-bottom mr-1" />
-              {{ t('todo.detail.dueAt', { date: formatDate(todo.dueAt) }) }}
-            </span>
-            <span v-if="isCompleted && todo.completedAt">
-              <UIcon name="i-lucide-check" class="size-4 align-text-bottom mr-1" />
-              {{ t('todo.detail.completedAt', { date: formatDate(todo.completedAt) }) }}
-            </span>
-          </div>
+
+          <UCard>
+            <template #header>
+              <h2 class="text-sm font-semibold">
+                {{ t('todo.detail.description') }}
+              </h2>
+            </template>
+            <p v-if="!descriptionHtml" class="italic text-muted text-sm">
+              {{ t('todo.detail.descriptionEmpty') }}
+            </p>
+            <!-- eslint-disable-next-line vue/no-v-html -->
+            <div
+              v-else
+              class="kb-markdown-preview prose prose-neutral dark:prose-invert max-w-none text-sm"
+              v-html="descriptionHtml"
+            />
+          </UCard>
+
+          <UCard>
+            <template #header>
+              <div class="flex items-center justify-between gap-2 flex-wrap">
+                <div class="flex items-center gap-2">
+                  <h2 class="text-sm font-semibold">
+                    {{ t('todo.detail.subtasks.title') }}
+                  </h2>
+                  <TodoSubtaskProgress :parent-todo-id="todo.id" size="sm" />
+                </div>
+                <UButton
+                  size="xs"
+                  icon="i-lucide-plus"
+                  :label="t('todo.subtask.add')"
+                  :to="`/app/todos/new?parentId=${encodeURIComponent(todo.id)}`"
+                />
+              </div>
+            </template>
+            <TodoSubtaskList :parent-todo-id="todo.id" :depth="1" />
+          </UCard>
         </div>
 
-        <UCard>
-          <template #header>
-            <h2 class="text-sm font-semibold">
-              {{ t('todo.detail.description') }}
-            </h2>
-          </template>
-          <p v-if="!descriptionHtml" class="italic text-muted text-sm">
-            {{ t('todo.detail.descriptionEmpty') }}
-          </p>
-          <!-- eslint-disable-next-line vue/no-v-html -->
-          <div
-            v-else
-            class="kb-markdown-preview prose prose-neutral dark:prose-invert max-w-none text-sm"
-            v-html="descriptionHtml"
-          />
-        </UCard>
-
-        <UCard>
-          <template #header>
-            <div class="flex items-center justify-between gap-2 flex-wrap">
-              <div class="flex items-center gap-2">
-                <h2 class="text-sm font-semibold">
-                  {{ t('todo.detail.subtasks.title') }}
-                </h2>
-                <TodoSubtaskProgress :parent-todo-id="todo.id" size="sm" />
-              </div>
+        <div class="lg:col-span-4 space-y-4">
+          <UPageCard :title="t('todo.detail.actions.title')" variant="subtle">
+            <div class="space-y-2">
               <UButton
-                size="xs"
-                icon="i-lucide-plus"
-                :label="t('todo.subtask.add')"
-                :to="`/app/todos/new?parentId=${encodeURIComponent(todo.id)}`"
+                :to="`/app/todos/${encodeURIComponent(todo.id)}/edit`"
+                icon="i-lucide-pencil"
+                :label="t('todo.actions.edit')"
+                block
+              />
+              <UButton
+                :icon="isCompleted ? 'i-lucide-rotate-ccw' : 'i-lucide-check'"
+                :label="isCompleted
+                  ? t('todo.actions.uncomplete.label')
+                  : t('todo.actions.complete.label')"
+                variant="outline"
+                :color="isCompleted ? 'neutral' : 'success'"
+                block
+                @click="onToggleComplete"
               />
             </div>
-          </template>
-          <TodoSubtaskList :parent-todo-id="todo.id" :depth="1" />
-        </UCard>
+          </UPageCard>
+
+          <UPageCard
+            v-if="todo.tags && todo.tags.length > 0"
+            :title="t('todo.form.tags.label')"
+            variant="subtle"
+          >
+            <div class="flex flex-wrap gap-1.5">
+              <UBadge
+                v-for="tag in todo.tags"
+                :key="tag.id"
+                color="neutral"
+                variant="subtle"
+                size="sm"
+              >
+                <UIcon name="i-lucide-tag" class="size-3 mr-1" />
+                {{ tag.name }}
+              </UBadge>
+            </div>
+          </UPageCard>
+
+          <UPageCard
+            v-if="todo.kbEntries && todo.kbEntries.length > 0"
+            :title="t('todo.detail.kbLinks.title')"
+            variant="subtle"
+          >
+            <div class="flex flex-col gap-1.5">
+              <NuxtLink
+                v-for="entry in todo.kbEntries"
+                :key="entry.id"
+                :to="`/app/kb/${encodeURIComponent(entry.slug)}`"
+                class="text-sm text-primary hover:underline truncate"
+              >
+                <UIcon name="i-lucide-link" class="size-3.5 align-text-bottom mr-1" />
+                {{ entry.title }}
+              </NuxtLink>
+            </div>
+          </UPageCard>
+        </div>
       </div>
-
-      <div class="lg:col-span-4 space-y-4">
-        <UPageCard :title="t('todo.detail.actions.title')" variant="subtle">
-          <div class="space-y-2">
-            <UButton
-              :to="`/app/todos/${encodeURIComponent(todo.id)}/edit`"
-              icon="i-lucide-pencil"
-              :label="t('todo.actions.edit')"
-              block
-            />
-            <UButton
-              :icon="isCompleted ? 'i-lucide-rotate-ccw' : 'i-lucide-check'"
-              :label="isCompleted
-                ? t('todo.actions.uncomplete.label')
-                : t('todo.actions.complete.label')"
-              variant="outline"
-              :color="isCompleted ? 'neutral' : 'success'"
-              block
-              @click="onToggleComplete"
-            />
-          </div>
-        </UPageCard>
-
-        <UPageCard
-          v-if="todo.tags && todo.tags.length > 0"
-          :title="t('todo.form.tags.label')"
-          variant="subtle"
-        >
-          <div class="flex flex-wrap gap-1.5">
-            <UBadge
-              v-for="tag in todo.tags"
-              :key="tag.id"
-              color="neutral"
-              variant="subtle"
-              size="sm"
-            >
-              <UIcon name="i-lucide-tag" class="size-3 mr-1" />
-              {{ tag.name }}
-            </UBadge>
-          </div>
-        </UPageCard>
-
-        <UPageCard
-          v-if="todo.kbEntries && todo.kbEntries.length > 0"
-          :title="t('todo.detail.kbLinks.title')"
-          variant="subtle"
-        >
-          <div class="flex flex-col gap-1.5">
-            <NuxtLink
-              v-for="entry in todo.kbEntries"
-              :key="entry.id"
-              :to="`/app/kb/${encodeURIComponent(entry.slug)}`"
-              class="text-sm text-primary hover:underline truncate"
-            >
-              <UIcon name="i-lucide-link" class="size-3.5 align-text-bottom mr-1" />
-              {{ entry.title }}
-            </NuxtLink>
-          </div>
-        </UPageCard>
-      </div>
-    </div>
-  </div>
+    </UPage>
+  </UPage>
 </template>

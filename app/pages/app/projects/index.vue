@@ -10,6 +10,7 @@
  * Refs: REQ-PROJ-2, REQ-PROJ-4 (deep-link to github.dev), REQ-PROJ-5
  * (read-only display).
  */
+import type { BreadcrumbItem } from '@nuxt/ui'
 import type {
   Repo,
   ReposListCacheQuery,
@@ -207,265 +208,280 @@ const trackedFilterOptions = computed(() => [
 
 const detailHref = (r: Repo) => `/app/projects/${r.id}`
 const githubDevHref = (r: Repo) => formatGithubDevUrl(r.owner, r.name)
+
+const breadcrumbItems = computed<BreadcrumbItem[]>(() => [
+  { label: t('projects.list.title') },
+])
+
+const headerLinks = computed(() => {
+  if (!canManage.value)
+    return []
+  const links: Array<Record<string, unknown>> = [
+    {
+      icon: 'i-lucide-link',
+      label: t('projects.list.actions.manageConnection'),
+      to: '/app/projects/connect',
+      variant: 'outline',
+    },
+  ]
+  if (isConnected.value) {
+    links.push({
+      icon: 'i-lucide-plus',
+      label: t('projects.list.actions.addRepo'),
+      to: '/app/projects/picker',
+    })
+  }
+  else {
+    links.push({
+      icon: 'i-lucide-link',
+      label: t('projects.list.actions.connect'),
+      to: '/app/projects/connect',
+    })
+  }
+  return links
+})
 </script>
 
 <template>
-  <div class="p-4 md:p-6 space-y-6 max-w-6xl">
-    <header class="flex items-start justify-between gap-4 flex-wrap">
-      <div>
-        <h1 class="text-2xl font-bold text-highlighted">
-          {{ t('projects.list.title') }}
-        </h1>
-        <p class="text-muted text-sm mt-1">
-          {{ t('projects.list.subtitle') }}
-        </p>
-      </div>
-      <div class="flex items-center gap-2">
-        <UButton
-          v-if="canManage"
-          variant="outline"
-          icon="i-lucide-link"
-          :label="t('projects.list.actions.manageConnection')"
-          to="/app/projects/connect"
-        />
-        <UButton
-          v-if="canManage && isConnected"
-          icon="i-lucide-plus"
-          :label="t('projects.list.actions.addRepo')"
-          to="/app/projects/picker"
-        />
-        <UButton
-          v-else-if="canManage && !isConnected"
-          icon="i-lucide-link"
-          :label="t('projects.list.actions.connect')"
-          to="/app/projects/connect"
-        />
-      </div>
-    </header>
-
-    <UAlert
-      v-if="!canRead"
-      color="warning"
-      variant="soft"
-      icon="i-lucide-shield-alert"
-      :title="t('projects.permissions.denied.title')"
-      :description="t('projects.permissions.denied.description')"
-    />
-
-    <template v-else>
-      <UAlert
-        v-if="!isConnected"
-        color="info"
-        variant="soft"
-        icon="i-lucide-info"
-        :title="t('projects.connection.status.notConnected')"
-        :description="t('projects.list.subtitle')"
-        :actions="canManage
-          ? [{ label: t('projects.list.actions.connect'), to: '/app/projects/connect', color: 'primary', variant: 'solid' }]
-          : undefined"
-      />
-      <UAlert
-        v-else
-        color="success"
-        variant="soft"
-        icon="i-lucide-check-circle"
-        :title="t('projects.connection.status.connected')"
-        :description="connectionStatus?.ghUserLogin
-          ? `${t('projects.connection.status.ghUserLogin')}: ${connectionStatus.ghUserLogin}`
-          : undefined"
-      />
-
-      <!-- Filter bar -->
-      <div class="flex flex-wrap items-end gap-3">
-        <UFormField :label="t('projects.list.filters.search.label')" class="grow min-w-60">
-          <UInput
-            v-model="search"
-            icon="i-lucide-search"
-            :placeholder="t('projects.list.filters.search.placeholder')"
-          />
-        </UFormField>
-
-        <UFormField :label="t('projects.list.filters.tracked.label')" class="min-w-48">
-          <USelectMenu
-            v-model="trackedFilter"
-            :items="trackedFilterOptions"
-            value-key="value"
-            label-key="label"
-          />
-        </UFormField>
-      </div>
-
-      <UAlert
-        v-if="error"
-        color="error"
-        variant="soft"
-        icon="i-lucide-alert-circle"
-        :title="t('projects.errors.load.title')"
-        :description="error.message"
-      />
-
-      <UCard>
-        <template #header>
-          <div class="flex items-center justify-between flex-wrap gap-2">
-            <h2 class="text-lg font-semibold text-highlighted">
-              {{ t('projects.list.table.title') }}
-            </h2>
-            <div class="text-sm text-muted">
-              {{ t('projects.list.table.total', { total }) }}
-            </div>
-          </div>
-        </template>
-
-        <div v-if="isLoading && rows.length === 0" class="space-y-2">
-          <USkeleton v-for="i in 4" :key="i" class="h-14 w-full" />
-        </div>
-
-        <div v-else-if="rows.length === 0" class="text-sm text-muted py-8 text-center space-y-1">
-          <template v-if="searchDebounced.trim() || trackedFilter !== 'all'">
-            <p>{{ t('projects.list.empty.filtered.title') }}</p>
-            <p class="text-xs">
-              {{ t('projects.list.empty.filtered.subtitle') }}
-            </p>
-          </template>
-          <template v-else>
-            <p>{{ t('projects.list.empty.tracked.title') }}</p>
-            <p class="text-xs">
-              {{ t('projects.list.empty.tracked.subtitle') }}
-            </p>
-          </template>
-        </div>
-
-        <ul v-else class="divide-y divide-default">
-          <li
-            v-for="repo in rows"
-            :key="repo.id"
-            class="flex items-center gap-3 py-3"
-            :class="{ 'opacity-60': repo.deletedAt }"
-          >
-            <NuxtLink
-              :to="detailHref(repo)"
-              class="flex-1 min-w-0 hover:bg-accented rounded p-2 -m-2 transition-colors"
-            >
-              <div class="flex items-center gap-2 flex-wrap">
-                <span class="font-medium text-highlighted truncate">
-                  {{ repo.fullName }}
-                </span>
-                <UBadge
-                  :color="repo.tracked ? 'success' : 'neutral'"
-                  variant="subtle"
-                  size="xs"
-                >
-                  {{ repo.tracked ? t('projects.list.row.tracked') : t('projects.list.row.untracked') }}
-                </UBadge>
-                <UBadge
-                  v-if="repo.private"
-                  color="neutral"
-                  variant="outline"
-                  size="xs"
-                >
-                  {{ t('projects.list.row.private') }}
-                </UBadge>
-              </div>
-              <div class="text-xs text-muted mt-1 flex items-center gap-3 flex-wrap">
-                <span v-if="repo.lastSyncedAt" class="font-mono">
-                  {{ t('projects.list.row.lastSyncAgo', { when: formatRelative(repo.lastSyncedAt) }) }}
-                </span>
-                <span v-else>{{ t('projects.list.row.neverSynced') }}</span>
-                <span v-if="repo.description" class="truncate">{{ repo.description }}</span>
-              </div>
-            </NuxtLink>
-            <div class="flex items-center gap-1 shrink-0">
-              <UButton
-                variant="ghost"
-                size="sm"
-                icon="i-lucide-external-link"
-                :to="githubDevHref(repo)"
-                target="_blank"
-                rel="noopener noreferrer"
-                :aria-label="t('projects.list.row.actions.openInGithubDev')"
-              />
-              <UButton
-                v-if="canManage && repo.tracked"
-                variant="ghost"
-                size="sm"
-                icon="i-lucide-refresh-cw"
-                :label="t('projects.list.row.actions.syncNow')"
-                :loading="syncingRepoId === repo.id"
-                :disabled="syncingRepoId !== null"
-                @click="handleSync(repo)"
-              />
-              <UButton
-                v-if="canManage"
-                variant="ghost"
-                size="sm"
-                :icon="repo.tracked ? 'i-lucide-eye-off' : 'i-lucide-eye'"
-                :label="repo.tracked ? t('projects.list.row.actions.untrack') : t('projects.list.row.actions.track')"
-                :loading="togglingRepoId === repo.id"
-                @click="handleToggleTracked(repo)"
-              />
-              <UButton
-                v-if="canManage"
-                color="error"
-                variant="ghost"
-                size="sm"
-                icon="i-lucide-trash"
-                :aria-label="t('projects.list.row.actions.delete')"
-                @click="askDelete(repo)"
-              />
-            </div>
-          </li>
-        </ul>
-
-        <template #footer>
-          <div class="flex items-center justify-between flex-wrap gap-2">
-            <div class="text-sm text-muted">
-              {{ t('projects.list.pagination.indicator', { page, totalPages }) }}
-            </div>
-            <div class="flex gap-2">
-              <UButton
-                variant="outline"
-                size="sm"
-                icon="i-lucide-chevron-left"
-                :label="t('projects.list.pagination.prev')"
-                :disabled="!canPrev"
-                @click="goPrev"
-              />
-              <UButton
-                variant="outline"
-                size="sm"
-                trailing-icon="i-lucide-chevron-right"
-                :label="t('projects.list.pagination.next')"
-                :disabled="!canNext"
-                @click="goNext"
-              />
-            </div>
-          </div>
-        </template>
-      </UCard>
-    </template>
-
-    <UModal v-model:open="deleteModalOpen" :title="t('projects.list.delete.title')">
-      <template #body>
-        <p class="text-sm">
-          {{ t('projects.list.delete.body', { full: deleteTarget?.fullName ?? '' }) }}
-        </p>
+  <UPage>
+    <UPageHeader
+      :title="t('projects.list.title')"
+      :description="t('projects.list.subtitle')"
+      :links="headerLinks"
+      :ui="{ root: 'border-none' }"
+    >
+      <template #headline>
+        <UBreadcrumb :items="breadcrumbItems" />
       </template>
-      <template #footer>
-        <div class="flex justify-end gap-2">
-          <UButton
-            color="neutral"
-            variant="ghost"
-            :label="t('common.cancel')"
-            @click="deleteModalOpen = false"
+    </UPageHeader>
+
+    <UPage>
+      <div class="space-y-6 max-w-6xl">
+        <UAlert
+          v-if="!canRead"
+          color="warning"
+          variant="soft"
+          icon="i-lucide-shield-alert"
+          :title="t('projects.permissions.denied.title')"
+          :description="t('projects.permissions.denied.description')"
+        />
+
+        <template v-else>
+          <UAlert
+            v-if="!isConnected"
+            color="info"
+            variant="soft"
+            icon="i-lucide-info"
+            :title="t('projects.connection.status.notConnected')"
+            :description="t('projects.list.subtitle')"
+            :actions="canManage
+              ? [{ label: t('projects.list.actions.connect'), to: '/app/projects/connect', color: 'primary', variant: 'solid' }]
+              : undefined"
           />
-          <UButton
+          <UAlert
+            v-else
+            color="success"
+            variant="soft"
+            icon="i-lucide-check-circle"
+            :title="t('projects.connection.status.connected')"
+            :description="connectionStatus?.ghUserLogin
+              ? `${t('projects.connection.status.ghUserLogin')}: ${connectionStatus.ghUserLogin}`
+              : undefined"
+          />
+
+          <!-- Filter bar -->
+          <div class="flex flex-wrap items-end gap-3">
+            <UFormField :label="t('projects.list.filters.search.label')" class="grow min-w-60">
+              <UInput
+                v-model="search"
+                icon="i-lucide-search"
+                :placeholder="t('projects.list.filters.search.placeholder')"
+              />
+            </UFormField>
+
+            <UFormField :label="t('projects.list.filters.tracked.label')" class="min-w-48">
+              <USelectMenu
+                v-model="trackedFilter"
+                :items="trackedFilterOptions"
+                value-key="value"
+                label-key="label"
+              />
+            </UFormField>
+          </div>
+
+          <UAlert
+            v-if="error"
             color="error"
-            :label="t('projects.list.delete.confirm')"
-            :loading="deleteMutation.asyncStatus.value === 'loading'"
-            @click="handleDelete"
+            variant="soft"
+            icon="i-lucide-alert-circle"
+            :title="t('projects.errors.load.title')"
+            :description="error.message"
           />
-        </div>
-      </template>
-    </UModal>
-  </div>
+
+          <UCard>
+            <template #header>
+              <div class="flex items-center justify-between flex-wrap gap-2">
+                <h2 class="text-lg font-semibold text-highlighted">
+                  {{ t('projects.list.table.title') }}
+                </h2>
+                <div class="text-sm text-muted">
+                  {{ t('projects.list.table.total', { total }) }}
+                </div>
+              </div>
+            </template>
+
+            <div v-if="isLoading && rows.length === 0" class="space-y-2">
+              <USkeleton v-for="i in 4" :key="i" class="h-14 w-full" />
+            </div>
+
+            <div v-else-if="rows.length === 0" class="text-sm text-muted py-8 text-center space-y-1">
+              <template v-if="searchDebounced.trim() || trackedFilter !== 'all'">
+                <p>{{ t('projects.list.empty.filtered.title') }}</p>
+                <p class="text-xs">
+                  {{ t('projects.list.empty.filtered.subtitle') }}
+                </p>
+              </template>
+              <template v-else>
+                <p>{{ t('projects.list.empty.tracked.title') }}</p>
+                <p class="text-xs">
+                  {{ t('projects.list.empty.tracked.subtitle') }}
+                </p>
+              </template>
+            </div>
+
+            <ul v-else class="divide-y divide-default">
+              <li
+                v-for="repo in rows"
+                :key="repo.id"
+                class="flex items-center gap-3 py-3"
+                :class="{ 'opacity-60': repo.deletedAt }"
+              >
+                <NuxtLink
+                  :to="detailHref(repo)"
+                  class="flex-1 min-w-0 hover:bg-accented rounded p-2 -m-2 transition-colors"
+                >
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <span class="font-medium text-highlighted truncate">
+                      {{ repo.fullName }}
+                    </span>
+                    <UBadge
+                      :color="repo.tracked ? 'success' : 'neutral'"
+                      variant="subtle"
+                      size="xs"
+                    >
+                      {{ repo.tracked ? t('projects.list.row.tracked') : t('projects.list.row.untracked') }}
+                    </UBadge>
+                    <UBadge
+                      v-if="repo.private"
+                      color="neutral"
+                      variant="outline"
+                      size="xs"
+                    >
+                      {{ t('projects.list.row.private') }}
+                    </UBadge>
+                  </div>
+                  <div class="text-xs text-muted mt-1 flex items-center gap-3 flex-wrap">
+                    <span v-if="repo.lastSyncedAt" class="font-mono">
+                      {{ t('projects.list.row.lastSyncAgo', { when: formatRelative(repo.lastSyncedAt) }) }}
+                    </span>
+                    <span v-else>{{ t('projects.list.row.neverSynced') }}</span>
+                    <span v-if="repo.description" class="truncate">{{ repo.description }}</span>
+                  </div>
+                </NuxtLink>
+                <div class="flex items-center gap-1 shrink-0">
+                  <UButton
+                    variant="ghost"
+                    size="sm"
+                    icon="i-lucide-external-link"
+                    :to="githubDevHref(repo)"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    :aria-label="t('projects.list.row.actions.openInGithubDev')"
+                  />
+                  <UButton
+                    v-if="canManage && repo.tracked"
+                    variant="ghost"
+                    size="sm"
+                    icon="i-lucide-refresh-cw"
+                    :label="t('projects.list.row.actions.syncNow')"
+                    :loading="syncingRepoId === repo.id"
+                    :disabled="syncingRepoId !== null"
+                    @click="handleSync(repo)"
+                  />
+                  <UButton
+                    v-if="canManage"
+                    variant="ghost"
+                    size="sm"
+                    :icon="repo.tracked ? 'i-lucide-eye-off' : 'i-lucide-eye'"
+                    :label="repo.tracked ? t('projects.list.row.actions.untrack') : t('projects.list.row.actions.track')"
+                    :loading="togglingRepoId === repo.id"
+                    @click="handleToggleTracked(repo)"
+                  />
+                  <UButton
+                    v-if="canManage"
+                    color="error"
+                    variant="ghost"
+                    size="sm"
+                    icon="i-lucide-trash"
+                    :aria-label="t('projects.list.row.actions.delete')"
+                    @click="askDelete(repo)"
+                  />
+                </div>
+              </li>
+            </ul>
+
+            <template #footer>
+              <div class="flex items-center justify-between flex-wrap gap-2">
+                <div class="text-sm text-muted">
+                  {{ t('projects.list.pagination.indicator', { page, totalPages }) }}
+                </div>
+                <div class="flex gap-2">
+                  <UButton
+                    variant="outline"
+                    size="sm"
+                    icon="i-lucide-chevron-left"
+                    :label="t('projects.list.pagination.prev')"
+                    :disabled="!canPrev"
+                    @click="goPrev"
+                  />
+                  <UButton
+                    variant="outline"
+                    size="sm"
+                    trailing-icon="i-lucide-chevron-right"
+                    :label="t('projects.list.pagination.next')"
+                    :disabled="!canNext"
+                    @click="goNext"
+                  />
+                </div>
+              </div>
+            </template>
+          </UCard>
+        </template>
+
+        <UModal v-model:open="deleteModalOpen" :title="t('projects.list.delete.title')">
+          <template #body>
+            <p class="text-sm">
+              {{ t('projects.list.delete.body', { full: deleteTarget?.fullName ?? '' }) }}
+            </p>
+          </template>
+          <template #footer>
+            <div class="flex justify-end gap-2">
+              <UButton
+                color="neutral"
+                variant="ghost"
+                :label="t('common.cancel')"
+                @click="deleteModalOpen = false"
+              />
+              <UButton
+                color="error"
+                :label="t('projects.list.delete.confirm')"
+                :loading="deleteMutation.asyncStatus.value === 'loading'"
+                @click="handleDelete"
+              />
+            </div>
+          </template>
+        </UModal>
+      </div>
+    </UPage>
+  </UPage>
 </template>

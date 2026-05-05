@@ -25,6 +25,7 @@
  *     would do client-side OR which is misleading; defer until the API
  *     supports it.
  */
+import type { BreadcrumbItem } from '@nuxt/ui'
 import type {
   Todo,
   TodoPriority,
@@ -247,6 +248,10 @@ const hasAnyFilter = computed(() =>
   Boolean(search.value || priorityParam.value || tagId.value),
 )
 
+const breadcrumbItems = computed<BreadcrumbItem[]>(() => [
+  { label: t('todo.list.title') },
+])
+
 // === Per-row kebab menu items ===
 const rowMenuItems = (todo: Todo) => [
   [
@@ -265,209 +270,209 @@ const rowMenuItems = (todo: Todo) => [
 </script>
 
 <template>
-  <div class="p-4 md:p-6 space-y-6">
-    <!-- Header -->
-    <div class="flex items-start justify-between gap-4 flex-wrap">
-      <div>
-        <h1 class="text-2xl font-bold text-highlighted">
-          {{ t('todo.list.title') }}
-        </h1>
-        <p class="text-muted text-sm mt-1">
-          {{ t('todo.list.subtitle') }}
-        </p>
-      </div>
-      <UButton
-        icon="i-lucide-plus"
-        :label="t('todo.list.create')"
-        to="/app/todos/new"
-      />
-    </div>
-
-    <!-- Sub-navigation: four canonical views with count badges -->
-    <TodoSubNav v-model="view" :counts="counts" />
-
-    <!-- Filter bar: search + priority + tag -->
-    <div class="space-y-3">
-      <UInput
-        v-model="search"
-        icon="i-lucide-search"
-        size="lg"
-        :placeholder="t('todo.list.search.placeholder')"
-        :aria-label="t('todo.list.search.placeholder')"
-        class="w-full"
-      />
-
-      <div class="flex flex-wrap items-center gap-2">
-        <USelectMenu
-          v-model="priorityParam"
-          :items="priorityOptions"
-          value-key="value"
-          label-key="label"
-          :placeholder="t('todo.filters.priority.label')"
-          icon="i-lucide-flag"
-          variant="outline"
-          class="min-w-40"
-        />
-
-        <USelectMenu
-          v-model="tagId"
-          :items="tagOptions"
-          value-key="value"
-          label-key="label"
-          :placeholder="t('todo.filters.tag.label')"
-          icon="i-lucide-tag"
-          variant="outline"
-          class="min-w-40"
-        />
-
-        <UButton
-          v-if="hasAnyFilter"
-          variant="ghost"
-          color="neutral"
-          icon="i-lucide-x"
-          size="sm"
-          :label="t('todo.filters.reset')"
-          @click="resetFilters"
-        />
-      </div>
-    </div>
-
-    <!-- Error -->
-    <UAlert
-      v-if="error"
-      color="error"
-      variant="soft"
-      :title="t('todo.list.error.title')"
-      :description="error.message"
-      icon="i-lucide-alert-circle"
-    />
-
-    <!-- Loading skeleton -->
-    <div v-if="isLoading" class="space-y-3">
-      <USkeleton v-for="i in 3" :key="i" class="h-20 w-full" />
-    </div>
-
-    <!-- Empty state — copy is per-view -->
-    <UCard
-      v-else-if="todos.length === 0"
-      :ui="{ body: 'flex flex-col items-center text-center py-12 gap-2' }"
+  <UPage>
+    <UPageHeader
+      :title="t('todo.list.title')"
+      :description="t('todo.list.subtitle')"
+      :links="[
+        { icon: 'i-lucide-plus', label: t('todo.list.create'), to: '/app/todos/new' },
+      ]"
+      :ui="{ root: 'border-none' }"
     >
-      <UIcon name="i-lucide-check-circle-2" class="size-10 text-muted" />
-      <h3 class="text-lg font-semibold text-highlighted">
-        {{ t(`todo.empty.${view}.title`) }}
-      </h3>
-      <p class="text-sm text-muted max-w-md">
-        {{ t(`todo.empty.${view}.subtitle`) }}
-      </p>
-    </UCard>
+      <template #headline>
+        <UBreadcrumb :items="breadcrumbItems" />
+      </template>
+      <div class="mt-4">
+        <TodoSubNav v-model="view" :counts="counts" />
+      </div>
+    </UPageHeader>
 
-    <!-- Result list -->
-    <div v-else class="space-y-2">
-      <UCard
-        v-for="todo in todos"
-        :key="todo.id"
-        :ui="{
-          root: 'transition-colors hover:bg-accented',
-          body: 'p-4',
-        }"
-      >
-        <div class="flex items-start gap-3">
-          <!-- Completion checkbox (primary action) -->
-          <UCheckbox
-            :model-value="isCompleted(todo)"
-            :disabled="pendingId === todo.id"
-            :aria-label="
-              isCompleted(todo)
-                ? t('todo.actions.uncomplete.label')
-                : t('todo.actions.complete.label')
-            "
-            class="mt-0.5"
-            @update:model-value="onToggleComplete(todo)"
+    <UPage>
+      <div class="space-y-6">
+        <!-- Filter bar: search + priority + tag -->
+        <div class="space-y-3">
+          <UInput
+            v-model="search"
+            icon="i-lucide-search"
+            size="lg"
+            :placeholder="t('todo.list.search.placeholder')"
+            :aria-label="t('todo.list.search.placeholder')"
+            class="w-full"
           />
 
-          <div class="min-w-0 flex-1 space-y-1">
-            <div class="flex items-center gap-2 flex-wrap">
-              <NuxtLink
-                :to="detailHref(todo)"
-                class="text-base font-semibold text-highlighted truncate hover:underline"
-                :class="{ 'line-through text-muted': isCompleted(todo) }"
-              >
-                {{ todo.title }}
-              </NuxtLink>
-              <UBadge
-                :color="priorityBadgeColor(todo.priority)"
-                variant="subtle"
-                size="xs"
-              >
-                {{ t(`todo.priority.${todo.priority}`) }}
-              </UBadge>
-              <!--
-                Per-row n/m badge (T-2.7). The component fans out one tiny
-                `useTodos({ parentTodoId })` query per visible row; queries
-                with no children render nothing and Pinia-Colada caches the
-                result, so the cost is bounded and amortised across views.
-                Acceptable at our single-user-hub scale; a server-side
-                aggregation in the list endpoint would be the cleaner
-                follow-up if the page size grows.
-              -->
-              <TodoSubtaskProgress :parent-todo-id="todo.id" />
-            </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <USelectMenu
+              v-model="priorityParam"
+              :items="priorityOptions"
+              value-key="value"
+              label-key="label"
+              :placeholder="t('todo.filters.priority.label')"
+              icon="i-lucide-flag"
+              variant="outline"
+              class="min-w-40"
+            />
 
-            <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
-              <span
-                v-if="todo.dueAt"
-                class="font-mono"
-                :class="isOverdue(todo) ? 'text-error font-medium' : ''"
-              >
-                <UIcon name="i-lucide-calendar" class="size-3.5 align-text-bottom mr-1" />
-                {{ formatRelative(todo.dueAt) }}
-              </span>
-              <span v-if="isCompleted(todo) && todo.completedAt" class="font-mono">
-                <UIcon name="i-lucide-check" class="size-3.5 align-text-bottom mr-1" />
-                {{ formatRelative(todo.completedAt) }}
-              </span>
-            </div>
-          </div>
+            <USelectMenu
+              v-model="tagId"
+              :items="tagOptions"
+              value-key="value"
+              label-key="label"
+              :placeholder="t('todo.filters.tag.label')"
+              icon="i-lucide-tag"
+              variant="outline"
+              class="min-w-40"
+            />
 
-          <!-- Kebab menu (edit / delete) -->
-          <UDropdownMenu :items="rowMenuItems(todo)">
             <UButton
+              v-if="hasAnyFilter"
               variant="ghost"
               color="neutral"
-              icon="i-lucide-more-vertical"
+              icon="i-lucide-x"
               size="sm"
-              :aria-label="t('todo.actions.menu')"
-              :disabled="pendingId === todo.id"
+              :label="t('todo.filters.reset')"
+              @click="resetFilters"
             />
-          </UDropdownMenu>
+          </div>
         </div>
-      </UCard>
-    </div>
 
-    <!-- Pagination (no total count from API; prev/next only) -->
-    <div
-      v-if="todos.length > 0 && (hasPrevPage || hasNextPage)"
-      class="flex items-center justify-end gap-2"
-    >
-      <UButton
-        variant="outline"
-        color="neutral"
-        icon="i-lucide-chevron-left"
-        :label="t('todo.list.pagination.prev')"
-        :disabled="!hasPrevPage"
-        @click="page = Math.max(1, page - 1)"
-      />
-      <span class="text-sm text-muted">
-        {{ t('todo.list.pagination.page', { page }) }}
-      </span>
-      <UButton
-        variant="outline"
-        color="neutral"
-        trailing-icon="i-lucide-chevron-right"
-        :label="t('todo.list.pagination.next')"
-        :disabled="!hasNextPage"
-        @click="page = page + 1"
-      />
-    </div>
-  </div>
+        <!-- Error -->
+        <UAlert
+          v-if="error"
+          color="error"
+          variant="soft"
+          :title="t('todo.list.error.title')"
+          :description="error.message"
+          icon="i-lucide-alert-circle"
+        />
+
+        <!-- Loading skeleton -->
+        <div v-if="isLoading" class="space-y-3">
+          <USkeleton v-for="i in 3" :key="i" class="h-20 w-full" />
+        </div>
+
+        <!-- Empty state — copy is per-view -->
+        <UCard
+          v-else-if="todos.length === 0"
+          :ui="{ body: 'flex flex-col items-center text-center py-12 gap-2' }"
+        >
+          <UIcon name="i-lucide-check-circle-2" class="size-10 text-muted" />
+          <h3 class="text-lg font-semibold text-highlighted">
+            {{ t(`todo.empty.${view}.title`) }}
+          </h3>
+          <p class="text-sm text-muted max-w-md">
+            {{ t(`todo.empty.${view}.subtitle`) }}
+          </p>
+        </UCard>
+
+        <!-- Result list -->
+        <div v-else class="space-y-2">
+          <UCard
+            v-for="todo in todos"
+            :key="todo.id"
+            :ui="{
+              root: 'transition-colors hover:bg-accented',
+              body: 'p-4',
+            }"
+          >
+            <div class="flex items-start gap-3">
+              <!-- Completion checkbox (primary action) -->
+              <UCheckbox
+                :model-value="isCompleted(todo)"
+                :disabled="pendingId === todo.id"
+                :aria-label="
+                  isCompleted(todo)
+                    ? t('todo.actions.uncomplete.label')
+                    : t('todo.actions.complete.label')
+                "
+                class="mt-0.5"
+                @update:model-value="onToggleComplete(todo)"
+              />
+
+              <div class="min-w-0 flex-1 space-y-1">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <NuxtLink
+                    :to="detailHref(todo)"
+                    class="text-base font-semibold text-highlighted truncate hover:underline"
+                    :class="{ 'line-through text-muted': isCompleted(todo) }"
+                  >
+                    {{ todo.title }}
+                  </NuxtLink>
+                  <UBadge
+                    :color="priorityBadgeColor(todo.priority)"
+                    variant="subtle"
+                    size="xs"
+                  >
+                    {{ t(`todo.priority.${todo.priority}`) }}
+                  </UBadge>
+                  <!--
+                    Per-row n/m badge (T-2.7). The component fans out one tiny
+                    `useTodos({ parentTodoId })` query per visible row; queries
+                    with no children render nothing and Pinia-Colada caches the
+                    result, so the cost is bounded and amortised across views.
+                    Acceptable at our single-user-hub scale; a server-side
+                    aggregation in the list endpoint would be the cleaner
+                    follow-up if the page size grows.
+                  -->
+                  <TodoSubtaskProgress :parent-todo-id="todo.id" />
+                </div>
+
+                <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
+                  <span
+                    v-if="todo.dueAt"
+                    class="font-mono"
+                    :class="isOverdue(todo) ? 'text-error font-medium' : ''"
+                  >
+                    <UIcon name="i-lucide-calendar" class="size-3.5 align-text-bottom mr-1" />
+                    {{ formatRelative(todo.dueAt) }}
+                  </span>
+                  <span v-if="isCompleted(todo) && todo.completedAt" class="font-mono">
+                    <UIcon name="i-lucide-check" class="size-3.5 align-text-bottom mr-1" />
+                    {{ formatRelative(todo.completedAt) }}
+                  </span>
+                </div>
+              </div>
+
+              <!-- Kebab menu (edit / delete) -->
+              <UDropdownMenu :items="rowMenuItems(todo)">
+                <UButton
+                  variant="ghost"
+                  color="neutral"
+                  icon="i-lucide-more-vertical"
+                  size="sm"
+                  :aria-label="t('todo.actions.menu')"
+                  :disabled="pendingId === todo.id"
+                />
+              </UDropdownMenu>
+            </div>
+          </UCard>
+        </div>
+
+        <!-- Pagination (no total count from API; prev/next only) -->
+        <div
+          v-if="todos.length > 0 && (hasPrevPage || hasNextPage)"
+          class="flex items-center justify-end gap-2"
+        >
+          <UButton
+            variant="outline"
+            color="neutral"
+            icon="i-lucide-chevron-left"
+            :label="t('todo.list.pagination.prev')"
+            :disabled="!hasPrevPage"
+            @click="page = Math.max(1, page - 1)"
+          />
+          <span class="text-sm text-muted">
+            {{ t('todo.list.pagination.page', { page }) }}
+          </span>
+          <UButton
+            variant="outline"
+            color="neutral"
+            trailing-icon="i-lucide-chevron-right"
+            :label="t('todo.list.pagination.next')"
+            :disabled="!hasNextPage"
+            @click="page = page + 1"
+          />
+        </div>
+      </div>
+    </UPage>
+  </UPage>
 </template>

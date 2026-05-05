@@ -12,6 +12,7 @@
  *
  * Refs: REQ-AI-2, REQ-AI-3, REQ-AI-4, DESIGN-API §AI Configuration.
  */
+import type { BreadcrumbItem } from '@nuxt/ui'
 import { useClearAiCredential, useSetAiCredential } from '~/features/ai/composables/useAiCredentialMutations'
 import { useAiCredentials } from '~/features/ai/composables/useAiCredentials'
 import { useAiModels } from '~/features/ai/composables/useAiModels'
@@ -189,228 +190,238 @@ const providerRows = computed(() => {
 })
 
 const isAnyLoading = computed(() => providersLoading.value || settingsLoading.value || modelsLoading.value)
+
+const breadcrumbItems = computed<BreadcrumbItem[]>(() => [
+  { label: t('settings.index.title'), to: '/app/settings' },
+  { label: t('ai.settings.title') },
+])
 </script>
 
 <template>
-  <div class="p-4 md:p-6 space-y-8 max-w-4xl">
-    <header>
-      <h1 class="text-2xl font-bold text-highlighted">
-        {{ t('ai.settings.title') }}
-      </h1>
-      <p class="text-muted text-sm mt-1">
-        {{ t('ai.settings.subtitle') }}
-      </p>
-    </header>
+  <UPage>
+    <UPageHeader
+      :title="t('ai.settings.title')"
+      :description="t('ai.settings.subtitle')"
+      :ui="{ root: 'border-none' }"
+    >
+      <template #headline>
+        <UBreadcrumb :items="breadcrumbItems" />
+      </template>
+    </UPageHeader>
 
-    <UAlert
-      v-if="providersError"
-      color="error"
-      variant="soft"
-      icon="i-lucide-alert-circle"
-      :title="t('ai.settings.error.load')"
-      :description="providersError.message"
-    />
+    <UPage>
+      <div class="space-y-8 max-w-4xl">
+        <UAlert
+          v-if="providersError"
+          color="error"
+          variant="soft"
+          icon="i-lucide-alert-circle"
+          :title="t('ai.settings.error.load')"
+          :description="providersError.message"
+        />
 
-    <div v-if="isAnyLoading && !settings" class="space-y-3">
-      <USkeleton class="h-32 w-full" />
-      <USkeleton class="h-32 w-full" />
-    </div>
-
-    <template v-else>
-      <!-- Section 1: Display name + history limit -->
-      <UCard>
-        <template #header>
-          <div>
-            <h2 class="text-lg font-semibold text-highlighted">
-              {{ t('ai.settings.display.title') }}
-            </h2>
-            <p class="text-sm text-muted">
-              {{ t('ai.settings.display.subtitle') }}
-            </p>
-          </div>
-        </template>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <UFormField :label="t('ai.settings.display.aiDisplayName.label')">
-            <UInput
-              v-model="aiDisplayName"
-              :placeholder="t('ai.settings.display.aiDisplayName.placeholder')"
-              :disabled="!canManage"
-            />
-          </UFormField>
-
-          <UFormField
-            :label="t('ai.settings.display.historyLimit.label')"
-            :description="t('ai.settings.display.historyLimit.description')"
-          >
-            <UInput
-              v-model.number="historyLimit"
-              type="number"
-              :min="1"
-              :max="200"
-              :disabled="!canManage"
-            />
-          </UFormField>
+        <div v-if="isAnyLoading && !settings" class="space-y-3">
+          <USkeleton class="h-32 w-full" />
+          <USkeleton class="h-32 w-full" />
         </div>
 
-        <template #footer>
-          <div class="flex justify-end">
-            <UButton
-              :label="t('ai.settings.actions.save')"
-              :loading="settingsMutation.asyncStatus.value === 'loading'"
-              :disabled="!canManage"
-              @click="handleSaveDisplay"
-            />
-          </div>
-        </template>
-      </UCard>
-
-      <!-- Section 2: Default model -->
-      <UCard>
-        <template #header>
-          <div>
-            <h2 class="text-lg font-semibold text-highlighted">
-              {{ t('ai.settings.defaultModel.title') }}
-            </h2>
-            <p class="text-sm text-muted">
-              {{ t('ai.settings.defaultModel.subtitle') }}
-            </p>
-          </div>
-        </template>
-
-        <div v-if="eligibleModels.length === 0" class="text-sm text-muted">
-          {{ t('ai.settings.defaultModel.empty') }}
-        </div>
-        <UFormField v-else :label="t('ai.settings.defaultModel.label')">
-          <USelectMenu
-            v-model="defaultModelId"
-            :items="modelOptions"
-            value-key="value"
-            label-key="label"
-            :placeholder="t('ai.settings.defaultModel.none')"
-            :disabled="!canManage"
-            class="min-w-72"
-          />
-        </UFormField>
-
-        <template #footer>
-          <div class="flex justify-end">
-            <UButton
-              :label="t('ai.settings.actions.save')"
-              :loading="settingsMutation.asyncStatus.value === 'loading'"
-              :disabled="!canManage"
-              @click="handleSaveDefaultModel"
-            />
-          </div>
-        </template>
-      </UCard>
-
-      <!-- Section 3: Provider credentials -->
-      <UCard>
-        <template #header>
-          <div>
-            <h2 class="text-lg font-semibold text-highlighted">
-              {{ t('ai.settings.credentials.title') }}
-            </h2>
-            <p class="text-sm text-muted">
-              {{ t('ai.settings.credentials.subtitle') }}
-            </p>
-          </div>
-        </template>
-
-        <ul class="divide-y divide-default">
-          <li
-            v-for="provider in providerRows"
-            :key="provider.providerId"
-            class="flex flex-wrap items-center justify-between gap-3 py-3"
-          >
-            <div class="flex items-center gap-3 min-w-0">
-              <UIcon name="i-lucide-key" class="size-4 text-muted shrink-0" />
-              <div class="min-w-0">
-                <p class="font-medium text-highlighted">
-                  {{ provider.providerDisplayName }}
-                </p>
-                <p class="text-xs text-muted truncate">
-                  {{ provider.providerKey }}
+        <template v-else>
+          <!-- Section 1: Display name + history limit -->
+          <UCard>
+            <template #header>
+              <div>
+                <h2 class="text-lg font-semibold text-highlighted">
+                  {{ t('ai.settings.display.title') }}
+                </h2>
+                <p class="text-sm text-muted">
+                  {{ t('ai.settings.display.subtitle') }}
                 </p>
               </div>
-            </div>
-            <div class="flex items-center gap-2">
-              <UBadge
-                :color="provider.hasCredentials ? 'success' : 'neutral'"
-                variant="subtle"
-              >
-                {{ provider.hasCredentials
-                  ? t('ai.settings.credentials.status.configured')
-                  : t('ai.settings.credentials.status.not_configured') }}
-              </UBadge>
-              <UButton
-                v-if="canManage"
-                color="primary"
-                variant="outline"
-                size="sm"
-                icon="i-lucide-pencil"
-                :label="provider.hasCredentials
-                  ? t('ai.settings.credentials.actions.replace')
-                  : t('ai.settings.credentials.actions.set')"
-                @click="openSetCredential(provider.providerId, provider.providerDisplayName)"
-              />
-              <UButton
-                v-if="canManage && provider.hasCredentials"
-                color="error"
-                variant="ghost"
-                size="sm"
-                icon="i-lucide-trash"
-                :label="t('ai.settings.credentials.actions.clear')"
-                :loading="clearMutation.asyncStatus.value === 'loading'"
-                @click="handleClearCredential(provider.providerId, provider.providerDisplayName)"
-              />
-            </div>
-          </li>
-        </ul>
-      </UCard>
-    </template>
+            </template>
 
-    <!-- Set-credential modal. We deliberately use a password-style input and
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <UFormField :label="t('ai.settings.display.aiDisplayName.label')">
+                <UInput
+                  v-model="aiDisplayName"
+                  :placeholder="t('ai.settings.display.aiDisplayName.placeholder')"
+                  :disabled="!canManage"
+                />
+              </UFormField>
+
+              <UFormField
+                :label="t('ai.settings.display.historyLimit.label')"
+                :description="t('ai.settings.display.historyLimit.description')"
+              >
+                <UInput
+                  v-model.number="historyLimit"
+                  type="number"
+                  :min="1"
+                  :max="200"
+                  :disabled="!canManage"
+                />
+              </UFormField>
+            </div>
+
+            <template #footer>
+              <div class="flex justify-end">
+                <UButton
+                  :label="t('ai.settings.actions.save')"
+                  :loading="settingsMutation.asyncStatus.value === 'loading'"
+                  :disabled="!canManage"
+                  @click="handleSaveDisplay"
+                />
+              </div>
+            </template>
+          </UCard>
+
+          <!-- Section 2: Default model -->
+          <UCard>
+            <template #header>
+              <div>
+                <h2 class="text-lg font-semibold text-highlighted">
+                  {{ t('ai.settings.defaultModel.title') }}
+                </h2>
+                <p class="text-sm text-muted">
+                  {{ t('ai.settings.defaultModel.subtitle') }}
+                </p>
+              </div>
+            </template>
+
+            <div v-if="eligibleModels.length === 0" class="text-sm text-muted">
+              {{ t('ai.settings.defaultModel.empty') }}
+            </div>
+            <UFormField v-else :label="t('ai.settings.defaultModel.label')">
+              <USelectMenu
+                v-model="defaultModelId"
+                :items="modelOptions"
+                value-key="value"
+                label-key="label"
+                :placeholder="t('ai.settings.defaultModel.none')"
+                :disabled="!canManage"
+                class="min-w-72"
+              />
+            </UFormField>
+
+            <template #footer>
+              <div class="flex justify-end">
+                <UButton
+                  :label="t('ai.settings.actions.save')"
+                  :loading="settingsMutation.asyncStatus.value === 'loading'"
+                  :disabled="!canManage"
+                  @click="handleSaveDefaultModel"
+                />
+              </div>
+            </template>
+          </UCard>
+
+          <!-- Section 3: Provider credentials -->
+          <UCard>
+            <template #header>
+              <div>
+                <h2 class="text-lg font-semibold text-highlighted">
+                  {{ t('ai.settings.credentials.title') }}
+                </h2>
+                <p class="text-sm text-muted">
+                  {{ t('ai.settings.credentials.subtitle') }}
+                </p>
+              </div>
+            </template>
+
+            <ul class="divide-y divide-default">
+              <li
+                v-for="provider in providerRows"
+                :key="provider.providerId"
+                class="flex flex-wrap items-center justify-between gap-3 py-3"
+              >
+                <div class="flex items-center gap-3 min-w-0">
+                  <UIcon name="i-lucide-key" class="size-4 text-muted shrink-0" />
+                  <div class="min-w-0">
+                    <p class="font-medium text-highlighted">
+                      {{ provider.providerDisplayName }}
+                    </p>
+                    <p class="text-xs text-muted truncate">
+                      {{ provider.providerKey }}
+                    </p>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2">
+                  <UBadge
+                    :color="provider.hasCredentials ? 'success' : 'neutral'"
+                    variant="subtle"
+                  >
+                    {{ provider.hasCredentials
+                      ? t('ai.settings.credentials.status.configured')
+                      : t('ai.settings.credentials.status.not_configured') }}
+                  </UBadge>
+                  <UButton
+                    v-if="canManage"
+                    color="primary"
+                    variant="outline"
+                    size="sm"
+                    icon="i-lucide-pencil"
+                    :label="provider.hasCredentials
+                      ? t('ai.settings.credentials.actions.replace')
+                      : t('ai.settings.credentials.actions.set')"
+                    @click="openSetCredential(provider.providerId, provider.providerDisplayName)"
+                  />
+                  <UButton
+                    v-if="canManage && provider.hasCredentials"
+                    color="error"
+                    variant="ghost"
+                    size="sm"
+                    icon="i-lucide-trash"
+                    :label="t('ai.settings.credentials.actions.clear')"
+                    :loading="clearMutation.asyncStatus.value === 'loading'"
+                    @click="handleClearCredential(provider.providerId, provider.providerDisplayName)"
+                  />
+                </div>
+              </li>
+            </ul>
+          </UCard>
+        </template>
+
+        <!-- Set-credential modal. We deliberately use a password-style input and
          never preview existing values; the server doesn't even have the key
          in plaintext after the initial save. -->
-    <UModal
-      v-model:open="credModalOpen"
-      :title="t('ai.settings.credentials.modal.title', { provider: credProviderLabel })"
-      :ui="{ content: 'light bg-default text-default' }"
-    >
-      <template #body>
-        <div class="space-y-3">
-          <p class="text-sm text-muted">
-            {{ t('ai.settings.credentials.modal.subtitle') }}
-          </p>
-          <UFormField :label="t('ai.settings.credentials.modal.label')">
-            <UInput
-              v-model="credInput"
-              type="password"
-              autocomplete="off"
-              :placeholder="t('ai.settings.credentials.modal.placeholder')"
-            />
-          </UFormField>
-        </div>
-      </template>
-      <template #footer>
-        <div class="flex justify-end gap-2">
-          <UButton
-            color="neutral"
-            variant="ghost"
-            :label="t('common.cancel')"
-            @click="credModalOpen = false"
-          />
-          <UButton
-            color="primary"
-            :label="t('ai.settings.credentials.modal.save')"
-            :loading="setMutation.asyncStatus.value === 'loading'"
-            :disabled="!credInput.trim()"
-            @click="handleSubmitCredential"
-          />
-        </div>
-      </template>
-    </UModal>
-  </div>
+        <UModal
+          v-model:open="credModalOpen"
+          :title="t('ai.settings.credentials.modal.title', { provider: credProviderLabel })"
+          :ui="{ content: 'light bg-default text-default' }"
+        >
+          <template #body>
+            <div class="space-y-3">
+              <p class="text-sm text-muted">
+                {{ t('ai.settings.credentials.modal.subtitle') }}
+              </p>
+              <UFormField :label="t('ai.settings.credentials.modal.label')">
+                <UInput
+                  v-model="credInput"
+                  type="password"
+                  autocomplete="off"
+                  :placeholder="t('ai.settings.credentials.modal.placeholder')"
+                />
+              </UFormField>
+            </div>
+          </template>
+          <template #footer>
+            <div class="flex justify-end gap-2">
+              <UButton
+                color="neutral"
+                variant="ghost"
+                :label="t('common.cancel')"
+                @click="credModalOpen = false"
+              />
+              <UButton
+                color="primary"
+                :label="t('ai.settings.credentials.modal.save')"
+                :loading="setMutation.asyncStatus.value === 'loading'"
+                :disabled="!credInput.trim()"
+                @click="handleSubmitCredential"
+              />
+            </div>
+          </template>
+        </UModal>
+      </div>
+    </UPage>
+  </UPage>
 </template>

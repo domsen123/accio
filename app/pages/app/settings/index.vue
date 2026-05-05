@@ -7,6 +7,7 @@
  * appears for users with `orchestrator:audit:view`. Server-side guards remain
  * the source of truth — this gate just hides links the user cannot use.
  */
+import type { BreadcrumbItem } from '@nuxt/ui'
 import { usePermissions } from '~/features/permissions'
 
 definePageMeta({
@@ -59,43 +60,50 @@ const cards = computed<SettingsCard[]>(() => [
 ])
 
 const visibleCards = computed(() => cards.value.filter(c => c.visible))
+
+const breadcrumbItems = computed<BreadcrumbItem[]>(() => [
+  { label: t('settings.index.title') },
+])
 </script>
 
 <template>
-  <div class="p-4 md:p-6 space-y-8 max-w-4xl">
-    <header>
-      <h1 class="text-2xl font-bold text-highlighted">
-        {{ t('settings.index.title') }}
-      </h1>
-      <p class="text-muted text-sm mt-1">
-        {{ t('settings.index.subtitle') }}
-      </p>
-    </header>
+  <UPage>
+    <UPageHeader
+      :title="t('settings.index.title')"
+      :description="t('settings.index.subtitle')"
+      :ui="{ root: 'border-none' }"
+    >
+      <template #headline>
+        <UBreadcrumb :items="breadcrumbItems" />
+      </template>
+    </UPageHeader>
 
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-      <NuxtLink
-        v-for="card in visibleCards"
-        :key="card.key"
-        :to="card.to"
-        class="block focus:outline-none"
-      >
-        <UCard
-          class="h-full transition-colors hover:bg-accented"
-          :ui="{ root: 'gap-3', body: 'flex items-start gap-3' }"
+    <UPage>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-4xl">
+        <NuxtLink
+          v-for="card in visibleCards"
+          :key="card.key"
+          :to="card.to"
+          class="block focus:outline-none"
         >
-          <div class="inline-flex items-center justify-center size-10 rounded-full bg-primary/10 ring ring-inset ring-primary/25 shrink-0">
-            <UIcon :name="card.icon" class="size-5 text-primary" />
-          </div>
-          <div class="min-w-0">
-            <p class="font-semibold text-highlighted">
-              {{ card.title }}
-            </p>
-            <p class="text-sm text-muted mt-0.5">
-              {{ card.description }}
-            </p>
-          </div>
-        </UCard>
-      </NuxtLink>
-    </div>
-  </div>
+          <UCard
+            class="h-full transition-colors hover:bg-accented"
+            :ui="{ root: 'gap-3', body: 'flex items-start gap-3' }"
+          >
+            <div class="inline-flex items-center justify-center size-10 rounded-full bg-primary/10 ring ring-inset ring-primary/25 shrink-0">
+              <UIcon :name="card.icon" class="size-5 text-primary" />
+            </div>
+            <div class="min-w-0">
+              <p class="font-semibold text-highlighted">
+                {{ card.title }}
+              </p>
+              <p class="text-sm text-muted mt-0.5">
+                {{ card.description }}
+              </p>
+            </div>
+          </UCard>
+        </NuxtLink>
+      </div>
+    </UPage>
+  </UPage>
 </template>

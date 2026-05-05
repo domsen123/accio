@@ -12,6 +12,7 @@
  *   - `?kbEntryId=<id>` (T-2.8) — pre-linked KB entry for "Create todo from
  *     this entry" on the KB detail page. Cancel bounces to that entry.
  */
+import type { BreadcrumbItem } from '@nuxt/ui'
 import type { Todo } from '~/features/todo/types/todo.types'
 import { useKbEntry } from '~/features/kb/composables/useKbEntry'
 import TodoForm from '~/features/todo/components/TodoForm.vue'
@@ -76,34 +77,34 @@ const onCancel = () => {
   else
     router.push('/app/todos')
 }
+
+const breadcrumbItems = computed<BreadcrumbItem[]>(() => [
+  { label: t('todo.list.title'), to: '/app/todos' },
+  { label: t('todo.form.create.title') },
+])
 </script>
 
 <template>
-  <div class="p-4 md:p-6 space-y-6">
-    <div class="flex items-center justify-between gap-3 flex-wrap">
-      <div>
-        <h1 class="text-2xl font-bold text-highlighted">
-          {{ t('todo.form.create.title') }}
-        </h1>
-        <p class="text-muted text-sm mt-1">
-          {{ isFromKb
-            ? t('todo.form.create.fromKb.subtitle')
-            : t('todo.form.create.subtitle') }}
-        </p>
-      </div>
-      <UButton
-        to="/app/todos"
-        variant="ghost"
-        color="neutral"
-        icon="i-lucide-arrow-left"
-        :label="t('todo.form.backToList')"
+  <UPage>
+    <UPageHeader
+      :title="t('todo.form.create.title')"
+      :description="isFromKb
+        ? t('todo.form.create.fromKb.subtitle')
+        : t('todo.form.create.subtitle')"
+      :ui="{ root: 'border-none' }"
+    >
+      <template #headline>
+        <UBreadcrumb :items="breadcrumbItems" />
+      </template>
+    </UPageHeader>
+
+    <UPage>
+      <TodoForm
+        :initial-parent-todo-id="initialParentTodoId"
+        :initial-kb-entry-ids="initialKbEntryIds"
+        @success="onSuccess"
+        @cancel="onCancel"
       />
-    </div>
-    <TodoForm
-      :initial-parent-todo-id="initialParentTodoId"
-      :initial-kb-entry-ids="initialKbEntryIds"
-      @success="onSuccess"
-      @cancel="onCancel"
-    />
-  </div>
+    </UPage>
+  </UPage>
 </template>

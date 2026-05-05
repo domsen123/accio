@@ -35,34 +35,33 @@ const stats = computed(() => [
 </script>
 
 <template>
-  <div class="p-6 space-y-8">
-    <div>
-      <h1 class="text-2xl font-bold text-highlighted">
-        {{ $t('app.welcome.title') }}
-      </h1>
-      <p class="text-muted mt-1">
-        {{ $t('app.welcome.subtitle') }}
-      </p>
-    </div>
+  <UPage>
+    <UPageHeader
+      :title="t('app.welcome.title')"
+      :description="t('app.welcome.subtitle')"
+      :ui="{ root: 'border-none' }"
+    />
 
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-      <UCard
-        v-for="stat in stats"
-        :key="stat.label"
-        :ui="{ root: 'gap-3', body: 'flex items-center gap-3' }"
-      >
-        <div class="inline-flex items-center justify-center size-10 rounded-full bg-primary/10 ring ring-inset ring-primary/25">
-          <UIcon :name="stat.icon" class="size-5 text-primary" />
-        </div>
-        <div>
-          <p class="text-xs uppercase text-muted font-medium">
-            {{ stat.label }}
-          </p>
-          <p class="text-2xl font-semibold text-highlighted">
-            {{ stat.value }}
-          </p>
-        </div>
-      </UCard>
-    </div>
-  </div>
+    <UPage>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <UCard
+          v-for="stat in stats"
+          :key="stat.label"
+          :ui="{ root: 'gap-3', body: 'flex items-center gap-3' }"
+        >
+          <div class="inline-flex items-center justify-center size-10 rounded-full bg-primary/10 ring ring-inset ring-primary/25">
+            <UIcon :name="stat.icon" class="size-5 text-primary" />
+          </div>
+          <div>
+            <p class="text-xs uppercase text-muted font-medium">
+              {{ stat.label }}
+            </p>
+            <p class="text-2xl font-semibold text-highlighted">
+              {{ stat.value }}
+            </p>
+          </div>
+        </UCard>
+      </div>
+    </UPage>
+  </UPage>
 </template>

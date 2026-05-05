@@ -295,12 +295,45 @@ Implementation: do **not** set `definePageMeta({ colorMode: 'light' })` on setti
 
 ### Page-header pattern
 
-Every `/app` page has a consistent header strip at the top of the main content:
+Every `/app` page is composed as a nested `UPage` with a `UPageHeader` at the top. The reference implementation is `app/pages/app/kb/index.vue`.
 
-- Title (`title-lg` to `display-sm` depending on page importance)
-- Optional subtitle (`text-muted text-sm`)
-- Optional right-side actions (typically one primary `<UButton color="primary">` plus zero-to-two secondary `variant="ghost"` buttons)
-- Followed by `border-b border-default` and `mb-6` spacing before content
+**Structure:**
+
+```vue
+<template>
+  <UPage>
+    <UPageHeader
+      :title="t('feature.title')"
+      :description="t('feature.subtitle')"
+      :links="[…]"
+      :ui="{ root: 'border-none' }"
+    >
+      <template #headline>
+        <UBreadcrumb :items="breadcrumbItems" />
+      </template>
+      <!-- optional sub-nav slot content here -->
+    </UPageHeader>
+
+    <UPage>
+      <!-- page body -->
+    </UPage>
+  </UPage>
+</template>
+```
+
+**Rules:**
+
+- **Title + description on `UPageHeader` props.** Never re-render an `<h1>`/`<p>` block inside the body when `UPageHeader` already accepts `:title` / `:description`.
+- **Primary actions go on `UPageHeader`:** simple action buttons via the `:links` array prop; complex/conditional buttons via the `#links` slot.
+- **Breadcrumb in `#headline` slot.** Build a `BreadcrumbItem[]` from `@nuxt/ui` reflecting the route hierarchy:
+  - All ancestors carry a `to` link.
+  - The last item is the current page — no `to` (it is not a link).
+  - Labels via `i18n` (`t('…')`) — never hardcoded strings.
+  - Dynamic segments (`[slug]`, `[id]`) use the loaded resource's title/name, not the raw param. Provide a sensible fallback while loading.
+- **No "Back" buttons.** Don't render a leading `i-lucide-arrow-left` button, a `Zurück`/`Back` link, or `router.back()` triggers anywhere under `/app/**`. The breadcrumb is the navigation affordance.
+- **Sub-navigation** (e.g. `KbSubNav`, `TodoSubNav`) renders as default-slot content inside `UPageHeader`, typically wrapped in `<div class="mt-4">`.
+- **Body density:** body content lives inside the inner `<UPage>`. When the page needs sub-areas use `#left` / `#right` slots; otherwise wrap content in `<div class="space-y-6">` (or the spacing the layout calls for) plus an optional `max-w-*` width cap.
+- **Detail pages:** the `UPageHeader` `:title` is the resource's title (e.g. KB entry title, repo full name); breadcrumb shows the parent list. Edit / delete / "open in github" actions live in `#links`.
 
 ### Content density
 
@@ -508,7 +541,8 @@ Use this list in PRs / before checking off a task:
 - [ ] Uses `<UButton>`, `<UInput>`, `<UModal>` etc. from Nuxt UI where applicable, not hand-rolled equivalents
 - [ ] Numbers, dates, IDs use `font-mono`
 - [ ] Tags / status indicators use the semantic colors documented in §Components
-- [ ] Page header follows the documented page-header pattern
+- [ ] Page header follows the documented page-header pattern (`UPage` > `UPageHeader` with title/description props, breadcrumb in `#headline` slot, actions in `#links`)
+- [ ] No back buttons / `router.back()` affordances — breadcrumb is the only up-nav
 - [ ] Spacing uses Tailwind tokens, not inline pixels
 - [ ] Touch targets meet minimum sizes
 - [ ] Empty state defined (if applicable)

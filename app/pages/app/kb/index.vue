@@ -14,6 +14,7 @@
  *   - The list endpoint returns no total count; pagination uses page size
  *     plus "is the current page full?" as a heuristic for "has next page".
  */
+import type { BreadcrumbItem } from '@nuxt/ui'
 import type { KbEntriesListParams, KbEntry, KbEntryAuthorType, KbEntrySourceType, KbEntryStatus } from '~/features/kb/types/kb.types'
 import KbCategoryTree from '~/features/kb/components/KbCategoryTree.vue'
 import KbSubNav from '~/features/kb/components/KbSubNav.vue'
@@ -190,41 +191,40 @@ const hasAnyFilter = computed(() =>
 )
 
 const detailHref = (entry: KbEntry) => `/app/kb/${encodeURIComponent(entry.slug)}`
+
+const breadcrumbItems = computed<BreadcrumbItem[]>(() => [
+  { label: t('kb.list.title') },
+])
 </script>
 
 <template>
-  <div class="p-4 md:p-6 space-y-6">
-    <!-- Header -->
-    <div class="flex items-start justify-between gap-4 flex-wrap">
-      <div>
-        <h1 class="text-2xl font-bold text-highlighted">
-          {{ t('kb.list.title') }}
-        </h1>
-        <p class="text-muted text-sm mt-1">
-          {{ t('kb.list.subtitle') }}
-        </p>
+  <UPage>
+    <UPageHeader
+      :title="t('kb.list.title')"
+      :description=" t('kb.list.subtitle')"
+      :links="[
+        { icon: 'i-lucide-plus', label: t('kb.list.create'), to: '/app/kb/new', color: 'neutral', variant: 'subtle' },
+      ]"
+      :ui="{
+        root: 'border-none',
+      }"
+    >
+      <template #headline>
+        <UBreadcrumb :items="breadcrumbItems" />
+      </template>
+      <div class="mt-4">
+        <KbSubNav />
       </div>
-      <UButton
-        icon="i-lucide-plus"
-        :label="t('kb.list.create')"
-        to="/app/kb/new"
-      />
-    </div>
+    </UPageHeader>
 
-    <!-- Sub-navigation between All / Inbox / Trash (T-1.10) -->
-    <KbSubNav />
-
-    <!-- Two-column split on lg+: category tree (left) + content (right). -->
-    <!-- Below lg the tree is hidden; the existing category dropdown takes -->
-    <!-- over (T-1.11). -->
-    <div class="lg:grid lg:grid-cols-[240px_minmax(0,1fr)] lg:gap-6">
-      <aside class="hidden lg:block">
+    <UPage>
+      <template #left>
         <KbCategoryTree
           :categories="categories"
           :selected-id="categoryId"
           @select="(id) => (categoryId = id)"
         />
-      </aside>
+      </template>
 
       <div class="space-y-6">
         <!-- Filter bar: search + chips/dropdowns -->
@@ -438,6 +438,6 @@ const detailHref = (entry: KbEntry) => `/app/kb/${encodeURIComponent(entry.slug)
           />
         </div>
       </div>
-    </div>
-  </div>
+    </UPage>
+  </UPage>
 </template>

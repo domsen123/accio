@@ -9,6 +9,7 @@
  *
  * Refs: REQ-PROJ-4, REQ-PROJ-5.
  */
+import type { BreadcrumbItem } from '@nuxt/ui'
 import type {
   CommitsListQuery,
   IssuesListQuery,
@@ -253,361 +254,359 @@ const labelsArray = (labels: unknown): string[] => {
     return labels.filter((s): s is string => typeof s === 'string')
   return []
 }
+
+const breadcrumbItems = computed<BreadcrumbItem[]>(() => [
+  { label: t('projects.list.title'), to: '/app/projects' },
+  { label: repo.value?.fullName ?? '…' },
+])
 </script>
 
 <template>
-  <div class="p-4 md:p-6 space-y-6 max-w-6xl">
-    <UButton
-      variant="ghost"
-      icon="i-lucide-chevron-left"
-      :label="t('projects.detail.back')"
-      to="/app/projects"
-      class="-ml-2"
-    />
+  <UPage>
+    <UPageHeader
+      :title="repo?.fullName ?? t('projects.list.title')"
+      :description="repo?.description ?? undefined"
+      :ui="{ root: 'border-none' }"
+    >
+      <template #headline>
+        <UBreadcrumb :items="breadcrumbItems" />
+      </template>
+      <template v-if="repo" #links>
+        <UButton
+          v-if="canManage && repo.tracked"
+          color="primary"
+          icon="i-lucide-refresh-cw"
+          :label="t('projects.detail.actions.syncNow')"
+          :loading="syncMutation.asyncStatus.value === 'loading'"
+          @click="handleSync"
+        />
+        <UButton
+          v-if="canManage"
+          variant="outline"
+          :icon="repo.tracked ? 'i-lucide-eye-off' : 'i-lucide-eye'"
+          :label="repo.tracked
+            ? t('projects.detail.actions.untrack')
+            : t('projects.detail.actions.track')"
+          :loading="trackMutation.asyncStatus.value === 'loading'"
+          @click="handleToggleTracked"
+        />
+        <UButton
+          variant="outline"
+          icon="i-lucide-external-link"
+          :label="t('projects.detail.actions.openInGithubDev')"
+          :to="formatGithubDevUrl(repo.owner, repo.name)"
+          target="_blank"
+          rel="noopener noreferrer"
+        />
+        <UButton
+          variant="ghost"
+          icon="i-lucide-github"
+          :label="t('projects.detail.actions.openOnGithub')"
+          :to="formatGithubRepoUrl(repo.owner, repo.name)"
+          target="_blank"
+          rel="noopener noreferrer"
+        />
+      </template>
+    </UPageHeader>
 
-    <UAlert
-      v-if="!canRead"
-      color="warning"
-      variant="soft"
-      icon="i-lucide-shield-alert"
-      :title="t('projects.permissions.denied.title')"
-      :description="t('projects.permissions.denied.description')"
-    />
-
-    <template v-else>
-      <div v-if="isLoading && !repo" class="space-y-3">
-        <USkeleton class="h-24 w-full" />
-        <USkeleton class="h-32 w-full" />
-      </div>
-
-      <UAlert
-        v-else-if="error"
-        color="error"
-        variant="soft"
-        icon="i-lucide-alert-circle"
-        :title="t('projects.errors.load.title')"
-        :description="error.message"
-      />
-
-      <template v-else-if="repo">
-        <!-- Header -->
-        <header class="space-y-3">
-          <div class="flex items-start justify-between gap-3 flex-wrap">
-            <div>
-              <h1 class="text-2xl font-bold text-highlighted">
-                {{ repo.fullName }}
-              </h1>
-              <p v-if="repo.description" class="text-sm text-muted mt-1">
-                {{ repo.description }}
-              </p>
-            </div>
-            <div class="flex items-center gap-2 flex-wrap">
-              <UButton
-                v-if="canManage && repo.tracked"
-                color="primary"
-                icon="i-lucide-refresh-cw"
-                :label="t('projects.detail.actions.syncNow')"
-                :loading="syncMutation.asyncStatus.value === 'loading'"
-                @click="handleSync"
-              />
-              <UButton
-                v-if="canManage"
-                variant="outline"
-                :icon="repo.tracked ? 'i-lucide-eye-off' : 'i-lucide-eye'"
-                :label="repo.tracked
-                  ? t('projects.detail.actions.untrack')
-                  : t('projects.detail.actions.track')"
-                :loading="trackMutation.asyncStatus.value === 'loading'"
-                @click="handleToggleTracked"
-              />
-              <UButton
-                variant="outline"
-                icon="i-lucide-external-link"
-                :label="t('projects.detail.actions.openInGithubDev')"
-                :to="formatGithubDevUrl(repo.owner, repo.name)"
-                target="_blank"
-                rel="noopener noreferrer"
-              />
-              <UButton
-                variant="ghost"
-                icon="i-lucide-github"
-                :label="t('projects.detail.actions.openOnGithub')"
-                :to="formatGithubRepoUrl(repo.owner, repo.name)"
-                target="_blank"
-                rel="noopener noreferrer"
-              />
-            </div>
-          </div>
-
-          <div class="flex items-center gap-2 flex-wrap text-xs">
-            <UBadge :color="repo.tracked ? 'success' : 'neutral'" variant="subtle" size="xs">
-              {{ repo.tracked ? t('projects.detail.header.tracked') : t('projects.detail.header.untracked') }}
-            </UBadge>
-            <UBadge v-if="repo.private" color="neutral" variant="outline" size="xs">
-              {{ t('projects.detail.header.private') }}
-            </UBadge>
-            <UBadge v-if="repo.defaultBranch" color="neutral" variant="outline" size="xs">
-              {{ t('projects.detail.header.defaultBranch') }}: {{ repo.defaultBranch }}
-            </UBadge>
-            <span class="text-muted">
-              {{ t('projects.detail.header.lastSyncedAt') }}:
-              <span v-if="repo.lastSyncedAt" class="font-mono">{{ formatRelative(repo.lastSyncedAt) }}</span>
-              <span v-else>{{ t('projects.detail.header.neverSynced') }}</span>
-            </span>
-          </div>
-        </header>
-
-        <!-- Tabs -->
-        <UTabs
-          v-model="activeTab"
-          :items="tabs"
-          value-key="value"
-          label-key="label"
-          variant="link"
+    <UPage>
+      <div class="space-y-6 max-w-6xl">
+        <UAlert
+          v-if="!canRead"
+          color="warning"
+          variant="soft"
+          icon="i-lucide-shield-alert"
+          :title="t('projects.permissions.denied.title')"
+          :description="t('projects.permissions.denied.description')"
         />
 
-        <!-- Issues -->
-        <section v-if="activeTab === 'issues'" class="space-y-4">
-          <div class="flex flex-wrap items-end gap-3">
-            <UFormField :label="t('projects.detail.filters.state.label')" class="min-w-40">
-              <USelectMenu
-                v-model="issuesState"
-                :items="issueStateOptions"
-                value-key="value"
-                label-key="label"
-              />
-            </UFormField>
-            <UFormField class="grow min-w-60">
-              <UInput
-                v-model="issuesQ"
-                icon="i-lucide-search"
-                :placeholder="t('projects.detail.filters.search.placeholder')"
-              />
-            </UFormField>
-            <UFormField class="min-w-60">
-              <UInput
-                v-model="issuesLabelsInput"
-                icon="i-lucide-tag"
-                :placeholder="t('projects.detail.filters.labels.placeholder')"
-              />
-            </UFormField>
+        <template v-else>
+          <div v-if="isLoading && !repo" class="space-y-3">
+            <USkeleton class="h-24 w-full" />
+            <USkeleton class="h-32 w-full" />
           </div>
 
           <UAlert
-            v-if="issuesQuery.error.value"
+            v-else-if="error"
             color="error"
             variant="soft"
             icon="i-lucide-alert-circle"
             :title="t('projects.errors.load.title')"
-            :description="issuesQuery.error.value.message"
+            :description="error.message"
           />
 
-          <div v-if="issuesQuery.isLoading.value && issuesQuery.rows.value.length === 0" class="space-y-2">
-            <USkeleton v-for="i in 3" :key="i" class="h-16 w-full" />
-          </div>
+          <template v-else-if="repo">
+            <!-- Metadata badges -->
+            <div class="flex items-center gap-2 flex-wrap text-xs">
+              <UBadge :color="repo.tracked ? 'success' : 'neutral'" variant="subtle" size="xs">
+                {{ repo.tracked ? t('projects.detail.header.tracked') : t('projects.detail.header.untracked') }}
+              </UBadge>
+              <UBadge v-if="repo.private" color="neutral" variant="outline" size="xs">
+                {{ t('projects.detail.header.private') }}
+              </UBadge>
+              <UBadge v-if="repo.defaultBranch" color="neutral" variant="outline" size="xs">
+                {{ t('projects.detail.header.defaultBranch') }}: {{ repo.defaultBranch }}
+              </UBadge>
+              <span class="text-muted">
+                {{ t('projects.detail.header.lastSyncedAt') }}:
+                <span v-if="repo.lastSyncedAt" class="font-mono">{{ formatRelative(repo.lastSyncedAt) }}</span>
+                <span v-else>{{ t('projects.detail.header.neverSynced') }}</span>
+              </span>
+            </div>
 
-          <div v-else-if="issuesQuery.rows.value.length === 0" class="text-sm text-muted py-8 text-center space-y-1">
-            <p>{{ t('projects.detail.issues.empty.title') }}</p>
-            <p class="text-xs">
-              {{ t('projects.detail.issues.empty.subtitle') }}
-            </p>
-          </div>
+            <!-- Tabs -->
+            <UTabs
+              v-model="activeTab"
+              :items="tabs"
+              value-key="value"
+              label-key="label"
+              variant="link"
+            />
 
-          <ul v-else class="divide-y divide-default border border-default rounded">
-            <li
-              v-for="issue in issuesQuery.rows.value"
-              :key="issue.id"
-              class="p-3"
-            >
-              <div class="flex items-center gap-2 flex-wrap">
-                <UBadge
-                  :color="issue.state === 'open' ? 'success' : 'neutral'"
-                  variant="subtle"
-                  size="xs"
-                >
-                  {{ issue.state }}
-                </UBadge>
-                <NuxtLink
-                  :to="issue.htmlUrl"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="font-medium text-highlighted hover:underline truncate"
-                >
-                  <span class="font-mono">#{{ issue.number }}</span> {{ issue.title }}
-                </NuxtLink>
-                <UBadge
-                  v-for="label in labelsArray(issue.labels)"
-                  :key="label"
-                  color="neutral"
-                  variant="outline"
-                  size="xs"
-                >
-                  {{ label }}
-                </UBadge>
+            <!-- Issues -->
+            <section v-if="activeTab === 'issues'" class="space-y-4">
+              <div class="flex flex-wrap items-end gap-3">
+                <UFormField :label="t('projects.detail.filters.state.label')" class="min-w-40">
+                  <USelectMenu
+                    v-model="issuesState"
+                    :items="issueStateOptions"
+                    value-key="value"
+                    label-key="label"
+                  />
+                </UFormField>
+                <UFormField class="grow min-w-60">
+                  <UInput
+                    v-model="issuesQ"
+                    icon="i-lucide-search"
+                    :placeholder="t('projects.detail.filters.search.placeholder')"
+                  />
+                </UFormField>
+                <UFormField class="min-w-60">
+                  <UInput
+                    v-model="issuesLabelsInput"
+                    icon="i-lucide-tag"
+                    :placeholder="t('projects.detail.filters.labels.placeholder')"
+                  />
+                </UFormField>
               </div>
-              <div class="text-xs text-muted mt-1 flex items-center gap-3 flex-wrap">
-                <span>{{ t('projects.detail.issues.row.openedBy', { login: userLogin(issue.author) }) }}</span>
-                <span v-if="issue.ghCreatedAt">
-                  {{ t('projects.detail.issues.row.openedAt', { when: formatRelative(issue.ghCreatedAt) }) }}
-                </span>
-                <span v-if="issue.ghClosedAt">
-                  {{ t('projects.detail.issues.row.closedAt', { when: formatRelative(issue.ghClosedAt) }) }}
-                </span>
-                <span>{{ t('projects.detail.issues.row.comments', { n: issue.commentsCount }) }}</span>
-              </div>
-            </li>
-          </ul>
-        </section>
 
-        <!-- Pulls -->
-        <section v-if="activeTab === 'pulls'" class="space-y-4">
-          <div class="flex flex-wrap items-end gap-3">
-            <UFormField :label="t('projects.detail.filters.state.label')" class="min-w-40">
-              <USelectMenu
-                v-model="pullsState"
-                :items="pullStateOptions"
-                value-key="value"
-                label-key="label"
+              <UAlert
+                v-if="issuesQuery.error.value"
+                color="error"
+                variant="soft"
+                icon="i-lucide-alert-circle"
+                :title="t('projects.errors.load.title')"
+                :description="issuesQuery.error.value.message"
               />
-            </UFormField>
-            <UFormField class="grow min-w-60">
-              <UInput
-                v-model="pullsQ"
-                icon="i-lucide-search"
-                :placeholder="t('projects.detail.filters.search.placeholder')"
-              />
-            </UFormField>
-            <UFormField class="min-w-60">
-              <UInput
-                v-model="pullsLabelsInput"
-                icon="i-lucide-tag"
-                :placeholder="t('projects.detail.filters.labels.placeholder')"
-              />
-            </UFormField>
-          </div>
 
-          <UAlert
-            v-if="pullsQuery.error.value"
-            color="error"
-            variant="soft"
-            icon="i-lucide-alert-circle"
-            :title="t('projects.errors.load.title')"
-            :description="pullsQuery.error.value.message"
-          />
+              <div v-if="issuesQuery.isLoading.value && issuesQuery.rows.value.length === 0" class="space-y-2">
+                <USkeleton v-for="i in 3" :key="i" class="h-16 w-full" />
+              </div>
 
-          <div v-if="pullsQuery.isLoading.value && pullsQuery.rows.value.length === 0" class="space-y-2">
-            <USkeleton v-for="i in 3" :key="i" class="h-16 w-full" />
-          </div>
+              <div v-else-if="issuesQuery.rows.value.length === 0" class="text-sm text-muted py-8 text-center space-y-1">
+                <p>{{ t('projects.detail.issues.empty.title') }}</p>
+                <p class="text-xs">
+                  {{ t('projects.detail.issues.empty.subtitle') }}
+                </p>
+              </div>
 
-          <div v-else-if="pullsQuery.rows.value.length === 0" class="text-sm text-muted py-8 text-center space-y-1">
-            <p>{{ t('projects.detail.pulls.empty.title') }}</p>
-            <p class="text-xs">
-              {{ t('projects.detail.pulls.empty.subtitle') }}
-            </p>
-          </div>
-
-          <ul v-else class="divide-y divide-default border border-default rounded">
-            <li
-              v-for="pull in pullsQuery.rows.value"
-              :key="pull.id"
-              class="p-3"
-            >
-              <div class="flex items-center gap-2 flex-wrap">
-                <UBadge
-                  :color="pullStateColor(pull.state)"
-                  variant="subtle"
-                  size="xs"
+              <ul v-else class="divide-y divide-default border border-default rounded">
+                <li
+                  v-for="issue in issuesQuery.rows.value"
+                  :key="issue.id"
+                  class="p-3"
                 >
-                  {{ t(`projects.detail.pulls.row.${pull.state}`) }}
-                </UBadge>
-                <UBadge v-if="pull.draft" color="neutral" variant="outline" size="xs">
-                  {{ t('projects.detail.pulls.row.draft') }}
-                </UBadge>
-                <NuxtLink
-                  :to="pull.htmlUrl"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="font-medium text-highlighted hover:underline truncate"
-                >
-                  <span class="font-mono">#{{ pull.number }}</span> {{ pull.title }}
-                </NuxtLink>
-              </div>
-              <div class="text-xs text-muted mt-1 flex items-center gap-3 flex-wrap">
-                <span>{{ t('projects.detail.pulls.row.openedBy', { login: userLogin(pull.author) }) }}</span>
-                <span class="font-mono">
-                  {{ t('projects.detail.pulls.row.branches', { base: pull.baseRef, head: pull.headRef }) }}
-                </span>
-                <span v-if="pull.ghUpdatedAt" class="font-mono">{{ formatRelative(pull.ghUpdatedAt) }}</span>
-              </div>
-            </li>
-          </ul>
-        </section>
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <UBadge
+                      :color="issue.state === 'open' ? 'success' : 'neutral'"
+                      variant="subtle"
+                      size="xs"
+                    >
+                      {{ issue.state }}
+                    </UBadge>
+                    <NuxtLink
+                      :to="issue.htmlUrl"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="font-medium text-highlighted hover:underline truncate"
+                    >
+                      <span class="font-mono">#{{ issue.number }}</span> {{ issue.title }}
+                    </NuxtLink>
+                    <UBadge
+                      v-for="label in labelsArray(issue.labels)"
+                      :key="label"
+                      color="neutral"
+                      variant="outline"
+                      size="xs"
+                    >
+                      {{ label }}
+                    </UBadge>
+                  </div>
+                  <div class="text-xs text-muted mt-1 flex items-center gap-3 flex-wrap">
+                    <span>{{ t('projects.detail.issues.row.openedBy', { login: userLogin(issue.author) }) }}</span>
+                    <span v-if="issue.ghCreatedAt">
+                      {{ t('projects.detail.issues.row.openedAt', { when: formatRelative(issue.ghCreatedAt) }) }}
+                    </span>
+                    <span v-if="issue.ghClosedAt">
+                      {{ t('projects.detail.issues.row.closedAt', { when: formatRelative(issue.ghClosedAt) }) }}
+                    </span>
+                    <span>{{ t('projects.detail.issues.row.comments', { n: issue.commentsCount }) }}</span>
+                  </div>
+                </li>
+              </ul>
+            </section>
 
-        <!-- Commits -->
-        <section v-if="activeTab === 'commits'" class="space-y-4">
-          <div class="flex flex-wrap items-end gap-3">
-            <UFormField :label="t('projects.detail.filters.since.label')" class="min-w-44">
-              <UInput v-model="commitsSince" type="date" />
-            </UFormField>
-            <UFormField :label="t('projects.detail.filters.author.label')" class="min-w-60">
-              <UInput
-                v-model="commitsAuthor"
-                :placeholder="t('projects.detail.filters.author.placeholder')"
+            <!-- Pulls -->
+            <section v-if="activeTab === 'pulls'" class="space-y-4">
+              <div class="flex flex-wrap items-end gap-3">
+                <UFormField :label="t('projects.detail.filters.state.label')" class="min-w-40">
+                  <USelectMenu
+                    v-model="pullsState"
+                    :items="pullStateOptions"
+                    value-key="value"
+                    label-key="label"
+                  />
+                </UFormField>
+                <UFormField class="grow min-w-60">
+                  <UInput
+                    v-model="pullsQ"
+                    icon="i-lucide-search"
+                    :placeholder="t('projects.detail.filters.search.placeholder')"
+                  />
+                </UFormField>
+                <UFormField class="min-w-60">
+                  <UInput
+                    v-model="pullsLabelsInput"
+                    icon="i-lucide-tag"
+                    :placeholder="t('projects.detail.filters.labels.placeholder')"
+                  />
+                </UFormField>
+              </div>
+
+              <UAlert
+                v-if="pullsQuery.error.value"
+                color="error"
+                variant="soft"
+                icon="i-lucide-alert-circle"
+                :title="t('projects.errors.load.title')"
+                :description="pullsQuery.error.value.message"
               />
-            </UFormField>
-          </div>
 
-          <UAlert
-            v-if="commitsQuery.error.value"
-            color="error"
-            variant="soft"
-            icon="i-lucide-alert-circle"
-            :title="t('projects.errors.load.title')"
-            :description="commitsQuery.error.value.message"
-          />
+              <div v-if="pullsQuery.isLoading.value && pullsQuery.rows.value.length === 0" class="space-y-2">
+                <USkeleton v-for="i in 3" :key="i" class="h-16 w-full" />
+              </div>
 
-          <div v-if="commitsQuery.isLoading.value && commitsQuery.rows.value.length === 0" class="space-y-2">
-            <USkeleton v-for="i in 3" :key="i" class="h-12 w-full" />
-          </div>
+              <div v-else-if="pullsQuery.rows.value.length === 0" class="text-sm text-muted py-8 text-center space-y-1">
+                <p>{{ t('projects.detail.pulls.empty.title') }}</p>
+                <p class="text-xs">
+                  {{ t('projects.detail.pulls.empty.subtitle') }}
+                </p>
+              </div>
 
-          <div v-else-if="commitsQuery.rows.value.length === 0" class="text-sm text-muted py-8 text-center space-y-1">
-            <p>{{ t('projects.detail.commits.empty.title') }}</p>
-            <p class="text-xs">
-              {{ t('projects.detail.commits.empty.subtitle') }}
-            </p>
-          </div>
-
-          <ul v-else class="divide-y divide-default border border-default rounded">
-            <li
-              v-for="commit in commitsQuery.rows.value"
-              :key="commit.id"
-              class="p-3"
-            >
-              <div class="flex items-center gap-2 flex-wrap">
-                <NuxtLink
-                  :to="commit.htmlUrl"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="font-mono text-xs text-muted hover:underline shrink-0"
+              <ul v-else class="divide-y divide-default border border-default rounded">
+                <li
+                  v-for="pull in pullsQuery.rows.value"
+                  :key="pull.id"
+                  class="p-3"
                 >
-                  {{ shortSha(commit.sha) }}
-                </NuxtLink>
-                <span class="font-medium text-highlighted truncate">
-                  {{ shortMessage(commit.message) }}
-                </span>
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <UBadge
+                      :color="pullStateColor(pull.state)"
+                      variant="subtle"
+                      size="xs"
+                    >
+                      {{ t(`projects.detail.pulls.row.${pull.state}`) }}
+                    </UBadge>
+                    <UBadge v-if="pull.draft" color="neutral" variant="outline" size="xs">
+                      {{ t('projects.detail.pulls.row.draft') }}
+                    </UBadge>
+                    <NuxtLink
+                      :to="pull.htmlUrl"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="font-medium text-highlighted hover:underline truncate"
+                    >
+                      <span class="font-mono">#{{ pull.number }}</span> {{ pull.title }}
+                    </NuxtLink>
+                  </div>
+                  <div class="text-xs text-muted mt-1 flex items-center gap-3 flex-wrap">
+                    <span>{{ t('projects.detail.pulls.row.openedBy', { login: userLogin(pull.author) }) }}</span>
+                    <span class="font-mono">
+                      {{ t('projects.detail.pulls.row.branches', { base: pull.baseRef, head: pull.headRef }) }}
+                    </span>
+                    <span v-if="pull.ghUpdatedAt" class="font-mono">{{ formatRelative(pull.ghUpdatedAt) }}</span>
+                  </div>
+                </li>
+              </ul>
+            </section>
+
+            <!-- Commits -->
+            <section v-if="activeTab === 'commits'" class="space-y-4">
+              <div class="flex flex-wrap items-end gap-3">
+                <UFormField :label="t('projects.detail.filters.since.label')" class="min-w-44">
+                  <UInput v-model="commitsSince" type="date" />
+                </UFormField>
+                <UFormField :label="t('projects.detail.filters.author.label')" class="min-w-60">
+                  <UInput
+                    v-model="commitsAuthor"
+                    :placeholder="t('projects.detail.filters.author.placeholder')"
+                  />
+                </UFormField>
               </div>
-              <div class="text-xs text-muted mt-1 flex items-center gap-3 flex-wrap">
-                <span>
-                  {{ t('projects.detail.commits.row.by', {
-                    who: commit.authorLogin || commit.authorName || '',
-                  }) }}
-                </span>
-                <span v-if="commit.authoredAt" class="font-mono">{{ formatRelative(commit.authoredAt) }}</span>
+
+              <UAlert
+                v-if="commitsQuery.error.value"
+                color="error"
+                variant="soft"
+                icon="i-lucide-alert-circle"
+                :title="t('projects.errors.load.title')"
+                :description="commitsQuery.error.value.message"
+              />
+
+              <div v-if="commitsQuery.isLoading.value && commitsQuery.rows.value.length === 0" class="space-y-2">
+                <USkeleton v-for="i in 3" :key="i" class="h-12 w-full" />
               </div>
-            </li>
-          </ul>
-        </section>
-      </template>
-    </template>
-  </div>
+
+              <div v-else-if="commitsQuery.rows.value.length === 0" class="text-sm text-muted py-8 text-center space-y-1">
+                <p>{{ t('projects.detail.commits.empty.title') }}</p>
+                <p class="text-xs">
+                  {{ t('projects.detail.commits.empty.subtitle') }}
+                </p>
+              </div>
+
+              <ul v-else class="divide-y divide-default border border-default rounded">
+                <li
+                  v-for="commit in commitsQuery.rows.value"
+                  :key="commit.id"
+                  class="p-3"
+                >
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <NuxtLink
+                      :to="commit.htmlUrl"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="font-mono text-xs text-muted hover:underline shrink-0"
+                    >
+                      {{ shortSha(commit.sha) }}
+                    </NuxtLink>
+                    <span class="font-medium text-highlighted truncate">
+                      {{ shortMessage(commit.message) }}
+                    </span>
+                  </div>
+                  <div class="text-xs text-muted mt-1 flex items-center gap-3 flex-wrap">
+                    <span>
+                      {{ t('projects.detail.commits.row.by', {
+                        who: commit.authorLogin || commit.authorName || '',
+                      }) }}
+                    </span>
+                    <span v-if="commit.authoredAt" class="font-mono">{{ formatRelative(commit.authoredAt) }}</span>
+                  </div>
+                </li>
+              </ul>
+            </section>
+          </template>
+        </template>
+      </div>
+    </UPage>
+  </UPage>
 </template>

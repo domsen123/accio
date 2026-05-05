@@ -6,6 +6,7 @@
  * count), mounts the shared `TodoForm` in edit mode, and navigates back
  * to the detail page on success.
  */
+import type { BreadcrumbItem } from '@nuxt/ui'
 import type { Todo } from '~/features/todo/types/todo.types'
 import TodoForm from '~/features/todo/components/TodoForm.vue'
 import { useTodoById } from '~/features/todo/composables/useTodoById'
@@ -39,47 +40,55 @@ const onCancel = () => {
   else
     router.push('/app/todos')
 }
+
+const breadcrumbItems = computed<BreadcrumbItem[]>(() => {
+  const items: BreadcrumbItem[] = [{ label: t('todo.list.title'), to: '/app/todos' }]
+  if (todo.value) {
+    items.push({
+      label: todo.value.title,
+      to: `/app/todos/${encodeURIComponent(todo.value.id)}`,
+    })
+  }
+  items.push({ label: t('todo.form.edit.heading') })
+  return items
+})
 </script>
 
 <template>
-  <div class="p-4 md:p-6 space-y-6">
-    <div class="flex items-center justify-between gap-3 flex-wrap">
-      <div>
-        <h1 class="text-2xl font-bold text-highlighted">
-          {{ t('todo.form.edit.heading') }}
-        </h1>
-        <p v-if="todo" class="text-muted text-sm mt-1 truncate max-w-2xl">
-          {{ todo.title }}
-        </p>
+  <UPage>
+    <UPageHeader
+      :title="t('todo.form.edit.heading')"
+      :description="todo?.title"
+      :ui="{ root: 'border-none' }"
+    >
+      <template #headline>
+        <UBreadcrumb :items="breadcrumbItems" />
+      </template>
+    </UPageHeader>
+
+    <UPage>
+      <div class="space-y-6">
+        <div v-if="isLoading" class="space-y-4">
+          <USkeleton class="h-8 w-3/4" />
+          <USkeleton class="h-64 w-full" />
+        </div>
+
+        <UAlert
+          v-else-if="error"
+          color="error"
+          variant="soft"
+          icon="i-lucide-alert-circle"
+          :title="t('todo.detail.error.title')"
+          :description="error.message"
+        />
+
+        <TodoForm
+          v-else-if="todo"
+          :todo="todo"
+          @success="onSuccess"
+          @cancel="onCancel"
+        />
       </div>
-      <UButton
-        :to="todo ? `/app/todos/${encodeURIComponent(todo.id)}` : '/app/todos'"
-        variant="ghost"
-        color="neutral"
-        icon="i-lucide-arrow-left"
-        :label="t('todo.form.edit.backToTodo')"
-      />
-    </div>
-
-    <div v-if="isLoading" class="space-y-4">
-      <USkeleton class="h-8 w-3/4" />
-      <USkeleton class="h-64 w-full" />
-    </div>
-
-    <UAlert
-      v-else-if="error"
-      color="error"
-      variant="soft"
-      icon="i-lucide-alert-circle"
-      :title="t('todo.detail.error.title')"
-      :description="error.message"
-    />
-
-    <TodoForm
-      v-else-if="todo"
-      :todo="todo"
-      @success="onSuccess"
-      @cancel="onCancel"
-    />
-  </div>
+    </UPage>
+  </UPage>
 </template>

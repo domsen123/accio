@@ -27,6 +27,7 @@
  *
  * Refs: REQ-ORCH-1, REQ-ORCH-3, REQ-ORCH-4, REQ-AI-4.
  */
+import type { BreadcrumbItem } from '@nuxt/ui'
 import type {
   ConversationMessage,
   ConversationMode,
@@ -452,375 +453,381 @@ onMounted(() => {
 onBeforeUnmount(() => {
   stream.abort()
 })
+
+const breadcrumbItems = computed<BreadcrumbItem[]>(() => [
+  { label: t('orchestrator.list.title'), to: '/app/orchestrator' },
+  { label: conversation.value?.title?.trim() || t('orchestrator.list.row.untitled') },
+])
 </script>
 
 <template>
-  <div class="p-4 md:p-6 space-y-4 max-w-5xl">
-    <UAlert
-      v-if="!canUse"
-      color="warning"
-      variant="soft"
-      icon="i-lucide-shield-alert"
-      :title="t('orchestrator.permissions.denied.title')"
-      :description="t('orchestrator.permissions.denied.description')"
-    />
+  <UPage>
+    <UPageHeader
+      :title="conversation?.title?.trim() || t('orchestrator.list.row.untitled')"
+      :ui="{ root: 'border-none' }"
+    >
+      <template #headline>
+        <UBreadcrumb :items="breadcrumbItems" />
+      </template>
+    </UPageHeader>
 
-    <template v-else>
-      <header class="flex items-start justify-between gap-3 flex-wrap">
-        <div class="flex items-center gap-2 min-w-0">
-          <UButton
-            variant="ghost"
-            size="sm"
-            icon="i-lucide-arrow-left"
-            :label="t('orchestrator.chat.back')"
-            to="/app/orchestrator"
-          />
-        </div>
-      </header>
-
-      <UAlert
-        v-if="error"
-        color="error"
-        variant="soft"
-        icon="i-lucide-alert-circle"
-        :title="t('orchestrator.errors.load.title')"
-        :description="error.message"
-      />
-
-      <div v-if="isLoading && !conversation" class="space-y-3">
-        <USkeleton class="h-12 w-full" />
-        <USkeleton class="h-32 w-full" />
-      </div>
-
-      <template v-else-if="conversation">
-        <!-- Conversation header card: title + mode toggle + model picker -->
-        <UCard>
-          <div class="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_auto] gap-4 items-start">
-            <UFormField
-              :label="t('orchestrator.chat.titleField.label')"
-              :description="t('orchestrator.chat.titleField.description')"
-            >
-              <UInput
-                v-model="titleInput"
-                :placeholder="t('orchestrator.chat.titleField.placeholder')"
-                @blur="persistTitle"
-                @keydown.enter.prevent="persistTitle"
-              />
-            </UFormField>
-
-            <div class="flex items-end gap-2 flex-wrap justify-end">
-              <UTooltip
-                :text="composerInput && !canWrite ? t('orchestrator.permissions.write.tooltip') : ''"
-                :disabled="canWrite"
-              >
-                <div class="flex items-center gap-2">
-                  <UBadge
-                    :color="conversation.mode === 'read_write' ? 'warning' : 'neutral'"
-                    variant="subtle"
-                  >
-                    {{ t(`orchestrator.modes.${conversation.mode}`) }}
-                  </UBadge>
-                  <UButton
-                    :color="conversation.mode === 'read_write' ? 'warning' : 'primary'"
-                    variant="outline"
-                    size="sm"
-                    :label="conversation.mode === 'read_only'
-                      ? t('orchestrator.chat.mode.enableWrite')
-                      : t('orchestrator.chat.mode.disableWrite')"
-                    :disabled="!canWrite || updateMutation.asyncStatus.value === 'loading'"
-                    @click="onModeToggleClick"
-                  />
-                </div>
-              </UTooltip>
-            </div>
-          </div>
-
-          <UFormField
-            :label="t('orchestrator.chat.modelPicker.label')"
-            :description="t('orchestrator.chat.modelPicker.description')"
-            class="mt-4"
-          >
-            <USelectMenu
-              v-model="modelInput"
-              :items="modelOptions"
-              value-key="value"
-              label-key="label"
-              :placeholder="t('orchestrator.chat.modelPicker.default')"
-              :disabled="modelsLoading || noModels"
-              class="min-w-72"
-            />
-          </UFormField>
-
-          <UAlert
-            v-if="noModels"
-            class="mt-3"
-            color="warning"
-            variant="soft"
-            icon="i-lucide-alert-triangle"
-            :title="t('orchestrator.chat.noModels.title')"
-            :description="t('orchestrator.chat.noModels.description')"
-          >
-            <template #actions>
-              <UButton
-                size="sm"
-                color="warning"
-                variant="solid"
-                icon="i-lucide-settings"
-                :label="t('orchestrator.chat.noModels.action')"
-                to="/app/settings/ai"
-              />
-            </template>
-          </UAlert>
-        </UCard>
-
-        <!-- Message history -->
-        <UCard>
-          <template #header>
-            <div class="flex items-center justify-between">
-              <h2 class="text-base font-semibold text-highlighted">
-                {{ t('orchestrator.chat.messages.title') }}
-              </h2>
-              <span class="text-xs text-muted">
-                {{ t('orchestrator.chat.messages.count', { n: messages.length }) }}
-              </span>
-            </div>
-          </template>
-
-          <div v-if="messages.length === 0 && !hasLiveContent" class="text-sm text-muted py-8 text-center">
-            {{ t('orchestrator.chat.messages.empty') }}
-          </div>
-
-          <ul v-else class="space-y-4">
-            <li
-              v-for="message in messages"
-              :key="message.id"
-              class="flex gap-3"
-            >
-              <div class="shrink-0 w-20 text-xs text-muted">
-                <p class="font-medium uppercase tracking-wide text-highlighted">
-                  {{ roleLabel(message.role) }}
-                </p>
-                <p class="font-mono">
-                  {{ formatTime(message.createdAt) }}
-                </p>
-              </div>
-              <div class="flex-1 min-w-0 space-y-2">
-                <p
-                  v-if="messageTextSummary(message)"
-                  class="whitespace-pre-wrap text-sm"
-                >
-                  {{ messageTextSummary(message) }}
-                </p>
-                <ul
-                  v-if="messageHasTools(message)"
-                  class="space-y-2"
-                >
-                  <li
-                    v-for="(block, idx) in messageBlocks(message)"
-                    :key="`${message.id}-${idx}`"
-                  >
-                    <ToolCallCard
-                      v-if="isToolCallBlock(block)"
-                      :tool-call-id="block.toolCallId ?? ''"
-                      :tool-name="block.toolName"
-                      :input="block.input"
-                    />
-                    <ToolResultCard
-                      v-else-if="isToolResultBlock(block)"
-                      :tool-call-id="block.toolCallId ?? ''"
-                      :tool-name="block.toolName"
-                      :output="block.output"
-                    />
-                  </li>
-                </ul>
-                <p
-                  v-if="!messageTextSummary(message) && !messageHasTools(message)"
-                  class="text-xs text-muted italic"
-                >
-                  {{ t('orchestrator.chat.messages.emptyBlock') }}
-                </p>
-              </div>
-            </li>
-
-            <!-- Live trailing block built from the in-flight stream events.
-                 Replaced by the persisted rows after `message-complete`. -->
-            <li
-              v-if="optimisticUserText !== null"
-              class="flex gap-3 opacity-90"
-            >
-              <div class="shrink-0 w-20 text-xs text-muted">
-                <p class="font-medium uppercase tracking-wide text-highlighted">
-                  {{ roleLabel('user') }}
-                </p>
-                <p class="italic">
-                  {{ t('orchestrator.chat.stream.live.label') }}
-                </p>
-              </div>
-              <div class="flex-1 min-w-0">
-                <p class="whitespace-pre-wrap text-sm">
-                  {{ optimisticUserText }}
-                </p>
-              </div>
-            </li>
-
-            <li
-              v-if="liveTextValues.length > 0 || liveToolCalls.length > 0 || liveToolResults.length > 0"
-              class="flex gap-3"
-            >
-              <div class="shrink-0 w-20 text-xs text-muted">
-                <p class="font-medium uppercase tracking-wide text-highlighted">
-                  {{ t('orchestrator.chat.stream.live.assistant') }}
-                </p>
-                <p class="italic flex items-center gap-1">
-                  <UIcon
-                    v-if="stream.isStreaming.value"
-                    name="i-lucide-loader-2"
-                    class="size-3 animate-spin"
-                  />
-                  {{ t('orchestrator.chat.stream.live.label') }}
-                </p>
-              </div>
-              <div class="flex-1 min-w-0 space-y-2">
-                <p
-                  v-for="(text, i) in liveTextValues"
-                  :key="`live-text-${i}`"
-                  class="whitespace-pre-wrap text-sm"
-                >
-                  {{ text }}
-                </p>
-                <ul v-if="liveToolCalls.length > 0" class="space-y-2">
-                  <li
-                    v-for="call in liveToolCalls"
-                    :key="`live-call-${call.toolCallId}`"
-                  >
-                    <ToolCallCard
-                      :tool-call-id="call.toolCallId"
-                      :tool-name="call.toolName"
-                      :input="call.input"
-                    />
-                  </li>
-                </ul>
-                <ul v-if="liveToolResults.length > 0" class="space-y-2">
-                  <li
-                    v-for="result in liveToolResults"
-                    :key="`live-result-${result.toolCallId}`"
-                  >
-                    <ToolResultCard
-                      :tool-call-id="result.toolCallId"
-                      :tool-name="result.toolName"
-                      :output="result.result"
-                    />
-                  </li>
-                </ul>
-              </div>
-            </li>
-          </ul>
-        </UCard>
-
-        <!-- Stream error alert -->
+    <UPage>
+      <div class="space-y-4 max-w-5xl">
         <UAlert
-          v-if="streamError"
-          color="error"
+          v-if="!canUse"
+          color="warning"
           variant="soft"
-          icon="i-lucide-alert-circle"
-          :title="t('orchestrator.chat.stream.errors.title')"
-          :description="streamErrorMessage"
-        >
-          <template #actions>
-            <UButton
-              v-if="streamError.code === 'connection_lost'"
-              size="sm"
-              color="error"
-              variant="solid"
-              icon="i-lucide-refresh-ccw"
-              :label="t('orchestrator.chat.composer.retry')"
-              :disabled="stream.isStreaming.value"
-              @click="onRetry"
-            />
-          </template>
-        </UAlert>
-
-        <!-- Pending confirmation card (T-3.14) -->
-        <ConfirmationCard
-          v-if="pendingConfirmation"
-          :conversation-id="conversation.id"
-          :action-id="pendingConfirmation.actionId"
-          :tool-name="pendingConfirmation.toolName"
-          :input="pendingConfirmation.input"
-          :affected-count="pendingConfirmation.affectedCount"
-          :reason="pendingConfirmation.reason"
-          :busy="stream.isStreaming.value"
-          @confirmed="onConfirmationConfirmed"
-          @cancelled="onConfirmationCancelled"
+          icon="i-lucide-shield-alert"
+          :title="t('orchestrator.permissions.denied.title')"
+          :description="t('orchestrator.permissions.denied.description')"
         />
 
-        <!-- Composer (T-3.15) -->
-        <UCard>
-          <UFormField
-            :label="t('orchestrator.chat.composer.label')"
-            :description="t('orchestrator.chat.composer.description')"
-          >
-            <UTextarea
-              v-model="composerInput"
-              :rows="3"
-              :placeholder="t('orchestrator.chat.composer.placeholder')"
-              :disabled="composerDisabled"
-              @keydown="onComposerKeydown"
+        <template v-else>
+          <UAlert
+            v-if="error"
+            color="error"
+            variant="soft"
+            icon="i-lucide-alert-circle"
+            :title="t('orchestrator.errors.load.title')"
+            :description="error.message"
+          />
+
+          <div v-if="isLoading && !conversation" class="space-y-3">
+            <USkeleton class="h-12 w-full" />
+            <USkeleton class="h-32 w-full" />
+          </div>
+
+          <template v-else-if="conversation">
+            <!-- Conversation header card: title + mode toggle + model picker -->
+            <UCard>
+              <div class="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_auto] gap-4 items-start">
+                <UFormField
+                  :label="t('orchestrator.chat.titleField.label')"
+                  :description="t('orchestrator.chat.titleField.description')"
+                >
+                  <UInput
+                    v-model="titleInput"
+                    :placeholder="t('orchestrator.chat.titleField.placeholder')"
+                    @blur="persistTitle"
+                    @keydown.enter.prevent="persistTitle"
+                  />
+                </UFormField>
+
+                <div class="flex items-end gap-2 flex-wrap justify-end">
+                  <UTooltip
+                    :text="composerInput && !canWrite ? t('orchestrator.permissions.write.tooltip') : ''"
+                    :disabled="canWrite"
+                  >
+                    <div class="flex items-center gap-2">
+                      <UBadge
+                        :color="conversation.mode === 'read_write' ? 'warning' : 'neutral'"
+                        variant="subtle"
+                      >
+                        {{ t(`orchestrator.modes.${conversation.mode}`) }}
+                      </UBadge>
+                      <UButton
+                        :color="conversation.mode === 'read_write' ? 'warning' : 'primary'"
+                        variant="outline"
+                        size="sm"
+                        :label="conversation.mode === 'read_only'
+                          ? t('orchestrator.chat.mode.enableWrite')
+                          : t('orchestrator.chat.mode.disableWrite')"
+                        :disabled="!canWrite || updateMutation.asyncStatus.value === 'loading'"
+                        @click="onModeToggleClick"
+                      />
+                    </div>
+                  </UTooltip>
+                </div>
+              </div>
+
+              <UFormField
+                :label="t('orchestrator.chat.modelPicker.label')"
+                :description="t('orchestrator.chat.modelPicker.description')"
+                class="mt-4"
+              >
+                <USelectMenu
+                  v-model="modelInput"
+                  :items="modelOptions"
+                  value-key="value"
+                  label-key="label"
+                  :placeholder="t('orchestrator.chat.modelPicker.default')"
+                  :disabled="modelsLoading || noModels"
+                  class="min-w-72"
+                />
+              </UFormField>
+
+              <UAlert
+                v-if="noModels"
+                class="mt-3"
+                color="warning"
+                variant="soft"
+                icon="i-lucide-alert-triangle"
+                :title="t('orchestrator.chat.noModels.title')"
+                :description="t('orchestrator.chat.noModels.description')"
+              >
+                <template #actions>
+                  <UButton
+                    size="sm"
+                    color="warning"
+                    variant="solid"
+                    icon="i-lucide-settings"
+                    :label="t('orchestrator.chat.noModels.action')"
+                    to="/app/settings/ai"
+                  />
+                </template>
+              </UAlert>
+            </UCard>
+
+            <!-- Message history -->
+            <UCard>
+              <template #header>
+                <div class="flex items-center justify-between">
+                  <h2 class="text-base font-semibold text-highlighted">
+                    {{ t('orchestrator.chat.messages.title') }}
+                  </h2>
+                  <span class="text-xs text-muted">
+                    {{ t('orchestrator.chat.messages.count', { n: messages.length }) }}
+                  </span>
+                </div>
+              </template>
+
+              <div v-if="messages.length === 0 && !hasLiveContent" class="text-sm text-muted py-8 text-center">
+                {{ t('orchestrator.chat.messages.empty') }}
+              </div>
+
+              <ul v-else class="space-y-4">
+                <li
+                  v-for="message in messages"
+                  :key="message.id"
+                  class="flex gap-3"
+                >
+                  <div class="shrink-0 w-20 text-xs text-muted">
+                    <p class="font-medium uppercase tracking-wide text-highlighted">
+                      {{ roleLabel(message.role) }}
+                    </p>
+                    <p class="font-mono">
+                      {{ formatTime(message.createdAt) }}
+                    </p>
+                  </div>
+                  <div class="flex-1 min-w-0 space-y-2">
+                    <p
+                      v-if="messageTextSummary(message)"
+                      class="whitespace-pre-wrap text-sm"
+                    >
+                      {{ messageTextSummary(message) }}
+                    </p>
+                    <ul
+                      v-if="messageHasTools(message)"
+                      class="space-y-2"
+                    >
+                      <li
+                        v-for="(block, idx) in messageBlocks(message)"
+                        :key="`${message.id}-${idx}`"
+                      >
+                        <ToolCallCard
+                          v-if="isToolCallBlock(block)"
+                          :tool-call-id="block.toolCallId ?? ''"
+                          :tool-name="block.toolName"
+                          :input="block.input"
+                        />
+                        <ToolResultCard
+                          v-else-if="isToolResultBlock(block)"
+                          :tool-call-id="block.toolCallId ?? ''"
+                          :tool-name="block.toolName"
+                          :output="block.output"
+                        />
+                      </li>
+                    </ul>
+                    <p
+                      v-if="!messageTextSummary(message) && !messageHasTools(message)"
+                      class="text-xs text-muted italic"
+                    >
+                      {{ t('orchestrator.chat.messages.emptyBlock') }}
+                    </p>
+                  </div>
+                </li>
+
+                <!-- Live trailing block built from the in-flight stream events.
+                 Replaced by the persisted rows after `message-complete`. -->
+                <li
+                  v-if="optimisticUserText !== null"
+                  class="flex gap-3 opacity-90"
+                >
+                  <div class="shrink-0 w-20 text-xs text-muted">
+                    <p class="font-medium uppercase tracking-wide text-highlighted">
+                      {{ roleLabel('user') }}
+                    </p>
+                    <p class="italic">
+                      {{ t('orchestrator.chat.stream.live.label') }}
+                    </p>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <p class="whitespace-pre-wrap text-sm">
+                      {{ optimisticUserText }}
+                    </p>
+                  </div>
+                </li>
+
+                <li
+                  v-if="liveTextValues.length > 0 || liveToolCalls.length > 0 || liveToolResults.length > 0"
+                  class="flex gap-3"
+                >
+                  <div class="shrink-0 w-20 text-xs text-muted">
+                    <p class="font-medium uppercase tracking-wide text-highlighted">
+                      {{ t('orchestrator.chat.stream.live.assistant') }}
+                    </p>
+                    <p class="italic flex items-center gap-1">
+                      <UIcon
+                        v-if="stream.isStreaming.value"
+                        name="i-lucide-loader-2"
+                        class="size-3 animate-spin"
+                      />
+                      {{ t('orchestrator.chat.stream.live.label') }}
+                    </p>
+                  </div>
+                  <div class="flex-1 min-w-0 space-y-2">
+                    <p
+                      v-for="(text, i) in liveTextValues"
+                      :key="`live-text-${i}`"
+                      class="whitespace-pre-wrap text-sm"
+                    >
+                      {{ text }}
+                    </p>
+                    <ul v-if="liveToolCalls.length > 0" class="space-y-2">
+                      <li
+                        v-for="call in liveToolCalls"
+                        :key="`live-call-${call.toolCallId}`"
+                      >
+                        <ToolCallCard
+                          :tool-call-id="call.toolCallId"
+                          :tool-name="call.toolName"
+                          :input="call.input"
+                        />
+                      </li>
+                    </ul>
+                    <ul v-if="liveToolResults.length > 0" class="space-y-2">
+                      <li
+                        v-for="result in liveToolResults"
+                        :key="`live-result-${result.toolCallId}`"
+                      >
+                        <ToolResultCard
+                          :tool-call-id="result.toolCallId"
+                          :tool-name="result.toolName"
+                          :output="result.result"
+                        />
+                      </li>
+                    </ul>
+                  </div>
+                </li>
+              </ul>
+            </UCard>
+
+            <!-- Stream error alert -->
+            <UAlert
+              v-if="streamError"
+              color="error"
+              variant="soft"
+              icon="i-lucide-alert-circle"
+              :title="t('orchestrator.chat.stream.errors.title')"
+              :description="streamErrorMessage"
+            >
+              <template #actions>
+                <UButton
+                  v-if="streamError.code === 'connection_lost'"
+                  size="sm"
+                  color="error"
+                  variant="solid"
+                  icon="i-lucide-refresh-ccw"
+                  :label="t('orchestrator.chat.composer.retry')"
+                  :disabled="stream.isStreaming.value"
+                  @click="onRetry"
+                />
+              </template>
+            </UAlert>
+
+            <!-- Pending confirmation card (T-3.14) -->
+            <ConfirmationCard
+              v-if="pendingConfirmation"
+              :conversation-id="conversation.id"
+              :action-id="pendingConfirmation.actionId"
+              :tool-name="pendingConfirmation.toolName"
+              :input="pendingConfirmation.input"
+              :affected-count="pendingConfirmation.affectedCount"
+              :reason="pendingConfirmation.reason"
+              :busy="stream.isStreaming.value"
+              @confirmed="onConfirmationConfirmed"
+              @cancelled="onConfirmationCancelled"
             />
-          </UFormField>
+
+            <!-- Composer (T-3.15) -->
+            <UCard>
+              <UFormField
+                :label="t('orchestrator.chat.composer.label')"
+                :description="t('orchestrator.chat.composer.description')"
+              >
+                <UTextarea
+                  v-model="composerInput"
+                  :rows="3"
+                  :placeholder="t('orchestrator.chat.composer.placeholder')"
+                  :disabled="composerDisabled"
+                  @keydown="onComposerKeydown"
+                />
+              </UFormField>
+              <template #footer>
+                <div class="flex justify-end gap-2">
+                  <UButton
+                    v-if="stream.isStreaming.value"
+                    color="neutral"
+                    variant="outline"
+                    icon="i-lucide-square"
+                    :label="t('orchestrator.chat.composer.stop')"
+                    @click="onStop"
+                  />
+                  <UTooltip
+                    :text="composerDisabledReason"
+                    :disabled="!composerDisabledReason"
+                  >
+                    <UButton
+                      icon="i-lucide-send"
+                      :label="t('orchestrator.chat.composer.send')"
+                      :disabled="sendDisabled"
+                      :loading="stream.isStreaming.value"
+                      @click="onSend"
+                    />
+                  </UTooltip>
+                </div>
+              </template>
+            </UCard>
+          </template>
+        </template>
+
+        <UModal
+          v-model:open="modeConfirmOpen"
+          :title="t('orchestrator.chat.mode.confirm.title')"
+        >
+          <template #body>
+            <p class="text-sm">
+              {{ t('orchestrator.chat.mode.confirm.body') }}
+            </p>
+          </template>
           <template #footer>
             <div class="flex justify-end gap-2">
               <UButton
-                v-if="stream.isStreaming.value"
                 color="neutral"
-                variant="outline"
-                icon="i-lucide-square"
-                :label="t('orchestrator.chat.composer.stop')"
-                @click="onStop"
+                variant="ghost"
+                :label="t('common.cancel')"
+                @click="modeConfirmOpen = false"
               />
-              <UTooltip
-                :text="composerDisabledReason"
-                :disabled="!composerDisabledReason"
-              >
-                <UButton
-                  icon="i-lucide-send"
-                  :label="t('orchestrator.chat.composer.send')"
-                  :disabled="sendDisabled"
-                  :loading="stream.isStreaming.value"
-                  @click="onSend"
-                />
-              </UTooltip>
+              <UButton
+                color="warning"
+                :label="t('orchestrator.chat.mode.confirm.action')"
+                :loading="updateMutation.asyncStatus.value === 'loading'"
+                @click="confirmModeWrite"
+              />
             </div>
           </template>
-        </UCard>
-      </template>
-    </template>
-
-    <UModal
-      v-model:open="modeConfirmOpen"
-      :title="t('orchestrator.chat.mode.confirm.title')"
-    >
-      <template #body>
-        <p class="text-sm">
-          {{ t('orchestrator.chat.mode.confirm.body') }}
-        </p>
-      </template>
-      <template #footer>
-        <div class="flex justify-end gap-2">
-          <UButton
-            color="neutral"
-            variant="ghost"
-            :label="t('common.cancel')"
-            @click="modeConfirmOpen = false"
-          />
-          <UButton
-            color="warning"
-            :label="t('orchestrator.chat.mode.confirm.action')"
-            :loading="updateMutation.asyncStatus.value === 'loading'"
-            @click="confirmModeWrite"
-          />
-        </div>
-      </template>
-    </UModal>
-  </div>
+        </UModal>
+      </div>
+    </UPage>
+  </UPage>
 </template>
