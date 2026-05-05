@@ -25,6 +25,7 @@ import type { GhProjectsReadService } from '../features/projects/read.service'
 import type { GhSyncService } from '../features/projects/sync.service'
 import type { RbacService } from '../features/rbac/rbac.service'
 import type { TodoService } from '../features/todo/service'
+import type { VaultService } from '../features/vault/service'
 import type { VaultSessionStore } from '../features/vault/session-store'
 import type { EventBus } from '../infrastructure/events'
 import * as schema from '../database/schema'
@@ -56,6 +57,7 @@ import { createGhProjectsReadService } from '../features/projects/read.service'
 import { createGhSyncService } from '../features/projects/sync.service'
 import { createRbacService } from '../features/rbac/rbac.service'
 import { createTodoService } from '../features/todo/service'
+import { createVaultService } from '../features/vault/service'
 import { createVaultSessionStore } from '../features/vault/session-store'
 import { getDatabase } from '../infrastructure/database/client'
 import { createItemService } from '../infrastructure/database/item-service'
@@ -473,6 +475,19 @@ const getGhProjectsReadService = lazy(() =>
 // Nitro plugin starts the periodic sweep timer.
 const getVaultSessionStore = lazy((): VaultSessionStore => createVaultSessionStore())
 
+// Vault service (T-V-14) — entry/folder/tag CRUD with on-demand DEK
+// unwrapping. Methods that touch ciphertext take a `masterKey` from the
+// session store and zero the DEK before returning.
+const getVaultService = lazy(() =>
+  createVaultService({
+    db: getDatabase('app'),
+    vaultEntriesItemService: getVaultEntriesItemService(),
+    vaultFoldersItemService: getVaultFoldersItemService(),
+    vaultTagsItemService: getVaultTagsItemService(),
+    workspaceVaultKeysItemService: getWorkspaceVaultKeysItemService(),
+  }),
+)
+
 // Public exports
 export const container = {
   get authService(): AuthService {
@@ -555,6 +570,9 @@ export const container = {
   },
   get vaultSessionStore(): VaultSessionStore {
     return getVaultSessionStore()
+  },
+  get vaultService(): VaultService {
+    return getVaultService()
   },
   get eventBus(): EventBus {
     return getEventBus()

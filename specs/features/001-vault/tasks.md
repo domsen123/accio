@@ -147,10 +147,18 @@ Tasks are prefixed `T-V-` (V for Vault).
 
 ## Server: entries, folders, tags
 
-- [ ] **T-V-14 — Vault service skeleton**
+- [x] **T-V-14 — Vault service skeleton**
   - `server/features/vault/service.ts` with CRUD on entries, folders, tags. All methods that read/write encrypted data require an unlocked session and unwrap the DEK on demand.
   - Refs: REQ-VAULT-7..11.
   - Done when: Unit tests cover create entry, update entry, list by folder, list by tag, soft delete, restore, duplicate, folder move, tag attach/detach.
+  - **Notes:**
+    - 14 tests in `tests/vault-service.test.ts` cover the encrypt/decrypt round-trip, create+get, cross-workspace isolation, missing-vault-precondition (412), update with payload + tag rewrite, list by folder + tag, case-insensitive `findOrCreateTag`, soft-delete + restore + trash listing, duplicate (with " (Copy)" + tag link copy), folder move via `updateFolder`, and case-insensitive title substring search. Folder depth check + delete strategy land in T-V-15; access-log writes in T-V-19.
+    - Encrypted payload is stored as `jsonb` with each `EncryptedBlob` carrying `{ ct, iv, tag }` as base64 strings. Custom fields with `is_secret=false` stay plaintext on disk so non-sensitive structured values (an SSH host) don't pay encryption overhead.
+    - `unwrapWorkspaceDek` is the single seam that touches `workspace_vault_keys`; every encrypted-path method calls it and zeros the returned DEK in `finally`.
+    - `findOrCreateTag` declared before `resolveTagRows` to keep the closure linear (lint flagged use-before-define).
+    - `createError` imported explicitly from `h3` instead of relying on Nuxt auto-imports — the unit tests run outside the Nitro runtime where the auto-import isn't injected.
+    - `vaultEntryTagsItemService` was initially in deps but the junction is touched directly via Drizzle, so it was removed to avoid a dead parameter; container DI updated to match.
+    - Test verifies that the raw row's JSON-stringified payload does NOT contain the plaintext password — sanity check that encryption actually happened.
 
 - [ ] **T-V-15 — Folder operations**
   - Move folder (and children); delete folder with `move_to_parent` or `delete_recursive` strategy; depth check (≤ 5).
