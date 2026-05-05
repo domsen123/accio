@@ -235,3 +235,9 @@ export type CommitsListResponse = PaginatedResponse<Commit>
 export interface RepoPatchInput {
   tracked: boolean
 }
+
+export interface RepoTrackInput {
+  owner: string
+  name: string
+  tracked: boolean
+}

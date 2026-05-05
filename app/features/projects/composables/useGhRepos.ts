@@ -12,6 +12,7 @@ import type {
   RepoPatchInput,
   ReposListCacheQuery,
   RepoSyncResponse,
+  RepoTrackInput,
 } from '../types/projects.types'
 import { useMutation, useQuery, useQueryCache } from '@pinia/colada'
 import { computed, toValue } from 'vue'
@@ -127,21 +128,16 @@ export const useSyncRepo = () => {
 }
 
 /**
- * Track or untrack a repo from the picker, identified by `(owner, name)`. We
- * don't have a `gh_repos.id` for never-tracked repos yet, so the server's
- * PATCH route only accepts a `repoId`. The picker therefore looks the row up
- * via the live cache match (`isCached`) — the composable surface here
- * mirrors what the picker page actually calls.
+ * Track or untrack a repo by `(owner, name)`. Used by the picker for rows
+ * that may not have a local `gh_repos.id` yet — the server-side
+ * `setRepoTracked` inserts a stub on first track.
  */
-export const useTrackAccessibleRepo = () => {
+export const useTrackRepoByName = () => {
   const queryCache = useQueryCache()
   const api = useGhReposApi()
 
   return useMutation({
-    mutation: async ({ repoId, tracked }: { repoId: string, tracked: boolean }) => {
-      const result = await api.patch(repoId, { tracked })
-      return result
-    },
+    mutation: (input: RepoTrackInput) => api.track(input),
     onSuccess: () => {
       // The picker reads from the github endpoint and overlays cache — both
       // need to refetch after a track toggle.

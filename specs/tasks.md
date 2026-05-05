@@ -898,13 +898,13 @@ Mark tasks done by changing `[ ]` to `[x]`. Add a brief note when deviating from
   - **Pages added (5):**
     - `app/pages/app/projects/index.vue` — connection banner, repo table with tracked badge, last-sync, sync-now, track-toggle, github.dev link, delete confirmation.
     - `app/pages/app/projects/connect.vue` — PAT password input with `connect` (validate-on-save), explicit "Validate now", revoke with `purgeData` checkbox + confirmation.
-    - `app/pages/app/projects/picker.vue` — `?source=github` accessible repos with private/cached/tracked badges, search + tracked-only/cached-only filters, track toggle for cached rows.
+    - `app/pages/app/projects/picker.vue` — `?source=github` accessible repos with private/cached/tracked badges, search + tracked-only/cached-only filters, track toggle for any row (cached rows go through PATCH-by-id; uncached rows go through `POST /api/projects/repos/track` which inserts a stub on first track).
     - `app/pages/app/projects/[repoId]/index.vue` — header (badges, github.dev / github.com / sync now / track toggle) + in-page tabs for issues / pulls / commits with state, search, label and since/author filters and pagination.
   - **Feature module added** (`app/features/projects/`):
     - `api/connection.ts` — `useGhConnectionApi()` (`getStatus`, `connect`, `revoke`, `validate`) and `ghConnectionKeys`.
     - `api/repos.ts` — `useGhReposApi()` (`listCache`, `listGithub`, `get`, `patch`, `delete`, `sync`, `listIssues`, `listPulls`, `listCommits`) and `ghReposKeys`.
     - `composables/useGhConnection.ts` — `useGhConnection`, `useConnectGh`, `useRevokeGh`, `useValidateGh`. Cross-invalidates connection + repos cache on revoke/connect.
-    - `composables/useGhRepos.ts` — `useGhRepos`, `useGhAccessibleRepos`, `useGhRepo`, `usePatchRepoTracked`, `useDeleteRepo`, `useSyncRepo`, `useTrackAccessibleRepo`.
+    - `composables/useGhRepos.ts` — `useGhRepos`, `useGhAccessibleRepos`, `useGhRepo`, `usePatchRepoTracked`, `useDeleteRepo`, `useSyncRepo`, `useTrackRepoByName`.
     - `composables/useGhRepoChildren.ts` — `useGhRepoIssues`, `useGhRepoPulls`, `useGhRepoCommits` with reactive `(repoId, params)` and Pinia Colada `enabled` guard until repoId resolves.
     - `types/projects.types.ts` — mirrors server serialiser shapes (`Repo`, `AccessibleRepo`, `Issue`, `Pull`, `Commit`, query/response wrappers).
     - `utils/links.ts` — `formatGithubDevUrl(owner, name)` and `formatGithubRepoUrl(owner, name)`. Validate segments against `[\w.-]+` and throw on path traversal / spaces / unicode garbage rather than producing broken URLs (REQ-PROJ-4).
@@ -914,7 +914,6 @@ Mark tasks done by changing `[ ]` to `[x]`. Add a brief note when deviating from
   - **Tests added:** `tests/projects-links.test.ts` — 8 unit tests covering happy-path, dot/underscore allowance, path-traversal rejection, slash rejection, empty rejection, space/unicode rejection, github.com sibling helper. Vue page tests are out of scope per the brief.
   - Quality gates: `pnpm lint` clean, `pnpm typecheck` clean, `pnpm test:run` 519/519 (was 511 post-T-4.6+T-4.7; +8 from `tests/projects-links.test.ts`). No regressions.
   - **Deviations:**
-    - Picker can only patch tracked status for repositories already cached locally. The existing T-4.6 PATCH route is keyed on `gh_repos.id` and the accessible-repos endpoint returns `ghId`/`isCached` only. We resolve `repoId` by overlaying `?source=cache&includeDeleted=true` rows in the picker; uncached rows are surfaced with their badges and a github.dev open-link, but tracking them requires a future "track-by-(owner,name)" route (workspace-wide sync also implicitly populates cache via `setRepoTracked`'s upstream fetch path — this is the documented workaround for now).
     - Tabs are in-page (`<UTabs>`), not sub-routes. The brief explicitly allowed either; sub-routes would have required a parent `[repoId].vue` layout for ~1 shared header — not worth the overhead.
     - Issue/pull pagination is per-tab and ships only the prev/next list at the bottom of each tab section (the `total` is already in the response but kept off the UI for now to reduce visual noise — easy follow-up if asked).
 
@@ -931,7 +930,7 @@ Mark tasks done by changing `[ ]` to `[x]`. Add a brief note when deviating from
   - **Operator runbook** (manual smoke pass):
     - Preconditions: real GitHub PAT with `repo` scope, seeded admin (`pnpm db:migrate` + admin signup), `pnpm dev`.
     - `/app/projects/connect` → paste PAT → status flips to "connected", `ghUserLogin` displayed.
-    - `/app/projects/picker?source=github` → list of accessible repos → toggle Track on a few cached rows; uncached rows surface a github.dev link (see T-4.8 deviation #1).
+    - `/app/projects/picker?source=github` → list of accessible repos → toggle Track on any row (cached or not); uncached rows are tracked via `POST /api/projects/repos/track` which inserts a stub on first track.
     - `/app/projects/[id]` → click "Sync now" → counts on Issues/Pulls/Commits tabs populate from cached `gh_*` rows; tab content matches GitHub.
     - Buttons "Open in github.dev" / `html_url` deep-links land at the correct URLs (issue/PR/commit pages or `github.dev/{owner}/{repo}/{ref}`).
     - `/app/orchestrator/...` with a `read_only` model → ask "what's open in `<owner>/<name>`?" → assistant calls `project_list_issues` and lists the cached open issues.

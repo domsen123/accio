@@ -19,6 +19,7 @@ import type {
   ReposListCacheResponse,
   ReposListGithubResponse,
   RepoSyncResponse,
+  RepoTrackInput,
 } from '../types/projects.types'
 
 const buildCacheListQuery = (params: ReposListCacheQuery): Record<string, unknown> => {
@@ -99,6 +100,12 @@ export const useGhReposApi = () => {
     patch: (repoId: string, input: RepoPatchInput): Promise<RepoDetailResponse> =>
       $api(String(`/api/projects/repos/${repoId}`), {
         method: 'PATCH',
+        body: input,
+      }),
+
+    track: (input: RepoTrackInput): Promise<RepoDetailResponse> =>
+      $api('/api/projects/repos/track', {
+        method: 'POST',
         body: input,
       }),
 

@@ -4,15 +4,9 @@
  *
  * Lists accessible repositories from the connected GitHub account
  * (`GET /api/projects/repos?source=github`) joined against the local cache
- * so we can show `isCached` / `isTracked` indicators and toggle the
- * `tracked` flag via PATCH for already-cached rows.
- *
- * Deviation: uncached rows cannot be tracked from the picker because the
- * existing PATCH route is keyed on `repoId` (the local row UUID). The brief
- * leaves us room to ship the simpler subset; the workspace-wide sync route
- * still discovers + caches accessible repos, after which they become
- * trackable here. The UI surfaces this clearly with a "not cached yet"
- * affordance.
+ * so we can show `isCached` / `isTracked` indicators and toggle tracking.
+ * Uncached rows go through `POST /api/projects/repos/track` which inserts a
+ * stub on first track; cached rows go through PATCH by `repoId`.
  *
  * Refs: REQ-PROJ-2 (list accessible repos), REQ-PROJ-4 (deep links).
  */
@@ -24,6 +18,7 @@ import {
   useGhAccessibleRepos,
   useGhRepos,
   usePatchRepoTracked,
+  useTrackRepoByName,
 } from '~/features/projects/composables/useGhRepos'
 import { formatGithubDevUrl } from '~/features/projects/utils/links'
 
@@ -84,22 +79,24 @@ const filteredRepos = computed<AccessibleRepo[]>(() => {
   })
 })
 
-const trackMutation = usePatchRepoTracked()
+const patchMutation = usePatchRepoTracked()
+const trackByNameMutation = useTrackRepoByName()
 const togglingGhId = ref<number | null>(null)
 
 const handleToggle = async (row: AccessibleRepo) => {
-  const repoId = cachedByGhId.value.get(row.ghId)
-  if (!repoId) {
-    toast.add({
-      title: t('projects.errors.action.title'),
-      description: t('projects.picker.row.cached'),
-      color: 'warning',
-    })
-    return
-  }
   togglingGhId.value = row.ghId
   try {
-    await trackMutation.mutateAsync({ repoId, tracked: !row.isTracked })
+    const repoId = cachedByGhId.value.get(row.ghId)
+    if (repoId) {
+      await patchMutation.mutateAsync({ repoId, tracked: !row.isTracked })
+    }
+    else {
+      await trackByNameMutation.mutateAsync({
+        owner: row.owner,
+        name: row.name,
+        tracked: !row.isTracked,
+      })
+    }
     toast.add({
       title: row.isTracked
         ? t('projects.list.toast.untracked.title')
@@ -242,7 +239,7 @@ const breadcrumbItems = computed<BreadcrumbItem[]>(() => [
                     :aria-label="t('projects.picker.row.actions.open')"
                   />
                   <UButton
-                    v-if="canManage && row.isCached"
+                    v-if="canManage"
                     variant="ghost"
                     size="sm"
                     :icon="row.isTracked ? 'i-lucide-eye-off' : 'i-lucide-eye'"

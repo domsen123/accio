@@ -91,6 +91,14 @@ export const repoPatchBodySchema = z.object({
 
 export type RepoPatchBody = z.infer<typeof repoPatchBodySchema>
 
+export const repoTrackBodySchema = z.object({
+  owner: z.string().trim().min(1).max(200),
+  name: z.string().trim().min(1).max(200),
+  tracked: z.boolean(),
+}).strict()
+
+export type RepoTrackBody = z.infer<typeof repoTrackBodySchema>
+
 // ─── Issues ─────────────────────────────────────────────────────────────────
 
 export const issuesListQuerySchema = z.object({
