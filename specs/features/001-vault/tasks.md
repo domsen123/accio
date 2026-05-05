@@ -132,10 +132,16 @@ Tasks are prefixed `T-V-` (V for Vault).
     - `evictByUser(user.id)` runs at the end so even the current request's vault session is locked — by design, since the in-memory master key was derived from the *old* password.
     - Returns 412 when master password not set, 401 on invalid current, 400 on `currentPassword === newPassword`.
 
-- [ ] **T-V-13 — Reset endpoint**
+- [x] **T-V-13 — Reset endpoint**
   - `POST /api/vault/reset`: requires `confirm: true`. Deletes `user_vault_credentials`, all `workspace_vault_keys` for the user (across all their workspaces), all `vault_*` data in those workspaces, all related access log entries.
   - Hard delete here is intentional — soft-delete would defeat the purpose.
   - Refs: REQ-VAULT-6.
+  - **Notes:**
+    - Without the master password (the very thing being reset because the user forgot it), there's no cryptographic way to know which `workspace_vault_keys` rows were wrapped under *this* user's master key. Implemented as: hard-delete vault data in every org the calling user is a member of. In a multi-user workspace this also wipes other members' vault data — documented in the file header as an accepted limitation. The personal-hub use case is the design target.
+    - All deletes run inside a single Drizzle `transaction` so a partial failure leaves the DB consistent.
+    - `vaultSessionStore.evictByUser(user.id)` runs in `finally` so the in-memory key is wiped even if the DB transaction throws.
+    - `vaultEntryTags` rows are deleted explicitly first, ahead of the FK cascade from `vault_entries`, so the order is robust to future FK changes.
+    - Body schema requires `confirm: literal(true)`; missing/false confirm → 400 from Zod.
 
 ---
 
