@@ -89,3 +89,32 @@ export class AiNoDefaultModelError extends Error {
     this.organisationId = organisationId
   }
 }
+
+/**
+ * Thrown when an admin tries to create a provider/model row that conflicts
+ * with the unique `(provider_id, model_id)` index, or when a workspace
+ * credential upsert violates `(organisation_id, provider_id)`.
+ */
+export class AiUniqueConflictError extends Error {
+  readonly resource: string
+  readonly detail?: Record<string, unknown>
+  constructor(resource: string, detail?: Record<string, unknown>) {
+    super(`Conflict on AI ${resource}`)
+    this.name = 'AiUniqueConflictError'
+    this.resource = resource
+    this.detail = detail
+  }
+}
+
+/**
+ * Thrown when a referenced provider id does not exist (e.g. credentials route
+ * called with a stale provider id).
+ */
+export class AiProviderNotFoundError extends Error {
+  readonly providerId: string
+  constructor(providerId: string) {
+    super(`AI provider "${providerId}" not found`)
+    this.name = 'AiProviderNotFoundError'
+    this.providerId = providerId
+  }
+}

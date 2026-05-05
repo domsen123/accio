@@ -38,6 +38,131 @@
       }
     }
   },
+  "ai": {
+    "settings": {
+      "title": "KI-Konfiguration",
+      "subtitle": "Verwalte Anbieter-Zugangsdaten, das Standardmodell und das Auftreten des Orchestrators in diesem Arbeitsbereich.",
+      "error": {
+        "load": "KI-Konfiguration konnte nicht geladen werden"
+      },
+      "actions": {
+        "save": "Speichern"
+      },
+      "display": {
+        "title": "Darstellung & Verlauf",
+        "subtitle": "Wie der Orchestrator angezeigt wird und wie viele vorherige Nachrichten er pro Antwort einbezieht.",
+        "aiDisplayName": {
+          "label": "Anzeigename",
+          "placeholder": "Claude-Orchestrator"
+        },
+        "historyLimit": {
+          "label": "Verlaufslimit",
+          "description": "Anzahl vorheriger Nachrichten pro Chat-Schritt (1–200)."
+        }
+      },
+      "defaultModel": {
+        "title": "Standardmodell",
+        "subtitle": "Wird genutzt, wenn ein Gespräch kein eigenes Modell festlegt. Es stehen nur Anbieter zur Auswahl, deren Zugangsdaten hier hinterlegt sind.",
+        "label": "Standardmodell",
+        "none": "Plattform-Standard verwenden",
+        "empty": "Hinterlege erst einen API-Schlüssel, um ein Standardmodell auswählen zu können."
+      },
+      "credentials": {
+        "title": "Anbieter-Zugangsdaten",
+        "subtitle": "API-Schlüssel pro Anbieter. Verschlüsselt gespeichert; der Klartext wird über keine API zurückgegeben.",
+        "status": {
+          "configured": "Konfiguriert",
+          "not_configured": "Nicht konfiguriert"
+        },
+        "actions": {
+          "set": "API-Schlüssel hinterlegen",
+          "replace": "Ersetzen",
+          "clear": "Entfernen"
+        },
+        "modal": {
+          "title": "API-Schlüssel für {provider}",
+          "subtitle": "Der Schlüssel wird vor dem Speichern serverseitig verschlüsselt. Bestehende Schlüssel werden nie angezeigt.",
+          "label": "API-Schlüssel",
+          "placeholder": "sk-…",
+          "save": "Schlüssel speichern"
+        },
+        "toast": {
+          "saved": {
+            "title": "{provider}-Schlüssel gespeichert"
+          },
+          "cleared": {
+            "title": "{provider}-Schlüssel entfernt"
+          },
+          "error": {
+            "title": "Zugangsdaten konnten nicht aktualisiert werden"
+          }
+        }
+      },
+      "toast": {
+        "saved": {
+          "title": "Einstellungen gespeichert"
+        },
+        "error": {
+          "title": "Einstellungen konnten nicht gespeichert werden"
+        }
+      }
+    },
+    "admin": {
+      "title": "KI-Modelle",
+      "providers": {
+        "title": "Anbieter",
+        "subtitle": "Anbieter komplett aktivieren oder deaktivieren. Beim Deaktivieren werden alle Modelle des Anbieters aus dem Picker ausgeblendet.",
+        "enabled": "Aktiviert",
+        "disabled": "Deaktiviert"
+      },
+      "models": {
+        "title": "Modelle",
+        "subtitle": "Kuratiertes Modell-Register. Neue Modelle stehen sofort nach dem Anlegen zur Verfügung — kein Redeploy nötig.",
+        "create": "Neues Modell",
+        "empty": "Noch keine Modelle"
+      },
+      "capabilities": {
+        "tools": "Tools",
+        "streaming": "Streaming",
+        "vision": "Vision",
+        "tools_label": "Unterstützt Tools",
+        "streaming_label": "Unterstützt Streaming",
+        "vision_label": "Unterstützt Vision"
+      },
+      "actions": {
+        "edit": "Bearbeiten",
+        "delete": "Löschen"
+      },
+      "form": {
+        "create_title": "Neues Modell",
+        "edit_title": "Modell bearbeiten",
+        "provider": "Anbieter",
+        "modelId": "Anbieter-Modell-ID",
+        "modelId_help": "Die vom SDK des Anbieters verwendete Kennung (z. B. claude-sonnet-4-6).",
+        "displayName": "Anzeigename",
+        "contextWindow": "Kontextfenster (Tokens)",
+        "inputPrice": "Input-Preis (USD / 1 Mio. Tokens)",
+        "outputPrice": "Output-Preis (USD / 1 Mio. Tokens)",
+        "price_placeholder": "Optional",
+        "enabled": "Aktiviert",
+        "isDefault": "Plattform-Standard"
+      },
+      "confirm": {
+        "delete": "Modell \"{name}\" löschen? Diese Aktion kann nicht rückgängig gemacht werden."
+      },
+      "toast": {
+        "saved": {
+          "title": "Gespeichert"
+        },
+        "deleted": {
+          "title": "Modell gelöscht"
+        },
+        "error": {
+          "title": "Aktion fehlgeschlagen"
+        }
+      }
+    }
+  },
   "kb": {
     "list": {
       "title": "Wissensdatenbank",

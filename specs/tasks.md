@@ -381,12 +381,33 @@ Mark tasks done by changing `[ ]` to `[x]`. Add a brief note when deviating from
     - **Tests:** `tests/ai-provider.test.ts` — 13 tests. Mocks `@ai-sdk/anthropic`, `@ai-sdk/openai`, `@ai-sdk/google` via `vi.mock` + `vi.hoisted` so each provider call returns a sentinel `{ provider, modelId }` and we can assert (a) the factory was called with the decrypted `apiKey`, (b) the provider object was called with the provider-side model id. AI tables aren't covered by the global `cleanDatabase` TRUNCATE, so the suite truncates `ai_providers`, `ai_models`, `ai_provider_credentials`, and `orchestrator_workspace_settings` itself in `beforeEach`.
   - Quality gates: `pnpm lint` clean, `pnpm typecheck` clean, `pnpm test:run` 227/227 (was 214; +13).
 
-- [ ] **T-3.1e — AI configuration API + UI**
+- [x] **T-3.1e — AI configuration API + UI**
   - Routes per DESIGN-API §AI Configuration.
   - Pages: `/app/settings/ai` (workspace credentials, default model, AI display name, history limit) and `/admin/ai/models` (super-admin model registry CRUD — stays under `/admin` because it's platform-global data).
   - Permission guards: `ai:read` for GET, `ai:manage` for PUT/PATCH/DELETE on workspace endpoints; `platform:admin` for `/admin/ai/models`.
   - Saving an API key encrypts it via `encryptForOrg`; reading credentials never returns the plaintext.
   - Refs: REQ-AI-2, REQ-AI-3, REQ-AI-4, DESIGN-API §AI Configuration.
+  - **Implementation notes:**
+    - Workspace routes (`/api/ai/...`): `providers.get` + `models.get` + `credentials/index.get` + `credentials/[providerId].put` + `credentials/[providerId].delete` + `settings.get` + `settings.put` + `settings.patch` (PATCH alias of PUT for clients that prefer either verb). Permission guards via `requirePermission(AI_READ | AI_MANAGE)` scoped to the workspace organisation.
+    - Admin routes (`/api/admin/ai/...`): `providers/index.get`, `providers/[id].patch` (toggle enabled), `models/index.get`, `models/index.post`, `models/[id].patch`, `models/[id].delete`. All gated by `requireSuperAdmin` (matches the rest of `/admin`). 11 route files total (8 workspace + 6 admin minus the shared `[providerId]` pair = 14 file count).
+    - Schemas: `server/features/ai/schemas.ts` (Zod v4). Shared error mapping in `server/features/ai/api-utils.ts` — codes: `validation.failed`, `ai.model.not_found`, `ai.model.disabled`, `ai.provider.disabled`, `ai.provider.not_found`, `ai.provider.unsupported`, `ai.credentials.missing`, `ai.credentials.conflict`, `ai.model.conflict`, `ai.default_model.missing`. Two new errors added to `server/features/ai/errors.ts`: `AiUniqueConflictError`, `AiProviderNotFoundError`.
+    - Service surface extended on `aiProviderService` (in `server/features/ai/provider.ts`): `listProviders`, `listModels`, `listWorkspaceCredentialStatus`, `setWorkspaceCredentials`, `clearWorkspaceCredentials`, `getWorkspaceSettings` (create-on-read with `config.orchestrator.historyLimit` default), `setWorkspaceSettings`, `createModel`, `updateModel`, `deleteModel`, `updateProvider`. `is_default = true` toggles use a transaction to unset the previous default in the same statement. Unique-violation detection walks the cause chain (Drizzle wraps the pg-error).
+    - Plaintext key handling: `setWorkspaceCredentials` encrypts via `encryptForOrg` inline (no intermediate variable persists past the call). The encrypted blob is stored in `ai_provider_credentials.api_key_encrypted` only; no list / status endpoint returns it. Asserted by a test that JSON-stringifies the credential-status response and grep-checks for both the plaintext key and the column name.
+    - Client slice: `app/features/ai/{api,composables,types}` with `useAiProviders`, `useAiModels`, `useAiCredentials`, `useAiSettings`, `useSetAiCredential`, `useClearAiCredential`, `useUpdateAiSettings`, plus the admin variants in `useAdminAiModels.ts`.
+    - Pages: `app/pages/app/settings/ai.vue` (three sections: display + history, default model picker scoped to providers with credentials per REQ-AI-4, provider credential list with set/clear modals — never previewing the existing key) and `app/pages/admin/ai/models.vue` (provider toggles + models table with inline enabled/default switches, edit/delete, and a create-or-edit modal). Both use the existing `app` / `admin` layouts.
+    - Permission gating: workspace page uses `usePermissions().isGlobalAdmin` + a "has `ai:manage` somewhere" fallback (no active-workspace-id composable yet — the server is still the source of truth via `requirePermission`). Admin page uses the existing `admin` middleware (platform-admin only).
+    - i18n: full `ai.settings.*` and `ai.admin.*` blocks in both `de.json` and `en.json`.
+    - **Tests:** `tests/ai-config.test.ts` — 14 new tests covering credential round-trip (encrypted blob is not the plaintext, `decryptForOrg` recovers it, status response carries no key-derived fields), credential upsert, clear, workspace settings create-on-read + happy path + unknown-model rejection + disabled-model rejection, default-model toggle on create AND update unsets the prior default, unique-conflict on duplicate model, list filters (`enabled` / `includeDisabled`), and `deleteModel` removes the row.
+    - **Smoke transcript** (logged in as the seed admin against the Default Workspace):
+      - `GET /api/ai/providers` → 200, three providers, all `hasCredentials: false`.
+      - `PUT /api/ai/credentials/<anthropic-id>` with `{apiKey: "sk-test-123"}` → 200 `{ credential: { providerId, hasCredentials: true } }`.
+      - `GET /api/ai/credentials` → Anthropic now `hasCredentials: true`, others false.
+      - `PUT /api/ai/settings` with `{historyLimit: 50, aiDisplayName: "Aria"}` → 200; subsequent `GET` reflects.
+      - `PUT /api/ai/credentials/<google-id>` with `{apiKey: ""}` → 400 `validation.failed` (Zod `too_small`).
+      - `GET /api/admin/ai/models` as platform admin → 200 with the seeded models.
+      - `GET /app/settings/ai` (cookie) → 200; `GET /admin/ai/models` (cookie) → 200; `GET /admin/ai/models` (no cookie) → 302 redirect (auth gate).
+  - Quality gates: `pnpm lint` clean, `pnpm typecheck` clean, `pnpm test:run` 241/241 (was 227; +14).
+  - **Deviation:** DESIGN-API spec lists `/api/ai/workspace-settings`; the implementation exposes the route at `/api/ai/settings` (matching the DB table and shorter URL), with both PUT and PATCH verbs accepted. Provider POST/DELETE were intentionally skipped (ADR-013 — adding a provider requires a bundled SDK adapter), only `PATCH /api/admin/ai/providers/[id]` for the enabled toggle is exposed. `DELETE /api/admin/ai/models/[id]` is hard delete; FK-violation detection against `orchestrator_actions` is deferred until T-3.7 lands the audit-write path.
 
 ### Self-MCP server
 - [ ] **T-3.2 — In-process MCP server bootstrap**

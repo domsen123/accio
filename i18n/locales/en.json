@@ -38,6 +38,131 @@
       }
     }
   },
+  "ai": {
+    "settings": {
+      "title": "AI configuration",
+      "subtitle": "Configure provider credentials, the default model, and how the orchestrator presents itself in this workspace.",
+      "error": {
+        "load": "Could not load AI configuration"
+      },
+      "actions": {
+        "save": "Save"
+      },
+      "display": {
+        "title": "Display & history",
+        "subtitle": "How the orchestrator appears, and how much conversation history it carries between turns.",
+        "aiDisplayName": {
+          "label": "AI display name",
+          "placeholder": "Claude-Orchestrator"
+        },
+        "historyLimit": {
+          "label": "History limit",
+          "description": "How many prior messages get pulled into each chat turn (1–200)."
+        }
+      },
+      "defaultModel": {
+        "title": "Default model",
+        "subtitle": "Used when a conversation does not explicitly pin a model. Only providers with credentials configured here are eligible.",
+        "label": "Default model",
+        "none": "Use platform default",
+        "empty": "Configure at least one provider's API key to choose a default model."
+      },
+      "credentials": {
+        "title": "Provider credentials",
+        "subtitle": "Per-provider API keys. Stored encrypted; the plaintext is never returned by any endpoint.",
+        "status": {
+          "configured": "Configured",
+          "not_configured": "Not configured"
+        },
+        "actions": {
+          "set": "Set API key",
+          "replace": "Replace",
+          "clear": "Clear"
+        },
+        "modal": {
+          "title": "API key for {provider}",
+          "subtitle": "The key is encrypted server-side before storage. Existing keys are never displayed.",
+          "label": "API key",
+          "placeholder": "sk-…",
+          "save": "Save key"
+        },
+        "toast": {
+          "saved": {
+            "title": "{provider} API key saved"
+          },
+          "cleared": {
+            "title": "{provider} API key removed"
+          },
+          "error": {
+            "title": "Could not update credentials"
+          }
+        }
+      },
+      "toast": {
+        "saved": {
+          "title": "Settings saved"
+        },
+        "error": {
+          "title": "Could not save settings"
+        }
+      }
+    },
+    "admin": {
+      "title": "AI Models",
+      "providers": {
+        "title": "Providers",
+        "subtitle": "Globally enable or disable an entire provider. Disabling hides every model under it from the picker.",
+        "enabled": "Enabled",
+        "disabled": "Disabled"
+      },
+      "models": {
+        "title": "Models",
+        "subtitle": "Curated model registry. New models become available immediately after creation — no redeploy required.",
+        "create": "New model",
+        "empty": "No models yet"
+      },
+      "capabilities": {
+        "tools": "Tools",
+        "streaming": "Streaming",
+        "vision": "Vision",
+        "tools_label": "Supports tools",
+        "streaming_label": "Supports streaming",
+        "vision_label": "Supports vision"
+      },
+      "actions": {
+        "edit": "Edit",
+        "delete": "Delete"
+      },
+      "form": {
+        "create_title": "New model",
+        "edit_title": "Edit model",
+        "provider": "Provider",
+        "modelId": "Provider-side model id",
+        "modelId_help": "The identifier used by the provider's SDK (e.g. claude-sonnet-4-6).",
+        "displayName": "Display name",
+        "contextWindow": "Context window (tokens)",
+        "inputPrice": "Input price (USD / 1M tokens)",
+        "outputPrice": "Output price (USD / 1M tokens)",
+        "price_placeholder": "Optional",
+        "enabled": "Enabled",
+        "isDefault": "Platform default"
+      },
+      "confirm": {
+        "delete": "Delete model \"{name}\"? This action cannot be undone."
+      },
+      "toast": {
+        "saved": {
+          "title": "Saved"
+        },
+        "deleted": {
+          "title": "Model deleted"
+        },
+        "error": {
+          "title": "Action failed"
+        }
+      }
+    }
+  },
   "kb": {
     "list": {
       "title": "Knowledge Base",
