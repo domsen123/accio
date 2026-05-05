@@ -153,12 +153,15 @@ const breadcrumbItems = computed<BreadcrumbItem[]>(() => [
               </UBadge>
             </div>
             <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted">
-              <span v-if="todo.dueAt">
-                <UIcon name="i-lucide-calendar" class="size-4 align-text-bottom mr-1" />
+              <span v-if="todo.dueAt" class="inline-flex items-center gap-1 font-mono font-semibold tabular-nums">
+                <UIcon name="i-lucide-calendar" class="size-3.5" />
                 {{ t('todo.detail.dueAt', { date: formatDate(todo.dueAt) }) }}
               </span>
-              <span v-if="isCompleted && todo.completedAt">
-                <UIcon name="i-lucide-check" class="size-4 align-text-bottom mr-1" />
+              <span
+                v-if="isCompleted && todo.completedAt"
+                class="inline-flex items-center gap-1 font-mono font-semibold tabular-nums"
+              >
+                <UIcon name="i-lucide-check" class="size-3.5" />
                 {{ t('todo.detail.completedAt', { date: formatDate(todo.completedAt) }) }}
               </span>
             </div>
@@ -236,8 +239,8 @@ const breadcrumbItems = computed<BreadcrumbItem[]>(() => [
                 color="neutral"
                 variant="subtle"
                 size="sm"
+                icon="i-lucide-tag"
               >
-                <UIcon name="i-lucide-tag" class="size-3 mr-1" />
                 {{ tag.name }}
               </UBadge>
             </div>
@@ -253,9 +256,9 @@ const breadcrumbItems = computed<BreadcrumbItem[]>(() => [
                 v-for="entry in todo.kbEntries"
                 :key="entry.id"
                 :to="`/app/kb/${encodeURIComponent(entry.slug)}`"
-                class="text-sm text-primary hover:underline truncate"
+                class="inline-flex items-center gap-2 text-sm text-primary hover:underline truncate"
               >
-                <UIcon name="i-lucide-link" class="size-3.5 align-text-bottom mr-1" />
+                <UIcon name="i-lucide-link" class="size-3.5" />
                 {{ entry.title }}
               </NuxtLink>
             </div>
