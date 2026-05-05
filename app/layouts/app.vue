@@ -154,8 +154,11 @@ const handleOrchestratorLaunch = () => {
       v-model:open="open"
       collapsible
       resizable
-      class="bg-elevated/75"
-      :ui="{ footer: 'lg:border-t lg:border-default' }"
+      class="bg-muted"
+      :ui="{
+        root: 'border-r border-default',
+        footer: 'lg:border-t lg:border-default',
+      }"
     >
       <template #header="{ collapsed }">
         <NuxtLink to="/app" class="flex items-center gap-2 px-2">
@@ -195,8 +198,8 @@ const handleOrchestratorLaunch = () => {
     <UDashboardPanel id="app-shell">
       <template #header>
         <UDashboardNavbar
-          :ui="{ right: 'gap-2' }"
-          class="bg-elevated/75"
+          :ui="{ root: 'border-b border-default', right: 'gap-2' }"
+          class="bg-default"
         >
           <template #leading>
             <UDashboardSidebarCollapse />
@@ -244,7 +247,9 @@ const handleOrchestratorLaunch = () => {
       </template>
 
       <template #body>
-        <slot />
+        <div class="p-4 lg:p-6">
+          <slot />
+        </div>
       </template>
     </UDashboardPanel>
   </UDashboardGroup>

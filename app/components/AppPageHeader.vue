@@ -3,9 +3,11 @@ const props = defineProps<{
   variant?: 'default' | 'dense'
 }>()
 
+const rootBase = 'border-b border-default mb-6'
+
 const variantStyles = {
-  dense: { title: 'text-lg sm:text-xl', root: 'py-4' },
-  default: {},
+  dense: { title: 'text-lg sm:text-xl', root: `${rootBase} py-4` },
+  default: { root: `${rootBase} pb-4` },
 }
 
 const ui = computed(() => variantStyles[props.variant ?? 'default'])
