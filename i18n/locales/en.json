@@ -117,6 +117,14 @@
       "backlinks": {
         "title": "Backlinks",
         "empty": "No entries link here yet."
+      },
+      "linkedTodos": {
+        "title": "Linked todos",
+        "empty": "No todos link to this entry yet.",
+        "createFromEntry": "Create todo from this entry",
+        "showCompleted": "Show completed",
+        "hideCompleted": "Hide completed",
+        "error": "Could not load linked todos."
       }
     },
     "form": {
@@ -414,7 +422,10 @@
     "form": {
       "create": {
         "title": "New todo",
-        "subtitle": "Capture a task with priority, due date, tags, and linked KB entries."
+        "subtitle": "Capture a task with priority, due date, tags, and linked KB entries.",
+        "fromKb": {
+          "subtitle": "This todo will be linked to the knowledge-base entry that brought you here."
+        }
       },
       "edit": {
         "title": "Edit — {title}",

@@ -18,6 +18,8 @@ import type {
   KbEntriesListParams,
   KbEntriesListResponse,
   KbEntryResponse,
+  KbLinkedTodosParams,
+  KbLinkedTodosResponse,
   KbPaginatedListParams,
   KbTagsListParams,
   KbTagsResponse,
@@ -35,6 +37,14 @@ export const useKbApi = () => {
 
     getEntryBacklinks: (id: string): Promise<KbBacklinksResponse> =>
       $api(`/api/kb/entries/${encodeURIComponent(id)}/backlinks`),
+
+    getEntryLinkedTodos: (
+      id: string,
+      params?: KbLinkedTodosParams,
+    ): Promise<KbLinkedTodosResponse> =>
+      $api(`/api/kb/entries/${encodeURIComponent(id)}/linked-todos`, {
+        query: params?.includeCompleted ? { includeCompleted: '1' } : undefined,
+      }),
 
     listInbox: (params?: KbPaginatedListParams): Promise<KbEntriesListResponse> =>
       $api('/api/kb/inbox', { query: params }),

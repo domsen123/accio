@@ -36,6 +36,7 @@ import type {
 } from '../types/todo.types'
 import * as z from 'zod'
 import KbTagPicker from '~/features/kb/components/KbTagPicker.vue'
+import { useKbEntry } from '~/features/kb/composables/useKbEntry'
 import { useTodoById } from '../composables/useTodoById'
 import { useCreateTodo, useUpdateTodo } from '../composables/useTodoMutations'
 import { TODO_PRIORITIES } from '../types/todo.types'
@@ -50,6 +51,13 @@ const props = defineProps<{
    * `props.todo.parentTodoId` already supplies the initial value.
    */
   initialParentTodoId?: string | null
+  /**
+   * Optional pre-filled KB-entry ids for create mode (T-2.8 "Create todo
+   * from this entry" entry point — `/app/todos/new?kbEntryId=<id>`).
+   * Ignored in edit mode where `props.todo.kbEntries` already supplies
+   * the initial set.
+   */
+  initialKbEntryIds?: string[] | null
 }>()
 
 const emit = defineEmits<{
@@ -104,6 +112,16 @@ const fromDatetimeLocalString = (value: string): string | null => {
 
 const initialTodo = props.todo as TodoWithRelations | null | undefined
 
+// Edit mode wins; create mode falls back to the `initialKbEntryIds` prop
+// (used by the "Create todo from this entry" flow from T-2.8). The route
+// passes a single id today but the prop is plural so future fan-out from
+// other entry points needs no further change here.
+const initialKbEntryIdsForCreate = computed<string[]>(() => {
+  if (initialTodo)
+    return initialTodo.kbEntries?.map(entry => entry.id) ?? []
+  return props.initialKbEntryIds ?? []
+})
+
 const state = reactive<TodoFormState>({
   title: initialTodo?.title ?? '',
   description: initialTodo?.descriptionMd ?? '',
@@ -113,12 +131,29 @@ const state = reactive<TodoFormState>({
   // prop (used by the "+ Subtask" navigate-with-prefill flow from T-2.7).
   parentTodoId: initialTodo?.parentTodoId ?? props.initialParentTodoId ?? null,
   tagNames: initialTodo?.tags?.map(tag => tag.name) ?? [],
-  kbEntryIds: initialTodo?.kbEntries?.map(entry => entry.id) ?? [],
+  kbEntryIds: initialKbEntryIdsForCreate.value,
 })
 
-const initialKbOptions = computed(() =>
-  initialTodo?.kbEntries?.map(entry => ({ id: entry.id, title: entry.title })) ?? [],
-)
+/**
+ * In create-mode-from-KB we have the entry id but not its title, so we lazily
+ * fetch the entry to populate the picker chip. Edit mode already carries
+ * hydrated `kbEntries` so no extra fetch is needed there.
+ */
+const kbLookupId = computed(() => {
+  if (!isEditMode.value && props.initialKbEntryIds && props.initialKbEntryIds.length === 1)
+    return props.initialKbEntryIds[0] ?? ''
+  return ''
+})
+
+const { entry: kbLookupEntry } = useKbEntry(kbLookupId)
+
+const initialKbOptions = computed(() => {
+  if (initialTodo)
+    return initialTodo.kbEntries?.map(entry => ({ id: entry.id, title: entry.title })) ?? []
+  if (kbLookupEntry.value)
+    return [{ id: kbLookupEntry.value.id, title: kbLookupEntry.value.title }]
+  return []
+})
 
 /**
  * Resolve the initial parent option for the picker.

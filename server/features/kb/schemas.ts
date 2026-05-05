@@ -98,3 +98,15 @@ export const updateKbCategorySchema = z.object({
 export const createKbTagSchema = z.object({
   name: tagNameSchema,
 })
+
+/**
+ * Query schema for `GET /api/kb/entries/[id]/linked-todos` (T-2.8). Defaults
+ * to `includeCompleted=false` so the KB entry detail doesn't render a wall
+ * of done items. Pass `?includeCompleted=1` to include them.
+ */
+export const linkedTodosQuerySchema = z.object({
+  includeCompleted: z.preprocess(
+    v => typeof v === 'string' ? truthy.has(v.toLowerCase()) : v,
+    z.boolean().optional(),
+  ),
+})

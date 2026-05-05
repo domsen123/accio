@@ -8,6 +8,7 @@
  */
 import type { CreateTodoInput, Todo, UpdateTodoInput } from '../types/todo.types'
 import { useMutation, useQueryCache } from '@pinia/colada'
+import { kbKeys } from '~/features/kb/api/kb.keys'
 import { useTodoApi } from '../api/todo.api'
 import { todoKeys } from '../api/todo.keys'
 
@@ -18,6 +19,14 @@ import { todoKeys } from '../api/todo.keys'
  *
  * `todo` may be undefined for mutations that don't echo a payload (none in
  * the current set, but the parameter keeps the API symmetric with KB).
+ *
+ * Cross-feature invalidation (T-2.8): KB entry detail pages render a
+ * "Linked todos" panel keyed under `kb`. Todo mutations from the KB-side
+ * checkbox bypass the `todos` family altogether unless we also bust the
+ * `kb` root here. We invalidate at the `kb` root rather than each linked
+ * entry id because (a) the todo response doesn't carry the linked entry
+ * ids and (b) `kb` queries are stale-time-gated, so the over-invalidation
+ * is cheap.
  */
 const invalidateTodo = (
   queryCache: ReturnType<typeof useQueryCache>,
@@ -29,6 +38,10 @@ const invalidateTodo = (
   queryCache.invalidateQueries({ key: todoKeys.all })
   if (todo?.id)
     queryCache.invalidateQueries({ key: todoKeys.detail(todo.id) })
+  // Also invalidate the KB linked-todos display so the KB detail page picks
+  // up the new completion state (T-2.8). Scoped to the linked-todos family
+  // so untouched KB queries (entries / backlinks / categories) stay warm.
+  queryCache.invalidateQueries({ key: [...kbKeys.all, 'entry'] })
 }
 
 export const useCompleteTodo = () => {

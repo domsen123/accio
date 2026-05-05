@@ -12,6 +12,7 @@ import {
   KbCannotPurgeActiveError,
   KbInvalidStatusTransitionError,
 } from '../server/features/kb/types'
+import { createTodoService } from '../server/features/todo/service'
 import { getDatabase } from '../server/infrastructure/database/client'
 import { createItemService } from '../server/infrastructure/database/item-service'
 
@@ -23,12 +24,18 @@ const organisationsItemService = createItemService({ db, table: schema.organisat
 const kbEntriesItemService = createItemService({ db, table: schema.kbEntries, tableName: 'kbEntries' })
 const kbCategoriesItemService = createItemService({ db, table: schema.kbCategories, tableName: 'kbCategories' })
 const kbTagsItemService = createItemService({ db, table: schema.kbTags, tableName: 'kbTags' })
+const todosItemService = createItemService({ db, table: schema.todos, tableName: 'todos' })
 
 const kbCategoryService = createKbCategoryService({ kbCategoriesItemService })
 const kbTagService = createKbTagService({ db, kbTagsItemService })
 const kbEntryService = createKbEntryService({
   db,
   kbEntriesItemService,
+  kbTagService,
+})
+const todoService = createTodoService({
+  db,
+  todosItemService,
   kbTagService,
 })
 
@@ -848,5 +855,112 @@ describe('kbEntryService — status lifecycle (T-1.6)', () => {
     })
     const ids = (await kbEntryService.list({ organisationId: orgId, status: 'archived' })).map(e => e.id)
     expect(ids).toEqual([archived.id])
+  })
+})
+
+describe('kbEntryService — getLinkedTodos (T-2.8, REQ-TODO-3)', () => {
+  let orgId: string
+
+  beforeEach(async () => {
+    orgId = (await setupOrg()).id
+  })
+
+  it('returns todos linked to the entry, excluding completed by default', async () => {
+    const entry = await kbEntryService.create({ organisationId: orgId, title: 'Project A' })
+    const active = await todoService.create({
+      organisationId: orgId,
+      title: 'Active task',
+      kbEntryIds: [entry.id],
+    })
+    const done = await todoService.create({
+      organisationId: orgId,
+      title: 'Done task',
+      kbEntryIds: [entry.id],
+    })
+    await todoService.complete(done.id)
+
+    // Default — completed excluded.
+    const defaultRows = await kbEntryService.getLinkedTodos({
+      organisationId: orgId,
+      entryId: entry.id,
+    })
+    expect(defaultRows.map(r => r.id)).toEqual([active.id])
+
+    // includeCompleted: true — both surface.
+    const allRows = await kbEntryService.getLinkedTodos({
+      organisationId: orgId,
+      entryId: entry.id,
+      includeCompleted: true,
+    })
+    expect(allRows.map(r => r.id).sort()).toEqual([active.id, done.id].sort())
+
+    // Soft-deleted todos are always excluded.
+    await todoService.softDelete(active.id)
+    const afterTrash = await kbEntryService.getLinkedTodos({
+      organisationId: orgId,
+      entryId: entry.id,
+      includeCompleted: true,
+    })
+    expect(afterTrash.map(r => r.id)).toEqual([done.id])
+  })
+
+  it('is workspace-scoped: a todo in another workspace never surfaces', async () => {
+    const orgB = (await setupOrg()).id
+    const entryA = await kbEntryService.create({ organisationId: orgId, title: 'Notes' })
+
+    // A todo in workspace A linked to the entry — should appear.
+    const todoA = await todoService.create({
+      organisationId: orgId,
+      title: 'A-side',
+      kbEntryIds: [entryA.id],
+    })
+    // A todo in workspace B that isn't linked to the entry. Adding a link
+    // across workspaces is rejected at the service layer, so we exercise the
+    // explicit organisationId guard by creating a same-id collision-resistant
+    // unrelated todo.
+    await todoService.create({
+      organisationId: orgB,
+      title: 'B-side',
+    })
+
+    const rowsA = await kbEntryService.getLinkedTodos({
+      organisationId: orgId,
+      entryId: entryA.id,
+    })
+    expect(rowsA.map(r => r.id)).toEqual([todoA.id])
+
+    // Querying with workspace B's id returns nothing — even though the entry
+    // technically lives in A, the service refuses to leak the link row.
+    const rowsB = await kbEntryService.getLinkedTodos({
+      organisationId: orgB,
+      entryId: entryA.id,
+    })
+    expect(rowsB).toEqual([])
+  })
+
+  it('returns rows sorted by created_at DESC', async () => {
+    const entry = await kbEntryService.create({ organisationId: orgId, title: 'Sorted' })
+    const first = await todoService.create({
+      organisationId: orgId,
+      title: 'First',
+      kbEntryIds: [entry.id],
+    })
+    // Manually advance the second row's createdAt so the ordering is stable
+    // — `created_at DESC` should put the newer one first.
+    const second = await todoService.create({
+      organisationId: orgId,
+      title: 'Second',
+      kbEntryIds: [entry.id],
+    })
+    await db
+      .update(schema.todos)
+      .set({ createdAt: new Date(Date.now() + 1000) })
+      .where(eq(schema.todos.id, second.id))
+
+    const rows = await kbEntryService.getLinkedTodos({
+      organisationId: orgId,
+      entryId: entry.id,
+    })
+    expect(rows.map(r => r.id)).toEqual([second.id, first.id])
   })
 })

@@ -128,3 +128,25 @@ export interface KbTagsResponse {
 export interface KbBacklinksResponse {
   data: KbEntry[]
 }
+
+/**
+ * Lightweight summary of a todo linked to a KB entry (T-2.8, REQ-TODO-3).
+ * Mirrors the server's `getLinkedTodos` projection: just enough metadata for
+ * the KB-side display (title, priority chip, due date, completion).
+ */
+export interface KbLinkedTodoSummary {
+  id: string
+  title: string
+  priority: 'low' | 'medium' | 'high' | 'urgent'
+  dueAt: string | null
+  completedAt: string | null
+}
+
+export interface KbLinkedTodosResponse {
+  data: KbLinkedTodoSummary[]
+}
+
+export interface KbLinkedTodosParams {
+  /** When `true` completed todos are also included. Defaults to `false`. */
+  includeCompleted?: boolean
+}

@@ -117,6 +117,14 @@
       "backlinks": {
         "title": "Rückverweise",
         "empty": "Bisher verlinkt kein Eintrag hierher."
+      },
+      "linkedTodos": {
+        "title": "Verknüpfte Aufgaben",
+        "empty": "Noch keine Aufgaben verknüpft.",
+        "createFromEntry": "Aufgabe aus diesem Eintrag erstellen",
+        "showCompleted": "Erledigte anzeigen",
+        "hideCompleted": "Erledigte ausblenden",
+        "error": "Verknüpfte Aufgaben konnten nicht geladen werden."
       }
     },
     "form": {
@@ -414,7 +422,10 @@
     "form": {
       "create": {
         "title": "Neue Aufgabe",
-        "subtitle": "Erfasse eine Aufgabe mit Priorität, Fälligkeit, Tags und verknüpften KB-Einträgen."
+        "subtitle": "Erfasse eine Aufgabe mit Priorität, Fälligkeit, Tags und verknüpften KB-Einträgen.",
+        "fromKb": {
+          "subtitle": "Diese Aufgabe wird mit dem Wissensdatenbank-Eintrag verknüpft, von dem du gekommen bist."
+        }
       },
       "edit": {
         "title": "Bearbeiten — {title}",

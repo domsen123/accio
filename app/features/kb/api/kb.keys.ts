@@ -2,7 +2,12 @@
  * Pinia Colada query keys for the KB feature.
  * Convention follows `app/features/admin/api/admin.keys.ts`.
  */
-import type { KbEntriesListParams, KbPaginatedListParams, KbTagsListParams } from '../types/kb.types'
+import type {
+  KbEntriesListParams,
+  KbLinkedTodosParams,
+  KbPaginatedListParams,
+  KbTagsListParams,
+} from '../types/kb.types'
 
 export const kbKeys = {
   all: ['kb'] as const,
@@ -11,6 +16,9 @@ export const kbKeys = {
     : [...kbKeys.all, 'entries'] as const,
   entry: (slug: string) => [...kbKeys.all, 'entry', slug] as const,
   entryBacklinks: (id: string) => [...kbKeys.all, 'entry', id, 'backlinks'] as const,
+  entryLinkedTodos: (id: string, params?: KbLinkedTodosParams) => params
+    ? [...kbKeys.all, 'entry', id, 'linked-todos', params] as const
+    : [...kbKeys.all, 'entry', id, 'linked-todos'] as const,
   inbox: (params?: KbPaginatedListParams) => params
     ? [...kbKeys.all, 'inbox', params] as const
     : [...kbKeys.all, 'inbox'] as const,

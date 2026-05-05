@@ -847,6 +847,64 @@ export const createKbEntryService = (deps: CreateKbEntryServiceDeps) => {
   }
 
   /**
+   * Hydrated todos that link to the given KB entry (REQ-TODO-3, T-2.8).
+   *
+   * Mirrors the symmetric Todo→KB display already wired into the todo detail
+   * page (T-2.6): the consumer is the KB detail page, so this lives here
+   * rather than on the todo service. JOINs `todo_kb_links → todos` and
+   * filters to:
+   *
+   *   - same workspace as the entry (defence in depth — the link rows are
+   *     workspace-implicit via either side, but we re-assert it to make the
+   *     query independent of how the route resolves the entry).
+   *   - active (non-soft-deleted) todos only.
+   *   - active todos by default; pass `includeCompleted: true` to include
+   *     completed todos. Default `false` so the KB entry doesn't render a
+   *     wall of done items.
+   *
+   * Returns the same shape as the Todo↔KB chips already rendered on the
+   * todo detail page: `{ id, title, priority, dueAt, completedAt }` plus
+   * the immediate subtask count is omitted — the KB-side row is read-only,
+   * we just need a one-line summary.
+   *
+   * Sort: `created_at DESC` — newest links surface first. Linked-todos is
+   * cross-cutting metadata, not a working list, so a stable recency-first
+   * order suffices.
+   */
+  const getLinkedTodos = async (input: {
+    organisationId: string
+    entryId: string
+    includeCompleted?: boolean
+  }): Promise<Array<{
+    id: string
+    title: string
+    priority: string
+    dueAt: Date | null
+    completedAt: Date | null
+  }>> => {
+    const conditions = [
+      eq(schema.todoKbLinks.entryId, input.entryId),
+      eq(schema.todos.organisationId, input.organisationId),
+      isNull(schema.todos.deletedAt),
+    ]
+    if (!input.includeCompleted)
+      conditions.push(isNull(schema.todos.completedAt))
+
+    return db
+      .select({
+        id: schema.todos.id,
+        title: schema.todos.title,
+        priority: schema.todos.priority,
+        dueAt: schema.todos.dueAt,
+        completedAt: schema.todos.completedAt,
+      })
+      .from(schema.todoKbLinks)
+      .innerJoin(schema.todos, eq(schema.todoKbLinks.todoId, schema.todos.id))
+      .where(and(...conditions))
+      .orderBy(desc(schema.todos.createdAt))
+  }
+
+  /**
    * Resolved entries that link to the given target entry (REQ-KB-4 backlinks).
    * Soft-deleted source entries are excluded by default — backlinks shouldn't
    * surface trashed authors. The link rows themselves are kept in place even
@@ -894,6 +952,7 @@ export const createKbEntryService = (deps: CreateKbEntryServiceDeps) => {
     linkTag,
     unlinkTag,
     getBacklinks,
+    getLinkedTodos,
   }
 }
 
