@@ -118,6 +118,70 @@
         "title": "Backlinks",
         "empty": "No entries link here yet."
       }
+    },
+    "form": {
+      "create": {
+        "title": "New entry",
+        "subtitle": "Write a Markdown note. Use [[slug]] to link to other entries."
+      },
+      "edit": {
+        "title": "Edit — {title}",
+        "fallback": "Edit entry",
+        "heading": "Edit entry",
+        "backToEntry": "Back to entry"
+      },
+      "title": {
+        "placeholder": "Untitled entry"
+      },
+      "status": {
+        "label": "Status"
+      },
+      "category": {
+        "title": "Category",
+        "placeholder": "Select a category...",
+        "none": "No category"
+      },
+      "tags": {
+        "title": "Tags",
+        "placeholder": "Add tags..."
+      },
+      "publish": {
+        "title": "Save"
+      },
+      "actions": {
+        "create": "Create entry",
+        "update": "Save changes",
+        "cancel": "Cancel"
+      },
+      "errors": {
+        "titleRequired": "Title is required",
+        "conflict": "An entry with that slug already exists. Adjust the title and try again.",
+        "generic": "Something went wrong. Please try again."
+      },
+      "toast": {
+        "created": "Entry created",
+        "updated": "Entry updated",
+        "error": "Could not save the entry"
+      }
+    },
+    "editor": {
+      "markdown": {
+        "label": "Markdown",
+        "placeholder": "Write your note here. Wikilinks: [[other-slug]] or [[Title|other-slug]]."
+      },
+      "preview": {
+        "label": "Preview",
+        "empty": "Preview appears here as you type."
+      },
+      "help": "Wikilinks: [[slug]] for a plain link, [[Title|slug]] for custom display text. Unresolved targets show with a dotted underline and a ? badge."
+    },
+    "tags": {
+      "create": {
+        "successTag": "Tag \"{name}\" added",
+        "errorTag": "Could not create tag \"{name}\"",
+        "successCategory": "Category \"{name}\" created",
+        "errorCategory": "Could not create category \"{name}\""
+      }
     }
   },
   "shell": {

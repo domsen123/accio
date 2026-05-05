@@ -1,20 +1,19 @@
 <script setup lang="ts">
 /**
- * KB entry detail page (T-1.8) — `/app/kb/[slug]`.
+ * KB entry detail page (T-1.8 / T-1.9) — `/app/kb/[slug]`.
  *
  * Renders title, metadata (status / author / source / category / tags), the
  * Markdown body, and a Backlinks panel.
  *
- * Markdown rendering is intentionally minimal here: a `<div>` with
- * `whitespace-pre-wrap` over the raw `bodyMd`. The proper editor + preview
- * pair (with wikilink resolution) lands in T-1.9, at which point this page
- * will swap in the renderer. Keeping the placeholder dependency-free avoids
- * pulling a Markdown library twice.
+ * Markdown body is rendered via `KbMarkdownPreview` (T-1.9) so wikilinks
+ * resolve consistently with the editor preview: resolved links are real
+ * `<a href>`s; unresolved links are visually distinct but still link to the
+ * target slug so the user can create the missing entry from the preview.
  *
- * Edit / Delete buttons link to the (not-yet-implemented) edit page; T-1.9
- * fills those in.
+ * Delete remains a disabled stub; the trash workflow lands in T-1.10.
  */
 import type { KbEntryStatus } from '~/features/kb/types/kb.types'
+import KbMarkdownPreview from '~/features/kb/components/KbMarkdownPreview.vue'
 
 definePageMeta({
   layout: 'app',
@@ -157,14 +156,12 @@ const formatDate = (iso: string): string => {
         </div>
       </div>
 
-      <!-- Body (markdown placeholder; T-1.9 swaps in the renderer) -->
+      <!-- Body — rendered Markdown with wikilink resolution (T-1.9). -->
       <UCard>
-        <div
+        <KbMarkdownPreview
           v-if="entry.bodyMd"
-          class="whitespace-pre-wrap font-mono text-sm leading-relaxed text-default"
-        >
-          {{ entry.bodyMd }}
-        </div>
+          :body="entry.bodyMd"
+        />
         <p v-else class="italic text-muted text-sm">
           {{ t('kb.detail.body.empty') }}
         </p>

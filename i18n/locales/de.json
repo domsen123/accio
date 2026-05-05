@@ -118,6 +118,70 @@
         "title": "Rückverweise",
         "empty": "Bisher verlinkt kein Eintrag hierher."
       }
+    },
+    "form": {
+      "create": {
+        "title": "Neuer Eintrag",
+        "subtitle": "Verfasse eine Markdown-Notiz. Mit [[slug]] verlinkst du andere Einträge."
+      },
+      "edit": {
+        "title": "Bearbeiten — {title}",
+        "fallback": "Eintrag bearbeiten",
+        "heading": "Eintrag bearbeiten",
+        "backToEntry": "Zurück zum Eintrag"
+      },
+      "title": {
+        "placeholder": "Eintrag ohne Titel"
+      },
+      "status": {
+        "label": "Status"
+      },
+      "category": {
+        "title": "Kategorie",
+        "placeholder": "Kategorie auswählen...",
+        "none": "Keine Kategorie"
+      },
+      "tags": {
+        "title": "Tags",
+        "placeholder": "Tags hinzufügen..."
+      },
+      "publish": {
+        "title": "Speichern"
+      },
+      "actions": {
+        "create": "Eintrag erstellen",
+        "update": "Änderungen speichern",
+        "cancel": "Abbrechen"
+      },
+      "errors": {
+        "titleRequired": "Titel ist erforderlich",
+        "conflict": "Ein Eintrag mit diesem Slug existiert bereits. Passe den Titel an und versuche es erneut.",
+        "generic": "Etwas ist schiefgelaufen. Bitte versuche es erneut."
+      },
+      "toast": {
+        "created": "Eintrag erstellt",
+        "updated": "Eintrag aktualisiert",
+        "error": "Eintrag konnte nicht gespeichert werden"
+      }
+    },
+    "editor": {
+      "markdown": {
+        "label": "Markdown",
+        "placeholder": "Schreibe hier deine Notiz. Wikilinks: [[other-slug]] oder [[Titel|other-slug]]."
+      },
+      "preview": {
+        "label": "Vorschau",
+        "empty": "Die Vorschau erscheint hier während du schreibst."
+      },
+      "help": "Wikilinks: [[slug]] für einen einfachen Link, [[Titel|slug]] für angepassten Anzeigetext. Nicht aufgelöste Ziele werden mit gepunkteter Unterstreichung und einem ?-Badge dargestellt."
+    },
+    "tags": {
+      "create": {
+        "successTag": "Tag \"{name}\" hinzugefügt",
+        "errorTag": "Tag \"{name}\" konnte nicht erstellt werden",
+        "successCategory": "Kategorie \"{name}\" erstellt",
+        "errorCategory": "Kategorie \"{name}\" konnte nicht erstellt werden"
+      }
     }
   },
   "shell": {
