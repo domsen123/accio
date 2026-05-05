@@ -186,9 +186,15 @@ Tasks are prefixed `T-V-` (V for Vault).
     - Patch endpoint takes a *full* `payload` blob when it's supplied — partial-payload updates would force a server-side decrypt + re-encrypt round-trip, which we deliberately push to the client to keep the server's plaintext window minimal. Documented inline.
     - Zod schemas live in `server/features/vault/schemas.ts`. T-V-33 will add the actual log-redaction wiring; the schemas already structure secret fields under `payload.*` so the redactor has a clear seam.
 
-- [ ] **T-V-17 — Folder & tag endpoints**
+- [x] **T-V-17 — Folder & tag endpoints**
   - All folder and tag routes per DESIGN-VAULT-API.
   - Refs: REQ-VAULT-9, REQ-VAULT-10.
+  - **Notes:**
+    - Folder routes: `GET /api/vault/folders`, `POST /api/vault/folders`, `PATCH /api/vault/folders/[id]`, `DELETE /api/vault/folders/[id]` (with strategy body).
+    - Tag routes: `GET /api/vault/tags`, `POST /api/vault/tags` (idempotent find-or-create), `DELETE /api/vault/tags/[id]`.
+    - All routes go through `requireVaultUnlocked` for consistency, even though folder/tag metadata is technically plaintext — REQ-VAULT-3 gates vault-page access uniformly. Documented inline.
+    - Folder PATCH splits rename vs move: rename runs through `updateFolder` directly; if `parentId` is also supplied it routes through `moveFolder` so cycle and subtree-depth checks fire. Both can run in one request.
+    - Tag DELETE pre-checks workspace membership via `listTags` to avoid leaking tags from other orgs through a bare-id 404.
 
 - [ ] **T-V-18 — Title search**
   - List endpoint accepts `q` parameter, case-insensitive substring match against `title`.
