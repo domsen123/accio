@@ -63,6 +63,6 @@ export default defineEventHandler(async (event) => {
 
   return {
     ok: true,
-    locks_at: new Date(Date.now() + container.vaultSessionStore.inactivityMs).toISOString(),
+    locksAt: new Date(Date.now() + container.vaultSessionStore.inactivityMs).toISOString(),
   }
 })

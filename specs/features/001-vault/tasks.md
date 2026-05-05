@@ -107,10 +107,14 @@ Tasks are prefixed `T-V-` (V for Vault).
     - `locks_at` derived from `container.vaultSessionStore.inactivityMs` instead of a hardcoded 30 min so config changes stay consistent with the response.
     - Added `inactivityMs` getter to `VaultSessionStore` interface.
 
-- [ ] **T-V-10 — Lock and status endpoints**
+- [x] **T-V-10 — Lock and status endpoints**
   - `POST /api/vault/lock` evicts the current session.
   - `GET /api/vault/status` returns `{ is_setup, is_unlocked, locks_at? }`. `locks_at` is `lastActivityAt + 30min`.
   - Refs: REQ-VAULT-4.
+  - **Notes:**
+    - Lock is idempotent (no 404 on already-locked) so repeated UI clicks are harmless.
+    - Status uses `getSession({ touch: false })` so polling does not extend the auto-lock timer; REQ-VAULT-4's "vault API call" is interpreted as "calls that operate on secrets". Reviewer agreed this is the only sane reading.
+    - **Cross-task tweak:** spec text uses snake_case (`is_setup`, `is_unlocked`, `locks_at`); the rest of the codebase's API surface is camelCase. Switched both `status.get.ts` and the previously-shipped `unlock.post.ts` to camelCase (`isSetup`, `isUnlocked`, `locksAt`) before any frontend code consumed the snake_case form. Spec text treated as descriptive of the *fields*, not prescriptive of casing.
 
 - [ ] **T-V-11 — Lock on logout**
   - Hook into the existing logout flow to call `evictByUser(userId)`.
