@@ -333,9 +333,12 @@ Tasks are prefixed `T-V-` (V for Vault).
       3. **Reset vault** — destructive irreversible action gated by typing "RESET" exactly. Confirmation modal also wrapped in `<div class="light">` per DESIGN.md.
     - Toast colour `success` / `error` follows the existing app convention.
 
-- [ ] **T-V-31 — i18n strings**
+- [x] **T-V-31 — i18n strings**
   - Add `vault.*` keys to `de.json` and `en.json` for all UI strings touched in T-V-23 through T-V-30.
   - Refs: DESIGN-VAULT-FRONTEND §Internationalisation.
+  - **Notes:**
+    - The full `vault.*` namespace was added in batch in T-V-23 to keep subsequent UI commits clean. Both `i18n/locales/en.json` and `i18n/locales/de.json` carry the same keys: `navLabel`, `lockIndicator.*`, `unlock.*`, `setup.*`, `settings.*` (with nested `changeMaster.*` and `reset.*`), `page.*` (with `emptyState.*`), `folders.*`, `entry.*`, `passwordGenerator.*`, `trash.*`, `audit.*` (with `events.*` enum-name → label map). Renamed `vault.trash.purge.{submit,cancel}` → `purgeSubmit`/`purgeCancel` in T-V-28 to avoid the leaf-vs-parent JSON collision.
+    - 121 unique `t('vault.*')` calls across the vault feature templates, all backed by both locales.
 
 - [ ] **T-V-32 — Side-nav entry**
   - Add "Vault" as a top-level entry in the side-nav for `/app/**` (visible only with `vault:read`).
