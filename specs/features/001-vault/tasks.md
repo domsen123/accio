@@ -308,9 +308,12 @@ Tasks are prefixed `T-V-` (V for Vault).
     - `VaultPasswordGenerator.vue` popover with length slider (8-64) + lowercase/uppercase/digits/symbols toggles. Drives `generatePassword` from `app/features/vault/utils/passwordGenerator.ts` which uses `crypto.getRandomValues` for both the per-pool seed character (one from each enabled pool) and the Fisher-Yates shuffle. Excludes ambiguous characters (`0/O`, `1/l/I`) by default; `excludeAmbiguous: false` opts back to the raw pools.
     - Wired into the password field of `VaultEntryForm.vue` — the popover button sits between the reveal-eye and copy buttons, and the `generated` event sets `password.value`.
 
-- [ ] **T-V-28 — Trash view**
+- [x] **T-V-28 — Trash view**
   - `/app/vault/trash` lists soft-deleted entries; restore and purge actions.
   - Refs: REQ-VAULT-8.
+  - **Notes:**
+    - `app/pages/app/vault/trash.vue`. Fetches via `useVaultTrash`. Per-row Restore (write permission) and Purge (delete permission) actions wired via `useRestoreVaultEntry` / `usePurgeVaultEntry`. Purge confirmation dialog wraps content in `<div class="light">` per DESIGN.md.
+    - Renamed i18n keys from `vault.trash.purge`, `vault.trash.purge.submit`, `vault.trash.purge.cancel` (which collide because `purge` can't be both a leaf string and a parent object) to `purgeAction`, `purgeSubmit`, `purgeCancel`. Updated `de.json` and `en.json` together.
 
 - [ ] **T-V-29 — Audit view**
   - `/app/vault/audit`: paginated log with filters (event type, since-date). Renders entry titles for events that reference an entry.

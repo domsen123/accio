@@ -1530,11 +1530,11 @@
       "pageTitle": "Papierkorb",
       "empty": "Papierkorb ist leer.",
       "restore": "Wiederherstellen",
-      "purge": "Endgültig löschen…",
+      "purgeAction": "Endgültig löschen…",
       "purgeConfirmTitle": "Eintrag dauerhaft löschen?",
       "purgeConfirmDescription": "Diese Aktion ist nicht rückgängig zu machen.",
-      "purge.submit": "Endgültig löschen",
-      "purge.cancel": "Abbrechen"
+      "purgeSubmit": "Endgültig löschen",
+      "purgeCancel": "Abbrechen"
     },
     "audit": {
       "pageTitle": "Tresor-Audit-Log",

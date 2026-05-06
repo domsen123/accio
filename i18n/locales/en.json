@@ -1530,11 +1530,11 @@
       "pageTitle": "Trash",
       "empty": "Trash is empty.",
       "restore": "Restore",
-      "purge": "Purge…",
+      "purgeAction": "Purge…",
       "purgeConfirmTitle": "Permanently delete entry?",
       "purgeConfirmDescription": "This is irreversible.",
-      "purge.submit": "Delete forever",
-      "purge.cancel": "Cancel"
+      "purgeSubmit": "Delete forever",
+      "purgeCancel": "Cancel"
     },
     "audit": {
       "pageTitle": "Vault audit log",
