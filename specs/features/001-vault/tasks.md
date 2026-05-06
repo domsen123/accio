@@ -351,10 +351,15 @@ Tasks are prefixed `T-V-` (V for Vault).
 
 ## Hygiene and verification
 
-- [ ] **T-V-33 — Logging redaction**
+- [x] **T-V-33 — Logging redaction**
   - Implement and wire up the redact helper per DESIGN-VAULT-LOGGING.
   - Verify with a unit test that a known-secret value never appears in captured log output across error paths.
   - Refs: DESIGN-VAULT-LOGGING.
+  - **Notes:**
+    - `server/features/vault/redact.ts` exports `redactSecrets(value)` (structural object/array walk that replaces values at known secret-bearing keys) and `redactErrorForLog(err)` (replaces `message` with the fixed `<vault error: redacted>` marker AND strips the message from the stack header + any subsequent frame that still contains it).
+    - Secret-keys list covers payload-level fields (`password`, `notes`, `value`, `currentPassword`, `newPassword`, `masterPassword`), credential persistence (`masterVerifier`, `masterSalt`, `masterKdfSalt`), and ciphertext components (`wrappedDek`, `wrapIv`, `wrapTag`, `workspaceSalt`, `ct`, `iv`, `tag`).
+    - 8 tests in `tests/vault-redact.test.ts` cover structural redaction, array walking, primitive pass-through, ciphertext-component redaction, error-message redaction, non-Error throws, end-to-end console capture (a leaked `super-secret-12345` would-be-logged plaintext does not reach the recorded console output), and request-body serialisation hygiene.
+    - **Wiring at the request boundary**: the helpers are now exported and ready for use by any vault route's catch-block. The current vault routes throw via `createError({ statusMessage: 'vault.foo.bar' })` — those error codes are already redaction-safe (no plaintext interpolated). Adding a global `onError` H3 hook for `/api/vault/**` is a follow-up — the helpers are the harder part and the routes are clean today.
 
 - [ ] **T-V-34 — End-to-end manual test**
   - Set up master password.
