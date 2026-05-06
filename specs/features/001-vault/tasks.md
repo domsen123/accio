@@ -315,9 +315,13 @@ Tasks are prefixed `T-V-` (V for Vault).
     - `app/pages/app/vault/trash.vue`. Fetches via `useVaultTrash`. Per-row Restore (write permission) and Purge (delete permission) actions wired via `useRestoreVaultEntry` / `usePurgeVaultEntry`. Purge confirmation dialog wraps content in `<div class="light">` per DESIGN.md.
     - Renamed i18n keys from `vault.trash.purge`, `vault.trash.purge.submit`, `vault.trash.purge.cancel` (which collide because `purge` can't be both a leaf string and a parent object) to `purgeAction`, `purgeSubmit`, `purgeCancel`. Updated `de.json` and `en.json` together.
 
-- [ ] **T-V-29 — Audit view**
+- [x] **T-V-29 — Audit view**
   - `/app/vault/audit`: paginated log with filters (event type, since-date). Renders entry titles for events that reference an entry.
   - Refs: REQ-VAULT-18, REQ-VAULT-19.
+  - **Notes:**
+    - New endpoint `server/api/vault/access-log.get.ts` reads `vault_access_log` left-joined to `vault_entries` so the UI can render the entry title without a second round trip. Filters: `eventType`, `since` (ISO datetime). Pagination: limit (default 50, max 200) + offset.
+    - `app/pages/app/vault/audit.vue` renders an event-tag chip + entry title + reason (italic) + timestamp per row, plus an event-type filter, since-date input, and prev/next pagination.
+    - Vault-locked → 423 (audit page is part of the vault surface).
 
 - [ ] **T-V-30 — Settings page**
   - `/app/vault/settings`: change master password, reset vault.
