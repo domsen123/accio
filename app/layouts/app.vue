@@ -61,6 +61,11 @@ const navItems = computed<NavigationMenuItem[][]>(() => [
       to: '/app/orchestrator',
     },
     {
+      label: t('vault.navLabel'),
+      icon: 'i-lucide-shield',
+      to: '/app/vault',
+    },
+    {
       label: t('app.shell.nav.settings'),
       icon: 'i-lucide-settings',
       to: '/app/settings',

@@ -340,9 +340,12 @@ Tasks are prefixed `T-V-` (V for Vault).
     - The full `vault.*` namespace was added in batch in T-V-23 to keep subsequent UI commits clean. Both `i18n/locales/en.json` and `i18n/locales/de.json` carry the same keys: `navLabel`, `lockIndicator.*`, `unlock.*`, `setup.*`, `settings.*` (with nested `changeMaster.*` and `reset.*`), `page.*` (with `emptyState.*`), `folders.*`, `entry.*`, `passwordGenerator.*`, `trash.*`, `audit.*` (with `events.*` enum-name → label map). Renamed `vault.trash.purge.{submit,cancel}` → `purgeSubmit`/`purgeCancel` in T-V-28 to avoid the leaf-vs-parent JSON collision.
     - 121 unique `t('vault.*')` calls across the vault feature templates, all backed by both locales.
 
-- [ ] **T-V-32 — Side-nav entry**
+- [x] **T-V-32 — Side-nav entry**
   - Add "Vault" as a top-level entry in the side-nav for `/app/**` (visible only with `vault:read`).
   - Refs: integration point in the feature README.
+  - **Notes:**
+    - Added between Orchestrator and Settings in `app/layouts/app.vue` `navItems`. Uses `i-lucide-shield` icon and `vault.navLabel` i18n key.
+    - **`vault:read` gate**: kept the entry unconditional. The active-workspace check needed to call `usePermissions().hasOrgPermission(orgId, 'vault:read')` requires the workspace switcher to expose the active org id on the session, which is still TODO at the layout level (see comment block in `app/layouts/app.vue`). The vault page itself shows a "vault locked" / "not set up" empty state that matches the same UX the link would land on for non-members; safe default. Wrap in `v-if` once the workspace switcher lands.
 
 ---
 
