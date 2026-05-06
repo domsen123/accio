@@ -10,6 +10,8 @@ import { eq } from 'drizzle-orm'
 import { describe, expect, it } from 'vitest'
 
 import * as schema from '../server/database/schema'
+import { createVaultGetSecretTool } from '../server/features/orchestrator/tools/vault-get-secret'
+import { createVaultSearchTool } from '../server/features/orchestrator/tools/vault-search'
 import {
   generateDek,
   generateSalt,
@@ -17,11 +19,9 @@ import {
 } from '../server/features/vault/crypto'
 import { createVaultService } from '../server/features/vault/service'
 import { createVaultSessionStore } from '../server/features/vault/session-store'
+
 import { getDatabase } from '../server/infrastructure/database/client'
 import { createItemService } from '../server/infrastructure/database/item-service'
-
-import { createVaultGetSecretTool } from '../server/features/orchestrator/tools/vault-get-secret'
-import { createVaultSearchTool } from '../server/features/orchestrator/tools/vault-search'
 import { createOrganisationData, createUserData } from './factories'
 
 const db = getDatabase('app')
