@@ -323,9 +323,15 @@ Tasks are prefixed `T-V-` (V for Vault).
     - `app/pages/app/vault/audit.vue` renders an event-tag chip + entry title + reason (italic) + timestamp per row, plus an event-type filter, since-date input, and prev/next pagination.
     - Vault-locked → 423 (audit page is part of the vault surface).
 
-- [ ] **T-V-30 — Settings page**
+- [x] **T-V-30 — Settings page**
   - `/app/vault/settings`: change master password, reset vault.
   - Refs: REQ-VAULT-5, REQ-VAULT-6.
+  - **Notes:**
+    - `app/pages/app/vault/settings.vue` covers three flows in one route:
+      1. **First-time setup** when `isSetup === false` — wraps the entire setup card in a `light` div, requires the `acknowledgeIrrecoverable` checkbox, validates min 12 chars + match client-side. Server still enforces the equality-with-login-password check (T-V-7).
+      2. **Change master password** — validates new ≥ 12 chars + match + ≠ current client-side, then calls `/api/vault/change-master`. Toast on success.
+      3. **Reset vault** — destructive irreversible action gated by typing "RESET" exactly. Confirmation modal also wrapped in `<div class="light">` per DESIGN.md.
+    - Toast colour `success` / `error` follows the existing app convention.
 
 - [ ] **T-V-31 — i18n strings**
   - Add `vault.*` keys to `de.json` and `en.json` for all UI strings touched in T-V-23 through T-V-30.
